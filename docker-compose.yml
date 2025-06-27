@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: db_mysql
+    restart: always
+    ports:
+      - "3306:3306"  # Puerto estándar de MySQL
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: bomberosdb
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: adminpass
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - bomberos-network
+
+  backend:
+    build: ./apps/bomberos-de-nosara-backend
+    container_name: backend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mysql
+    environment:
+      DB_HOST: mysql       # Nombre del servicio MySQL
+      DB_PORT: 3306
+      DB_USER: admin
+      DB_PASSWORD: adminpass
+      DB_NAME: bomberosdb
+    networks:
+      - bomberos-network
+
+  frontend:
+    build: ./apps/bomberos-de-nosara-frontend
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    networks:
+      - bomberos-network
+
+volumes:
+  mysql_data:
+
+networks:
+  bomberos-network:
+    driver: bridge
