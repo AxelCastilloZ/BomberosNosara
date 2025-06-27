@@ -1,21 +1,27 @@
-# === General ===
+# === Node modules ===
 node_modules/
+**/node_modules/
+
+# === Build output ===
 dist/
 build/
 .temp/
 .tmp/
+*.tsbuildinfo
+dist-ssr/
+
+# === Logs & temporary files ===
 logs/
 *.log
 *.pid
 *.seed
 *.pid.lock
 *.suo
-*.ntvs*
-*.njsproj
-*.sln
 *.sw?
+*.bak
+*.tmp
 
-# === OS and editor files ===
+# === IDE & OS generated files ===
 .DS_Store
 .idea/
 .vscode/
@@ -25,29 +31,41 @@ logs/
 .project
 .classpath
 .c9/
+Thumbs.db
 
-# === PNPM and lock files ===
+# === pnpm & lock files ===
 pnpm-lock.yaml
 pnpm-debug.log*
 lerna-debug.log*
 
-# === dotenv files ===
+# === Environment variables ===
 .env
 .env.local
 .env.*.local
+.env.*          # Asegura ignorar .env.development, .env.production, etc.
 
 # === Coverage / test output ===
 coverage/
 .nyc_output/
+*.lcov
+
+# === Docker volumes / data / overrides ===
+docker-data/
+docker-volume/
+docker-compose.override.yml
 
 # === Diagnostic reports (Node.js) ===
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
-# === Vite specific ===
-dist-ssr/
+# === Vite preview files ===
 *.local
 
-# === Keep shared VSCode settings if needed ===
+# === TypeORM & seeds (NestJS) ===
+*.typeorm.*
+*.seeder.*
+*.d.ts.map
+
+# === VSCode settings you want to share ===
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json

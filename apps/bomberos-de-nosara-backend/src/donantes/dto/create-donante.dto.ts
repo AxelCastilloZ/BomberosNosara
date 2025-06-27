@@ -3,18 +3,18 @@ import { IsString, IsUrl, MaxLength } from 'class-validator';
 export class CreateDonanteDto {
   @IsString()
   @MaxLength(50)
-  id: string;
+  id!: string;
 
   @IsString()
   @MaxLength(100)
-  nombre: string;
+  nombre!: string;
 
   @IsString()
-  descripcion: string;
+  descripcion!: string;
 
   @IsUrl()
-  logo: string;
+  logo!: string;
 
   @IsUrl()
-  url: string;
+  url!: string;
 }

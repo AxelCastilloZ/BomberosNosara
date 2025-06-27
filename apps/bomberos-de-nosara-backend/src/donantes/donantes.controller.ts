@@ -5,8 +5,8 @@ import { UpdateDonanteDto } from './dto/update-donante.dto';
 import { Donante } from './entities/donante.entity';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from 'src/common/decorators/roles.decorator';
-import { RoleEnum } from 'src/roles/role.enum';
+import { Roles } from '../common/decorators/roles.decorator';
+import { RoleEnum } from '../roles/role.enum';
 
 @Controller('donantes')
 export class DonantesController {

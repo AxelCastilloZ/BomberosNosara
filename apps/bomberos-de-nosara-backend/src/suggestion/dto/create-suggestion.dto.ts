@@ -3,16 +3,16 @@ import { IsString, IsEmail, IsNotEmpty } from 'class-validator';
 export class CreateSugerenciaDto {
   @IsString()
   @IsNotEmpty()
-  nombre: string;
+  nombre!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
   @IsNotEmpty()
-  telefono: string;
+  telefono!: string;
 
   @IsString()
   @IsNotEmpty()
-  contenido: string;
+  contenido!: string;
 }

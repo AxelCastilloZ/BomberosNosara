@@ -2,10 +2,10 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from 'src/users/entities/user.entity';
-import {  RoleEnum } from 'src/roles/role.enum'; // ✅ importar RoleEnum
+import { User } from '../users/entities/user.entity';
+import {  RoleEnum } from '../roles/role.enum'; // ✅ importar RoleEnum
 import * as bcrypt from 'bcrypt';
-import { Role } from 'src/roles/entities/role.entity';
+import { Role } from '../roles/entities/role.entity';
 
 
 @Injectable()

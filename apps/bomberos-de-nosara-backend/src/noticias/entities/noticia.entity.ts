@@ -3,17 +3,17 @@ import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 @Entity('noticias')
 export class Noticia {
   @PrimaryGeneratedColumn('uuid') //para generar los id automaticos
-  id: string;
+  id!: string;
 
   @Column()
-  titulo: string;
+  titulo!: string;
 
   @Column({ type: 'text' })
-  descripcion: string;
+  descripcion!: string;
 
   @Column({ length: 1000 })
-  url: string;
+  url!: string;
 
   @Column()
-  fecha: string;
+  fecha!: string;
 }

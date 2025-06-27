@@ -5,15 +5,15 @@ import { Role } from '../../roles/entities/role.entity';
 @Entity()
 export class User {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ unique: true })
-  username: string;
+  username!: string;
 
   @Column()
-  password: string;
+  password!: string;
 
   @ManyToMany(() => Role, { eager: true }) // eager carga automática
   @JoinTable()
-  roles: Role[];
+  roles!: Role[];
 }

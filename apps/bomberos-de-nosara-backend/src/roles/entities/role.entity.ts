@@ -5,8 +5,8 @@ import { RoleEnum } from '../role.enum';
 @Entity()
 export class Role {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column({ unique: true })
-  name: RoleEnum; 
+  name!: RoleEnum; 
 }

@@ -3,20 +3,20 @@ import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 @Entity('sugerencia')
 export class Sugerencia {
   @PrimaryGeneratedColumn()
-  id: number;
+  id!: number;
 
   @Column()
-  nombre: string;
+  nombre!: string;
 
   @Column()
-  email: string;
+  email!: string;
 
   @Column()
-  telefono: string;
+  telefono!: string;
 
   @Column('text')
-  contenido: string;
+  contenido!: string;
 
   @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
-  fecha: Date;
+  fecha!: Date;
 }

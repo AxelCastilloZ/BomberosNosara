@@ -2,17 +2,17 @@ import { IsString, IsUrl, IsDate } from 'class-validator';
 
 export class CreateNoticiaDto {
   @IsString()
-  id: string;
+  id!: string;
 
   @IsString()
-  titulo: string;
+  titulo!: string;
 
   @IsString()
-  descripcion: string;
+  descripcion!: string;
 
   @IsUrl()
-  url: string;
+  url!: string;
 
   @IsString()
-  fecha: string;
+  fecha!: string;
 }
