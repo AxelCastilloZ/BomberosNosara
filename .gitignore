@@ -1,0 +1,54 @@
+# === General ===
+node_modules/
+dist/
+build/
+.temp/
+.tmp/
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# === OS and editor files ===
+.DS_Store
+.idea/
+.vscode/
+*.sublime-workspace
+*.launch
+.settings/
+.project
+.classpath
+.c9/
+
+# === PNPM and lock files ===
+pnpm-lock.yaml
+pnpm-debug.log*
+lerna-debug.log*
+
+# === dotenv files ===
+.env
+.env.local
+.env.*.local
+
+# === Coverage / test output ===
+coverage/
+.nyc_output/
+
+# === Diagnostic reports (Node.js) ===
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# === Vite specific ===
+dist-ssr/
+*.local
+
+# === Keep shared VSCode settings if needed ===
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
