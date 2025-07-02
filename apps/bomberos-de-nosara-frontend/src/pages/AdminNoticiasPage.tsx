@@ -18,7 +18,12 @@ import {
 import { Noticia } from '../types/news';
 
 export default function AdminNoticiasPage() {
-  const { data: noticias=[], isLoading }=useNoticias();
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  const { data, isLoading } = useNoticias(page, limit);
+  const noticias = data?.data || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
   const { mutate: addNoticia }=useAddNoticia();
   const { mutate: updateNoticia }=useUpdateNoticia();
   const { mutate: deleteNoticia }=useDeleteNoticia();
@@ -141,6 +146,15 @@ export default function AdminNoticiasPage() {
       ),
     },
     {
+      header: 'Fecha',
+      accessorKey: 'fecha',
+      cell: ({ row }) => (
+        <div className="text-sm text-gray-600">
+          {new Date(row.original.fecha).toLocaleDateString('es-ES')}
+        </div>
+      ),
+    },
+    {
       header: 'Acciones',
       cell: ({ row }) => (
         <div className="flex gap-2">
@@ -171,7 +185,7 @@ export default function AdminNoticiasPage() {
   });
 
   return (
-    <div className="min-h-screen pt-28 bg-gradient-to-b from-white to-blue-50 px-4">
+    <div className="min-h-screen pt-28 bg-gradient-to-b from-white px-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-4xl font-bold text-red-700">Administrar Noticias</h1>
@@ -190,6 +204,7 @@ export default function AdminNoticiasPage() {
         {isLoading? (
           <p className="text-center text-gray-500">Cargando noticias...</p>
         ):(
+          <>
           <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
             <table className="min-w-full bg-white border border-gray-300">
               <thead className="bg-red-100 text-red-800">
@@ -222,6 +237,25 @@ export default function AdminNoticiasPage() {
               </tbody>
             </table>
           </div>
+          {/* Controles de paginación */}
+          <div className="flex justify-end gap-2 mt-12 mb-12">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <span className="px-2 py-1">Página {page} de {totalPages}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Siguiente
+            </button>
+          </div>
+          </>
         )}
 
         {isFormOpen&&(

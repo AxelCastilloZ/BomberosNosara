@@ -6,10 +6,12 @@ import {
   Param,
   Put,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { NoticiaService } from './noticia.service';
 import { CreateNoticiaDto } from './dto/create-noticia.dto';
 import { UpdateNoticiaDto } from './dto/update-noticia.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 
 @Controller('noticias')
 export class NoticiaController {
@@ -21,8 +23,8 @@ export class NoticiaController {
   }
 
   @Get()
-  findAll() {
-    return this.noticiaService.findAll();
+  findAll(@Query() query: PaginationQueryDto) {
+    return this.noticiaService.findAll(query.page, query.limit);
   }
 
   @Get(':id')
