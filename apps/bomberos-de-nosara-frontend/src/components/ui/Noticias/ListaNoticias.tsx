@@ -23,7 +23,9 @@ const FlechaCarrusel = ({ direccion, onClick }: { direccion: 'izquierda' | 'dere
 };
 
 export const ListaNoticias = () => {
-  const { data: noticias, isLoading, error } = useNoticias();
+  // Mostrar solo las últimas 5 noticias en el carrusel
+  const limit = 5;
+  const { data, isLoading, error } = useNoticias(1, limit);
 
   if (isLoading) {
     return (
@@ -42,15 +44,15 @@ export const ListaNoticias = () => {
   }
 
   const configuracionCarrusel = {
-    dots: true, 
-    infinite: noticias!!.length > 1, 
-    speed: 500, 
-    slidesToShow: 1, 
+    dots: true,
+    infinite: (data?.data?.length ?? 0) > 1,
+    speed: 500,
+    slidesToShow: 1,
     slidesToScroll: 1,
-    autoplay: true, 
-    autoplaySpeed: 5000, 
-    prevArrow: <FlechaCarrusel direccion="izquierda" />,
-    nextArrow: <FlechaCarrusel direccion="derecha" />,
+    autoplay: true,
+    autoplaySpeed: 5000,
+    prevArrow: <FlechaCarrusel direccion="izquierda" />, 
+    nextArrow: <FlechaCarrusel direccion="derecha" />, 
     customPaging: () => (
       <button className="w-3 h-3 rounded-full bg-gray-300 hover:bg-red-500 mt-4" />
     )
@@ -59,7 +61,7 @@ export const ListaNoticias = () => {
   return (
     <div className="max-w-5xl mx-auto px-4">
       <Slider {...configuracionCarrusel}>
-        {noticias?.map((noticia) => (
+        {data?.data.map((noticia) => (
           <div key={noticia.id} className="px-2">
             <NoticiaCard noticia={noticia} />
           </div>
