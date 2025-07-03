@@ -23,6 +23,7 @@ import AdminChatPage from '../pages/Administrativas/AdminChatPage';
 import AdminDashboardPage from '../pages/Administrativas/AdminDashboardPage';
 import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
 import AdminEstadisticasPage from '../pages/Administrativas/AdminEstadisticasPage';
+import AdminMaterialEducativoPage from "../pages/Administrativas/AdminMaterialEducativoPage";
 import AdminUsuariosPage from '../pages/Administrativas/AdminUsuariosPage';
 import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
 import AdminNoticiasPage from '../pages/AdminNoticiasPage';
@@ -135,6 +136,18 @@ const routeTree=rootRoute.addChildren([
       if (!isAdmin()) throw redirect({ to: '/login' });
     },
   }),
+
+  
+  createRoute({
+   path: '/admin/material-interno',
+    component: AdminMaterialEducativoPage,
+   getParentRoute: () => rootRoute,
+   beforeLoad: () => {
+    if (!isAdmin()) throw redirect({ to: '/login' });
+  },
+}),
+
+
   createRoute({
   path: '/admin/usuarios',
   component: AdminUsuariosPage,
