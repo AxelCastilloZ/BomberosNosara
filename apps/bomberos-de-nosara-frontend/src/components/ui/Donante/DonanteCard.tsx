@@ -11,11 +11,13 @@ export const DonanteCard = ({ donante, onClick }: Props) => {
       className="text-center p-4 rounded-xl bg-white transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl"
     >
       <a href={donante.url} target="_blank" rel="noopener noreferrer">
+        <div className="block h-32 w-full items-center justify-center">
         <img
           src={donante.logo}
           alt={donante.nombre}
-          className="h-50 w-auto object-contain mx-auto transition-transform duration-300 hover:scale-105"
+          className="h-full w-auto object-contain mx-auto transition-transform duration-300 hover:scale-105"
         />
+        </div>
       </a>
 
       <h3 className="mt-3 text-lg font-medium text-gray-800">{donante.nombre}</h3>

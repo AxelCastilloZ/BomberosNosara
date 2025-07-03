@@ -9,8 +9,8 @@ interface GridProps {
 export const DonantesGrid = ({ donantes, onLeerMas }: GridProps) => (
   <section className="py-12 bg-white">
     <div className="text-center mb-10">
-      <h2 className="text-5xl font-serif font-light">Quienes nos apoyan</h2>
-      <p className="text-gray-700 mt-4 text-md">
+      <h2 className=" text-4xl lg:text-5xl font-serif font-light md:text-5xl pt-4 ">Quienes nos apoyan</h2>
+      <p className="text-gray-700 mt-4 sm:text-3xl">
         Si desea formar parte de este selecto grupo, envíe un correo a:{" "}
         <span className="font-normal not-italic underline underline-offset-4">donaciones@bomberosdenosara.org</span>
       </p>
