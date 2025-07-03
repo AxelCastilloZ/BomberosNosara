@@ -4,7 +4,7 @@ import {
   useAddDonante,
   useUpdateDonante,
   useDeleteDonante,
-} from '../service/donorService'; 
+} from '../service/donorService';
 import { Donante } from '../types/donate';
 import { useForm } from '@tanstack/react-form';
 import {
@@ -42,7 +42,6 @@ export default function AdminDonantesPage() {
     onSubmit: async ({ value }) => {
       setShowLoading(true);
 
-      
       const camposInvalidos = Object.entries(value).filter(
         ([_, v]) => !v || v.trim() === ''
       );
@@ -52,7 +51,6 @@ export default function AdminDonantesPage() {
         return;
       }
 
-      
       if (!editingDonante && donantes.some(d => d.id === value.id)) {
         alert('Ya existe un donante con ese ID');
         setShowLoading(false);
@@ -99,11 +97,13 @@ export default function AdminDonantesPage() {
       header: 'Logo',
       accessorKey: 'logo',
       cell: ({ row }) => (
+        <div className="flex justify-center items-center">
         <img
           src={row.original.logo}
           alt={row.original.nombre}
-          className="h-30 w-30 object-contain"
+          className="h-20 w-20 object-contain mx-auto"
         />
+        </div>
       ),
     },
     {
@@ -114,7 +114,7 @@ export default function AdminDonantesPage() {
       header: 'Descripción',
       accessorKey: 'descripcion',
       cell: ({ row }) => (
-        <div className="max-w-xs whitespace-pre-line break-words">
+        <div className="max-w-lg whitespace-pre-line break-words text-sm ">
           {row.original.descripcion}
         </div>
       ),
@@ -122,7 +122,7 @@ export default function AdminDonantesPage() {
     {
       header: 'Acciones',
       cell: ({ row }) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-center items-center">
           <button
             onClick={() => handleEdit(row.original)}
             className="text-amber-600 hover:text-amber-700 text-sm"
@@ -152,15 +152,17 @@ export default function AdminDonantesPage() {
   return (
     <div className="min-h-screen pt-28 bg-gradient-to-b from-white to-blue-50 px-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-4xl font-bold text-red-700">Administrar Donantes</h1>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 text-center sm:text-left">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-red-700">
+            Administrar Donantes
+          </h1>
           <button
             onClick={() => {
               setEditingDonante(null);
               form.reset();
               setIsFormOpen(true);
             }}
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            className="bg-red-600 text-white text-sm px-4 py-2 rounded hover:bg-red-700 sm:text-base sm:px-6 sm:py-2 w-full sm:w-auto"
           >
             + Agregar Donante
           </button>
@@ -169,42 +171,84 @@ export default function AdminDonantesPage() {
         {isLoading ? (
           <p className="text-center text-gray-500">Cargando donantes...</p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
-            <table className="min-w-full bg-white border border-gray-300">
-              <thead className="bg-red-100 text-red-800">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className="px-6 py-3 border border-gray-300 text-left text-sm font-bold uppercase tracking-wide"
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="divide-y divide-gray-300">
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-blue-50 transition">
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="px-6 py-4 border border-gray-200 text-gray-700 align-top"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Tabla para escritorio */}
+            <div className="hidden md:block overflow-x-auto rounded-lg border border-gray-300 shadow-md">
+              <table className="min-w-full bg-white border border-gray-300 text-sm">
+                <thead className="bg-red-100 text-red-800">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-4 md:px-6 py-2 md:py-3 border border-gray-300 text-center text-xs md:text-sm font-bold uppercase tracking-wide"
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody className="divide-y divide-gray-300">
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-blue-50 transition">
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className="px-6 py-4 border border-gray-200 text-gray-700 align-top h-full"
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Cards para móviles */}
+            <div className="block md:hidden space-y-4">
+              {donantes.map((d) => (
+                <div
+                  key={d.id}
+                  className="bg-white border border-gray-300 rounded-lg p-4 shadow-sm"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <img
+                      src={d.logo}
+                      alt={d.nombre}
+                      className="w-12 h-12 object-contain border rounded"
+                    />
+                    <h2 className="text-lg font-bold text-red-700">{d.nombre}</h2>
+                  </div>
+                  <p className="text-sm text-gray-700 whitespace-pre-line break-words mb-2">
+                    {d.descripcion}
+                  </p>
+                  <div className="flex justify-end gap-4 text-sm">
+                    <button
+                      onClick={() => handleEdit(d)}
+                      className="text-amber-600 hover:text-amber-700"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setToDeleteId(d.id);
+                        setShowConfirmDelete(true);
+                      }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
-      {/* Formulario de creación/edición */}
+      {/* Formulario de creacion de edicion */}
       {isFormOpen && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
           <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-xl">
@@ -225,7 +269,7 @@ export default function AdminDonantesPage() {
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     className="w-full border p-2 rounded"
-                    disabled={!!editingDonante} 
+                    disabled={!!editingDonante}
                   />
                 )}
               </form.Field>
