@@ -1,7 +1,8 @@
 import { Dialog } from '@headlessui/react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { SuggestionForm } from '../../Suggestions/SuggestionForm';
+import SuggestionForm from '../../Suggestions/SuggestionForm';
+
 
 interface Props {
   isOpen: boolean;

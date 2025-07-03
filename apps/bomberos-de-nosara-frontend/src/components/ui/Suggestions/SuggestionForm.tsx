@@ -1,7 +1,11 @@
 import { useState } from "react";
 import emailjs from "emailjs-com";
 
-export default function SuggestionForm() {
+interface SuggestionFormProps {
+  onSuccess?: () => void;
+}
+
+export default function SuggestionForm({ onSuccess }: SuggestionFormProps) {
   const [formData, setFormData] = useState({
     nombre: "",
     email: "",
@@ -9,20 +13,21 @@ export default function SuggestionForm() {
   });
   const [enviado, setEnviado] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    emailjs.send(
-      "YOUR_SERVICE_ID",
-      "YOUR_TEMPLATE_ID",
-      formData,
-      "YOUR_USER_ID"
-    )
-    .then(() => setEnviado(true))
-    .catch((err) => console.error("Error al enviar:", err));
+    emailjs
+      .send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", formData, "YOUR_USER_ID")
+      .then(() => {
+        setEnviado(true);
+        if (onSuccess) onSuccess(); // <- se llama al cerrar el modal
+      })
+      .catch((err) => console.error("Error al enviar:", err));
   };
 
   if (enviado) {
@@ -67,3 +72,4 @@ export default function SuggestionForm() {
     </form>
   );
 }
+
