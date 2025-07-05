@@ -12,6 +12,9 @@ import AdminDonantesPage from '../pages/AdminDonantesPage';
 import AdminLoginPage from '../pages/AdminLoginPage';
 import DonantesPage from '../pages/DonantesPage';
 import Home from '../pages/Home';
+import NuestroTrabajoPage from '../pages/NuestroTrabajoPage';
+import ContactoPage from '../pages/ContactoPage';
+
 
 import NoticiasPage from '../pages/NoticiasPage';
 
@@ -20,6 +23,7 @@ import AdminChatPage from '../pages/Administrativas/AdminChatPage';
 import AdminDashboardPage from '../pages/Administrativas/AdminDashboardPage';
 import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
 import AdminEstadisticasPage from '../pages/Administrativas/AdminEstadisticasPage';
+import AdminMaterialEducativoPage from "../pages/Administrativas/AdminMaterialEducativoPage";
 import AdminUsuariosPage from '../pages/Administrativas/AdminUsuariosPage';
 import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
 import AdminNoticiasPage from '../pages/AdminNoticiasPage';
@@ -76,8 +80,20 @@ const routeTree=rootRoute.addChildren([
     getParentRoute: () => rootRoute,
   }),
   createRoute({
+  path: '/nuestro-trabajo',
+  component: NuestroTrabajoPage,
+  getParentRoute: () => rootRoute,
+}),
+
+
+  createRoute({
     path: '/login',
     component: AdminLoginPage,
+    getParentRoute: () => rootRoute,
+  }),
+    createRoute({
+    path: '/contacto',
+    component: ContactoPage,
     getParentRoute: () => rootRoute,
   }),
  
@@ -120,6 +136,18 @@ const routeTree=rootRoute.addChildren([
       if (!isAdmin()) throw redirect({ to: '/login' });
     },
   }),
+
+  
+  createRoute({
+   path: '/admin/material-interno',
+    component: AdminMaterialEducativoPage,
+   getParentRoute: () => rootRoute,
+   beforeLoad: () => {
+    if (!isAdmin()) throw redirect({ to: '/login' });
+  },
+}),
+
+
   createRoute({
   path: '/admin/usuarios',
   component: AdminUsuariosPage,

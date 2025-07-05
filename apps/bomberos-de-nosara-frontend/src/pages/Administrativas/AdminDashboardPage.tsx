@@ -6,8 +6,9 @@ import {
   FaChartBar,
   FaComments,
   FaNewspaper,
+  FaBook
 } from "react-icons/fa";
-import { getUserRoles } from '../../auth/AdminAuth'; // ajustá path si es necesario
+import { getUserRoles } from '../../auth/AdminAuth'; 
 
 const allDashboardItems = [
   {
@@ -40,6 +41,15 @@ const allDashboardItems = [
     href: "/admin/estadisticas",
     roles: ["SUPERUSER", "ADMIN"],
   },
+
+ {
+  icon: <FaBook size={24} />, 
+  label: "Material Interno",
+  href: "/admin/material-interno",
+  roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"],
+},
+
+
   {
     icon: <FaComments size={24} />,
     label: "Chat Interno",

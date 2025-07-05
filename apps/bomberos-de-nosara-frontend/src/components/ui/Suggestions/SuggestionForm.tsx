@@ -1,123 +1,75 @@
-import { useForm } from '@tanstack/react-form';
-import { useAddSuggestion } from '../../../hooks/useSuggestions';
-import { Suggestion } from '../../../types/suggestion';
-import { v4 as uuidv4 } from 'uuid';
-import { useState } from 'react';
-import { SuccessModal } from '../Modals/suggestions/SuccessSuggestionModal';
-import { LoadingModal } from '../Modals/Donantes/LoadingModal';
+import { useState } from "react";
+import emailjs from "emailjs-com";
 
-export function SuggestionForm({ onSuccess }: { onSuccess?: () => void }) {
-  const addMutation = useAddSuggestion();
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showLoading, setShowLoading] = useState(false);
+interface SuggestionFormProps {
+  onSuccess?: () => void;
+}
 
-  const form = useForm({
-    defaultValues: {
-      nombre: '',
-      email: '',
-      telefono: '',
-      contenido: '',
-    },
-    onSubmit: async ({ value }) => {
-      setShowLoading(true);
-      const nueva: Suggestion = {
-        ...value,
-        id: uuidv4(),
-        fecha: new Date().toISOString(),
-      };
-      setTimeout(async () => {
-        await addMutation.mutateAsync(nueva);
-        setShowLoading(false);
-        setShowSuccess(true);
-        form.reset();
-        onSuccess?.();
-      }, 1000);
-    },
+export default function SuggestionForm({ onSuccess }: SuggestionFormProps) {
+  const [formData, setFormData] = useState({
+    nombre: "",
+    email: "",
+    mensaje: "",
   });
+  const [enviado, setEnviado] = useState(false);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    emailjs
+      .send("YOUR_SERVICE_ID", "YOUR_TEMPLATE_ID", formData, "YOUR_USER_ID")
+      .then(() => {
+        setEnviado(true);
+        if (onSuccess) onSuccess(); // <- se llama al cerrar el modal
+      })
+      .catch((err) => console.error("Error al enviar:", err));
+  };
+
+  if (enviado) {
+    return <p className="text-green-600 text-center mt-4">¡Gracias por tu sugerencia!</p>;
+  }
 
   return (
-    <>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          form.handleSubmit();
-        }}
-        className="space-y-4"
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <input
+        type="text"
+        name="nombre"
+        placeholder="Tu nombre"
+        value={formData.nombre}
+        onChange={handleChange}
+        required
+        className="w-full border px-4 py-2 rounded"
+      />
+      <input
+        type="email"
+        name="email"
+        placeholder="Tu correo"
+        value={formData.email}
+        onChange={handleChange}
+        required
+        className="w-full border px-4 py-2 rounded"
+      />
+      <textarea
+        name="mensaje"
+        placeholder="Tu mensaje"
+        value={formData.mensaje}
+        onChange={handleChange}
+        required
+        className="w-full border px-4 py-2 rounded"
+        rows={5}
+      />
+      <button
+        type="submit"
+        className="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 transition"
       >
-        <form.Field name="nombre">
-          {(field) => (
-            <div>
-              <label className="block">Nombre Completo</label>
-              <input
-                type="text"
-                className="input w-full border rounded p-2"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                required
-              />
-            </div>
-          )}
-        </form.Field>
-
-        <form.Field name="email">
-          {(field) => (
-            <div>
-              <label className="block">Email</label>
-              <input
-                type="email"
-                className="input w-full border rounded p-2"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                required
-              />
-            </div>
-          )}
-        </form.Field>
-
-        <form.Field name="telefono">
-          {(field) => (
-            <div>
-              <label className="block">Teléfono</label>
-              <input
-                type="tel"
-                className="input w-full border rounded p-2"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                required
-              />
-            </div>
-          )}
-        </form.Field>
-
-        <form.Field name="contenido">
-          {(field) => (
-            <div>
-              <label className="block">Sugerencia</label>
-              <textarea
-                rows={4}
-                className="input w-full border rounded p-2"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-              />
-            </div>
-          )}
-        </form.Field>
-
-        <button
-          type="submit"
-          className="bg-lime-500 text-white px-4 py-2 rounded hover:bg-lime-600 transition-all"
-        >
-          Enviar sugerencia
-        </button>
-      </form>
-
-      {showLoading && <LoadingModal />}
-      {showSuccess && (
-        <SuccessModal
-          message="¡Sugerencia enviada correctamente!"
-          onClose={() => setShowSuccess(false)}
-        />
-      )}
-    </>
+        Enviar
+      </button>
+    </form>
   );
 }
+
