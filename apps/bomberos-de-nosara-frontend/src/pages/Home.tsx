@@ -4,6 +4,7 @@ import NoticiasPage from "./NoticiasPage";
 import SuggestionsPage from "./SuggestionsPage";
 import NuestroTrabajoPage from "./NuestroTrabajoPage";
 import ContactoPage from "./ContactoPage";
+import DonarPage from "./DonarPage";
 
 export default function Home() {
     return (
@@ -31,7 +32,9 @@ export default function Home() {
                 <NoticiasPage />
             </div>
             <SuggestionsPage />
+            <DonarPage/>
             <ContactoPage/>
+    
         </div>
         
     );
