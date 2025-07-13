@@ -5,6 +5,7 @@ import { existsSync } from 'fs';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ServeStaticModule } from '@nestjs/serve-static';
 
 import { DonantesModule } from './donantes/donantes.module';
 import { AuthModule } from './auth/auth.module';
@@ -20,19 +21,20 @@ import { EquipoBomberilModule } from './equipo-bomberil/equipo-bomberil.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: (() => {
-       
         const localPath = join(__dirname, '..', '.env');
-      
         const dockerPath = '/app/.env';
-//lol
-        
+
         if (process.env.NODE_ENV === 'production') {
           return existsSync(dockerPath) ? dockerPath : localPath;
         }
 
-       
         return existsSync(localPath) ? localPath : undefined;
       })(),
+    }),
+
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
     }),
 
     TypeOrmModule.forRootAsync({

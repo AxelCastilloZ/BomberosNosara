@@ -12,7 +12,7 @@ export class Donante {
   descripcion!: string;
 
  @Column({ length: 1000 })
-logo!: string;
+  logo!: string;
 
 @Column({ length: 1000 })
 url!: string;

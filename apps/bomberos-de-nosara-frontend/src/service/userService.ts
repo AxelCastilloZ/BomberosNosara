@@ -21,3 +21,28 @@ export const createUser = async (userData: {
   });
   return res.data;
 };
+
+export const updateUser = async (
+  id: number,
+  userData: {
+    username: string;
+    password?: string;
+    roles: string[];
+  }
+) => {
+  const token = localStorage.getItem('token');
+  const res = await axios.put(`http://localhost:3000/users/${id}`, userData, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+export const deleteUser = async (id: number) => {
+  const token = localStorage.getItem('token');
+  const res = await axios.delete(`http://localhost:3000/users/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.data;
+};
+
+

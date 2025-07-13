@@ -1,4 +1,8 @@
 import React, { useState } from 'react';
+import { updateUser } from '../../../../service/userService';
+
+
+
 
 interface EditUserModalProps {
   user: {
@@ -8,18 +12,31 @@ interface EditUserModalProps {
     rol: string;
   };
   onClose: () => void;
+  onUpdated: () => void;
 }
 
-const EditUserModal = ({ user, onClose }: EditUserModalProps) => {
+const EditUserModal = ({ user, onClose, onUpdated }: EditUserModalProps) => {
   const [nombre, setNombre] = useState(user.nombre);
-  const [email, setEmail] = useState(user.email);
+  const [password, setPassword] = useState('');
   const [rol, setRol] = useState(user.rol);
 
-  const handleUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Usuario actualizado:', { nombre, email, rol });
+  const handleUpdate = async (e: React.FormEvent) => {
+  e.preventDefault();
+  try {
+    await updateUser(user.id, {
+      username: nombre,
+      password: password || undefined, // solo si se escribió
+      roles: [rol],
+    });
+
+    alert(`Usuario actualizado:\nNombre: ${nombre}\nRol: ${rol}`);
     onClose();
-  };
+    await onUpdated(); // Esto es lo que refresca la lista
+  } catch (err) {
+    alert('Error al actualizar usuario');
+  }
+};
+
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center">
@@ -33,20 +50,46 @@ const EditUserModal = ({ user, onClose }: EditUserModalProps) => {
             placeholder="Nombre"
           />
           <input
-            type="email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
             className="w-full p-2 border rounded"
-            placeholder="Correo"
+            placeholder="Nueva contraseña (opcional)"
           />
-          <select
-            value={rol}
-            onChange={e => setRol(e.target.value)}
-            className="w-full p-2 border rounded"
-          >
-            <option value="admin">Administrador</option>
-            <option value="bombero">Bombero</option>
-          </select>
+
+          <div className="space-y-2">
+            <label className="block">
+              <input
+                type="radio"
+                name="role"
+                value="ADMIN"
+                checked={rol === 'ADMIN'}
+                onChange={(e) => setRol(e.target.value)}
+              />
+              ADMIN
+            </label>
+            <label className="block">
+              <input
+                type="radio"
+                name="role"
+                value="PERSONAL_BOMBERIL"
+                checked={rol === 'PERSONAL_BOMBERIL'}
+                onChange={(e) => setRol(e.target.value)}
+              />
+              PERSONAL_BOMBERIL
+            </label>
+            <label className="block">
+              <input
+                type="radio"
+                name="role"
+                value="VOLUNTARIO"
+                checked={rol === 'VOLUNTARIO'}
+                onChange={(e) => setRol(e.target.value)}
+              />
+              VOLUNTARIO
+            </label>
+          </div>
+
 
           <div className="flex justify-end space-x-2">
             <button

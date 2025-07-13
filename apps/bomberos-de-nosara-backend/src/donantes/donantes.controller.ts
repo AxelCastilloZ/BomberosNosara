@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { DonantesService } from './donantes.service';
 import { CreateDonanteDto } from './dto/create-donante.dto';
 import { UpdateDonanteDto } from './dto/update-donante.dto';
@@ -19,12 +20,17 @@ export class DonantesController {
   }
 
 
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(RoleEnum.SUPERUSER, RoleEnum.ADMIN)
-  @Post()
-  create(@Body() dto: CreateDonanteDto): Promise<Donante> {
-    return this.donantesService.create(dto);
-  }
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(RoleEnum.SUPERUSER, RoleEnum.ADMIN)
+@Post()
+@UseInterceptors(FileInterceptor('logo'))
+create(
+  @Body() dto: CreateDonanteDto,
+  @UploadedFile() file: Express.Multer.File,
+): Promise<Donante> {
+  return this.donantesService.create(dto, file);
+}
+
 
   
   @UseGuards(JwtAuthGuard, RolesGuard)
