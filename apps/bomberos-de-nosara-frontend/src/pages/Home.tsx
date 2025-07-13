@@ -5,8 +5,11 @@ import SuggestionsPage from "./SuggestionsPage";
 import NuestroTrabajoPage from "./NuestroTrabajoPage";
 import ContactoPage from "./ContactoPage";
 
+
+
 export default function Home() {
     return (
+        <>
         <div className="min-h-screen bg-white px-4 text-center pt-28 flex flex-col items-center">
             <h1 className="text-5xl font-serif font-light text-gray-900 mb-6">
                 Bienvenido a Bomberos Nosara
@@ -31,8 +34,11 @@ export default function Home() {
                 <NoticiasPage />
             </div>
             <SuggestionsPage />
-            <ContactoPage/>
-        </div>
+           
         
+        </div>
+
+         <ContactoPage/>
+        </>
     );
 }

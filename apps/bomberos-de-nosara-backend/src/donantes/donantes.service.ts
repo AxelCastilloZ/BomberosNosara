@@ -12,10 +12,16 @@ export class DonantesService {
     private readonly donanteRepository: Repository<Donante>,
   ) {}
 
-  async create(dto: CreateDonanteDto): Promise<Donante> {
-    const nuevo = this.donanteRepository.create(dto);
-    return this.donanteRepository.save(nuevo);
+  async create(dto: CreateDonanteDto, file?: Express.Multer.File): Promise<Donante> {
+  const nuevo = this.donanteRepository.create(dto);
+
+  if (file) {
+    nuevo.logo = `/uploads/donantes/${file.filename}`;
   }
+
+  return this.donanteRepository.save(nuevo);
+}
+
 
   async findAll(): Promise<Donante[]> {
     return this.donanteRepository.find();

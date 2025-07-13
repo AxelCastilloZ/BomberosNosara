@@ -30,6 +30,9 @@ export default function AdminDonantesPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [toDeleteId, setToDeleteId] = useState<string | null>(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string>("");
+
 
   const form = useForm({
     defaultValues: {
@@ -42,14 +45,29 @@ export default function AdminDonantesPage() {
     onSubmit: async ({ value }) => {
       setShowLoading(true);
 
-      const camposInvalidos = Object.entries(value).filter(
-        ([_, v]) => !v || v.trim() === ''
-      );
-      if (camposInvalidos.length > 0) {
-        alert('Todos los campos son obligatorios');
-        setShowLoading(false);
-        return;
-      }
+       const camposInvalidos = Object.entries(value).filter(
+          ([k, v]) => k !== 'logo' && (!v || v.trim() === '')
+        );
+
+        if (camposInvalidos.length > 0 || !logoFile) {
+          alert('Todos los campos son obligatorios');
+          setShowLoading(false);
+          return;
+        }
+
+        if (!logoFile && !editingDonante) {
+          alert('Debes seleccionar un logo');
+          setShowLoading(false);
+          return;
+        }
+
+
+        if (!logoFile) {
+          alert('Debes seleccionar un archivo de imagen.');
+          setShowLoading(false);
+          return;
+        }
+
 
       if (!editingDonante && donantes.some(d => d.id === value.id)) {
         alert('Ya existe un donante con ese ID');
@@ -62,7 +80,7 @@ export default function AdminDonantesPage() {
           updateDonante(value);
           setSuccessMsg(`Donante actualizado: ${value.nombre}`);
         } else {
-          addDonante(value);
+          addDonante({ ...value, logoFile});
           setSuccessMsg(`Donante agregado: ${value.nombre}`);
         }
       } catch (err) {
@@ -73,6 +91,8 @@ export default function AdminDonantesPage() {
         setIsFormOpen(false);
         setEditingDonante(null);
         form.reset();
+        setLogoFile(null);
+
       }
     },
   });
@@ -97,9 +117,11 @@ export default function AdminDonantesPage() {
       header: 'Logo',
       accessorKey: 'logo',
       cell: ({ row }) => (
+        
         <div className="flex justify-center items-center">
+      
         <img
-          src={row.original.logo}
+          src={`${import.meta.env.VITE_API_URL}${row.original.logo}`}
           alt={row.original.nombre}
           className="h-20 w-20 object-contain mx-auto"
         />
@@ -215,7 +237,7 @@ export default function AdminDonantesPage() {
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <img
-                      src={d.logo}
+                      src={`${import.meta.env.VITE_API_URL}${d.logo}`}
                       alt={d.nombre}
                       className="w-12 h-12 object-contain border rounded"
                     />
@@ -293,16 +315,28 @@ export default function AdminDonantesPage() {
                   />
                 )}
               </form.Field>
-              <form.Field name="logo">
-                {(field) => (
-                  <input
-                    placeholder="URL del Logo"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    className="w-full border p-2 rounded"
-                  />
-                )}
-              </form.Field>
+          
+             <div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files.length > 0) {
+                    setLogoFile(e.target.files[0]);
+                  }
+                }}
+                className="w-full border p-2 rounded"
+              />
+              {logoFile && (
+                <img
+                  src={URL.createObjectURL(logoFile)}
+                  alt="Vista previa"
+                  className="mt-2 h-20 object-contain"
+                />
+              )}
+            </div>
+
+
               <form.Field name="url">
                 {(field) => (
                   <input

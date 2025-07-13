@@ -12,8 +12,10 @@ export const DonanteCard = ({ donante, onClick }: Props) => {
     >
       <a href={donante.url} target="_blank" rel="noopener noreferrer">
         <div className="block h-32 w-full items-center justify-center">
+          
+
         <img
-          src={donante.logo}
+          src={`${import.meta.env.VITE_API_URL}${donante.logo}`}
           alt={donante.nombre}
           className="h-full w-auto object-contain mx-auto transition-transform duration-300 hover:scale-105"
         />

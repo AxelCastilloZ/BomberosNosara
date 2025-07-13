@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { getUsers, createUser } from '../../service/userService';
+import { getUsers, createUser, deleteUser } from '../../service/userService';
+import EditUserModal from '../../components/ui/Administrativa/UsuariosAdmin/EditUserModal';
+import ConfirmDeleteModal from '../../components/ui/Administrativa/UsuariosAdmin/ConfirmDeleteModal';
 import { FaUserPlus, FaUsers } from 'react-icons/fa';
 import { HiOutlineUserGroup } from 'react-icons/hi';
 
@@ -16,6 +18,8 @@ const schema = yup.object({
 export default function AdminUsuariosPage() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [deletingUser, setDeletingUser] = useState<any | null>(null);
 
   const {
     register,
@@ -34,7 +38,6 @@ export default function AdminUsuariosPage() {
   });
 
   const selectedRoles = watch('roles');
-
   const allRoles = ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'];
 
   const loadUsers = async () => {
@@ -94,7 +97,7 @@ export default function AdminUsuariosPage() {
 
           <div>
             <p className="font-medium mb-2">Roles:</p>
-            <div className="lg:grid grid-cols-2 md:flex  gap-2">
+            <div className="lg:grid grid-cols-2 md:flex gap-2">
               {allRoles.map((role) => (
                 <label key={role} className="flex items-center space-x-2 text-sm">
                   <input
@@ -143,10 +146,54 @@ export default function AdminUsuariosPage() {
                   | Roles: {user.roles.map((r: any) => r.name).join(', ')}
                 </span>
               </div>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setEditingUser(user)}
+                  className="text-blue-600 hover:underline"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => setDeletingUser(user)}
+                  className="text-red-600 hover:underline"
+                >
+                  Eliminar
+                </button>
+              </div>
             </li>
           ))}
         </ul>
       </div>
+
+      {/* Modales */}
+      {editingUser && (
+        <EditUserModal
+          user={{
+            id: editingUser.id,
+            nombre: editingUser.username,
+            email: editingUser.username, // Cambia esto si tienes un campo real de email
+            rol: editingUser.roles[0]?.name || '',
+          }}
+          onClose={() => setEditingUser(null)}
+          onUpdated={loadUsers}
+        />
+      )}
+
+      {deletingUser && (
+        <ConfirmDeleteModal
+          userName={deletingUser.username}
+          onCancel={() => setDeletingUser(null)}
+          onConfirm={async () => {
+            try {
+              await deleteUser(deletingUser.id);
+              await loadUsers();
+              setDeletingUser(null);
+            } catch (err) {
+              alert('Error al eliminar usuario');
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

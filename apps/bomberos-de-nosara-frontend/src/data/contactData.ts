@@ -1,4 +1,4 @@
-export const contactHero = "Bienvenido al Sitio Web Oficial de La Asociación Bomberos de Nosara.";
+export const contactHero = "Bienvenido  SOY MELINA al Sitio Web Oficial de La Asociación Bomberos de Nosara.";
 
 export const contactParagraphs = [
   "Los Bomberos de Nosara ayudan a garantizar servicios de emergencia oportunos para la comunidad porque, en caso de emergencia, ¡cada segundo cuenta!",
