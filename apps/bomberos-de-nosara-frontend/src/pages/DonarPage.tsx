@@ -1,4 +1,4 @@
-import { DonarAhoraSection } from '../components/ui/Donante/DonarAhoraSection';
+import { DonarAhoraSection } from '../components/ui/Donar/DonarAhoraSection';
 
 export default function DonarPage() {
   return (

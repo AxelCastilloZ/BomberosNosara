@@ -24,7 +24,6 @@ export default function Home() {
                 <NuestroTrabajoPage/>
             </div>
             
-
             <div className="mt-16 w-full">
                 <DonantesPage />
             </div>
