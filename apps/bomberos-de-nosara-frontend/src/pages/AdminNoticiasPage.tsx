@@ -15,6 +15,7 @@ import {
   useNoticias,
   useUpdateNoticia,
 } from '../service/noticiasService';
+import { uploadImage } from '../service/uploadService';
 import { Noticia } from '../types/news';
 
 export default function AdminNoticiasPage() {
@@ -35,6 +36,8 @@ export default function AdminNoticiasPage() {
   const [successMsg, setSuccessMsg]=useState('');
   const [toDeleteId, setToDeleteId]=useState<string|null>(null);
   const [showConfirmDelete, setShowConfirmDelete]=useState(false);
+  const [selectedFile, setSelectedFile]=useState<File|null>(null);
+  const [previewUrl, setPreviewUrl]=useState<string>('');
 
   const form=useForm({
     defaultValues: {
@@ -47,9 +50,22 @@ export default function AdminNoticiasPage() {
     onSubmit: async ({ value }) => {
       try {
         setShowLoading(true);
+        
+        // Si hay un archivo seleccionado, subirlo primero
+        let imageUrl = value.url;
+        if (selectedFile) {
+          imageUrl = await uploadImage(selectedFile);
+        }
+        
+        // Crear el objeto de noticia con la URL de la imagen
+        const noticiaData = {
+          ...value,
+          url: imageUrl
+        };
+        
         if (editingNoticia) {
           await new Promise<void>((resolve, reject) => {
-            updateNoticia(value, {
+            updateNoticia(noticiaData, {
               onSuccess: () => {
                 setSuccessMsg(`Noticia actualizada: ${value.titulo}`);
                 resolve();
@@ -61,7 +77,7 @@ export default function AdminNoticiasPage() {
           });
         } else {
           await new Promise<void>((resolve, reject) => {
-            addNoticia(value, {
+            addNoticia(noticiaData, {
               onSuccess: () => {
                 setSuccessMsg(`Noticia agregada: ${value.titulo}`);
                 resolve();
@@ -75,6 +91,8 @@ export default function AdminNoticiasPage() {
         setShowSuccess(true);
         setIsFormOpen(false);
         setEditingNoticia(null);
+        setSelectedFile(null);
+        setPreviewUrl('');
         form.reset();
       } catch (error) {
         console.error('Error en la operación:', error);
@@ -86,11 +104,26 @@ export default function AdminNoticiasPage() {
     },
   });
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      // Crear URL de preview
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      console.log(url);
+      // Limpiar el campo URL del formulario ya que ahora usamos el archivo
+      form.setFieldValue('url', '');
+    }
+  };
+
   const handleEdit=(noticia: Noticia) => {
     setEditingNoticia(noticia);
     Object.entries(noticia).forEach(([key, value]) => {
       form.setFieldValue(key as keyof Noticia, value);
     });
+    setPreviewUrl(noticia.url);
+    setSelectedFile(null);
     setIsFormOpen(true);
   };
 
@@ -192,6 +225,8 @@ export default function AdminNoticiasPage() {
           <button
             onClick={() => {
               setEditingNoticia(null);
+              setSelectedFile(null);
+              setPreviewUrl('');
               form.reset();
               setIsFormOpen(true);
             }}
@@ -301,16 +336,26 @@ export default function AdminNoticiasPage() {
                     />
                   )}
                 </form.Field>
-                <form.Field name="url">
-                  {(field) => (
-                    <input
-                      placeholder="URL de la Imagen"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      className="w-full border p-2 rounded"
-                    />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Imagen de la Noticia
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full border p-2 rounded"
+                  />
+                  {(previewUrl || editingNoticia?.url) && (
+                    <div className="mt-2">
+                      <img
+                        src={previewUrl || editingNoticia?.url}
+                        alt="Preview"
+                        className="w-32 h-32 object-cover rounded border"
+                      />
+                    </div>
                   )}
-                </form.Field>
+                </div>
                 <form.Field name="fecha">
                   {(field) => (
                     <input
@@ -326,7 +371,11 @@ export default function AdminNoticiasPage() {
                 <div className="flex justify-between pt-4">
                   <button
                     type="button"
-                    onClick={() => setIsFormOpen(false)}
+                    onClick={() => {
+                      setIsFormOpen(false);
+                      setSelectedFile(null);
+                      setPreviewUrl('');
+                    }}
                     className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
                   >
                     Cancelar
