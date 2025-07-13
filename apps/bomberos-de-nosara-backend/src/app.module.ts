@@ -7,7 +7,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ServeStaticModule } from '@nestjs/serve-static';
 
-
 import { DonantesModule } from './donantes/donantes.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -15,22 +14,19 @@ import { RolesModule } from './roles/roles.module';
 import { SeederModule } from './seeder/seeder.module';
 import { NoticiaModule } from './noticias/noticia.module';
 import { SugerenciaModule } from './suggestion/suggestion.module';
+import { EquipoBomberilModule } from './equipo-bomberil/equipo-bomberil.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: (() => {
-
         const localPath = join(__dirname, '..', '.env');
-
         const dockerPath = '/app/.env';
-//lol
 
         if (process.env.NODE_ENV === 'production') {
           return existsSync(dockerPath) ? dockerPath : localPath;
         }
-
 
         return existsSync(localPath) ? localPath : undefined;
       })(),
@@ -66,6 +62,7 @@ import { SugerenciaModule } from './suggestion/suggestion.module';
     RolesModule,
     SeederModule,
     SugerenciaModule,
+    EquipoBomberilModule,
   ],
 })
 export class AppModule {}
