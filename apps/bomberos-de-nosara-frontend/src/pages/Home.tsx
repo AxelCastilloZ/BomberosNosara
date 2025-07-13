@@ -39,7 +39,9 @@ export default function Home() {
           <DonarPage />
         </div>
 
-        <ContactoPage />
+        <div className="mt-16 w-full">
+          <ContactoPage />
+        </div>
       </div>
     </>
   );
