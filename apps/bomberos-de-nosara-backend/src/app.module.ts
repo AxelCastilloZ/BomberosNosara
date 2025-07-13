@@ -1,5 +1,6 @@
-
 import * as crypto from 'crypto';
+import { join } from 'path';
+import { existsSync } from 'fs';
 
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -12,11 +13,26 @@ import { RolesModule } from './roles/roles.module';
 import { SeederModule } from './seeder/seeder.module';
 import { NoticiaModule } from './noticias/noticia.module';
 import { SugerenciaModule } from './suggestion/suggestion.module';
+import { EquipoBomberilModule } from './equipo-bomberil/equipo-bomberil.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: (() => {
+       
+        const localPath = join(__dirname, '..', '.env');
+      
+        const dockerPath = '/app/.env';
+//lol
+        
+        if (process.env.NODE_ENV === 'production') {
+          return existsSync(dockerPath) ? dockerPath : localPath;
+        }
+
+       
+        return existsSync(localPath) ? localPath : undefined;
+      })(),
     }),
 
     TypeOrmModule.forRootAsync({
@@ -29,11 +45,11 @@ import { SugerenciaModule } from './suggestion/suggestion.module';
         username: configService.get<string>('DATABASE_USER', 'root'),
         password: configService.get<string>('DATABASE_PASSWORD', ''),
         database: configService.get<string>('DATABASE_NAME', 'bomberosNosara'),
-        synchronize: false,
-        dropSchema: false,
+        synchronize: true,
+        dropSchema: true,
         autoLoadEntities: true,
-        retryAttempts: 10,       
-       retryDelay: 3000,        
+        retryAttempts: 10,
+        retryDelay: 3000,
       }),
     }),
 
@@ -44,7 +60,7 @@ import { SugerenciaModule } from './suggestion/suggestion.module';
     RolesModule,
     SeederModule,
     SugerenciaModule,
+    EquipoBomberilModule,
   ],
 })
 export class AppModule {}
-
