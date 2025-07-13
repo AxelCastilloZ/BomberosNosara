@@ -33,9 +33,25 @@ export const useDonantes = () => {
 export const useAddDonante = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (newDonante: Donante) => {
-      await axios.post(API_URL, newDonante, {
-        headers: getAuthHeader(),
+    mutationFn: async (newDonante: {
+      id: string;
+      nombre: string;
+      descripcion: string;
+      url: string;
+      logoFile: File; //  Nuevo campo que pasaremos desde el formulario
+    }) => {
+      const formData = new FormData();
+      formData.append('id', String (newDonante.id));
+      formData.append('nombre', String (newDonante.nombre));
+      formData.append('descripcion', String (newDonante.descripcion));
+      formData.append('url', String (newDonante.url));
+      formData.append('logo', newDonante.logoFile); //  Aquí subimos el archivo
+
+      await axios.post(API_URL, formData, {
+        headers: {
+          ...getAuthHeader(),
+          'Content-Type': 'multipart/form-data',
+        },
       });
     },
     onSuccess: () => {
@@ -43,6 +59,7 @@ export const useAddDonante = () => {
     },
   });
 };
+
 
 // PUT
 export const useUpdateDonante = () => {

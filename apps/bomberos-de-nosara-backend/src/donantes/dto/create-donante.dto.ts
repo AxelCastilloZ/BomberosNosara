@@ -1,4 +1,4 @@
-import { IsString, IsUrl, MaxLength } from 'class-validator';
+import { IsString, IsUrl, MaxLength, IsOptional } from 'class-validator';
 
 export class CreateDonanteDto {
   @IsString()
@@ -12,8 +12,8 @@ export class CreateDonanteDto {
   @IsString()
   descripcion!: string;
 
-  @IsUrl()
-  logo!: string;
+  @IsOptional()
+  logo?: string;
 
   @IsUrl()
   url!: string;

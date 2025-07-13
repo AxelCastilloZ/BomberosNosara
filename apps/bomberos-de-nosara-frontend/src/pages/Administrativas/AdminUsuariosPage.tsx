@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { getUsers, createUser } from '../../service/userService';
+import { getUsers, createUser, deleteUser } from '../../service/userService';
+import EditUserModal from "../../components/ui/Administrativa/UsuariosAdmin/EditUserModal";
+import ConfirmDeleteModal from "../../components/ui/Administrativa/UsuariosAdmin/ConfirmDeleteModal";
+
 
 export default function AdminUsuariosPage() {
   const [users, setUsers] = useState([]);
@@ -7,6 +10,10 @@ export default function AdminUsuariosPage() {
   const [password, setPassword] = useState('');
   const [roles, setRoles] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [deletingUser, setDeletingUser] = useState<any | null>(null);
+
+
 
   const loadUsers = async () => {
     try {
@@ -84,11 +91,61 @@ export default function AdminUsuariosPage() {
       <h2 className="text-lg font-semibold mb-2">Usuarios existentes</h2>
       <ul className="space-y-2">
         {users.map((user: any) => (
-          <li key={user.id} className="border p-3 rounded bg-gray-50">
-            <strong>{user.username}</strong> — Roles: {user.roles.map((r: any) => r.name).join(', ')}
+          <li
+            key={user.id}
+            className="border p-3 rounded bg-gray-50 flex justify-between items-center"
+          >
+            <div>
+              <strong>{user.username}</strong> — Roles: {user.roles.map((r: any) => r.name).join(', ')}
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setEditingUser(user)}
+                className="text-blue-600 hover:underline"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => setDeletingUser(user)}
+                className="text-red-600 hover:underline"
+              >
+                Eliminar
+              </button>
+            </div>
           </li>
         ))}
       </ul>
+
+
+      {editingUser && (
+        <EditUserModal
+          user={{
+            id: editingUser.id,
+            nombre: editingUser.username, // si tienes nombre separado, cámbialo
+            email: editingUser.username,  // si tienes email, cámbialo
+            rol: editingUser.roles[0]?.name || '',
+          }}
+          onClose={() => setEditingUser(null)}
+          onUpdated={loadUsers}
+        />
+      )}
+
+      {deletingUser && (
+        <ConfirmDeleteModal
+          userName={deletingUser.username}
+          onCancel={() => setDeletingUser(null)}
+          onConfirm={async () => {
+            try {
+              await deleteUser(deletingUser.id);
+              await loadUsers();
+              setDeletingUser(null);
+            } catch (err) {
+              alert('Error al eliminar usuario');
+            }
+          }}
+        />
+      )}
+
     </div>
   );
 }
