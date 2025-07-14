@@ -1,4 +1,4 @@
-import { IsString, IsUrl, IsDate } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreateNoticiaDto {
   @IsString()
@@ -10,7 +10,7 @@ export class CreateNoticiaDto {
   @IsString()
   descripcion!: string;
 
-  @IsUrl()
+  @IsString()
   url!: string;
 
   @IsString()
