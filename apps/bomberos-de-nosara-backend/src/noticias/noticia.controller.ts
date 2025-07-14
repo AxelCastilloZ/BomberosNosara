@@ -28,17 +28,19 @@ export class NoticiaController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: number) {
     return this.noticiaService.findOne(id);
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateNoticiaDto) {
+  update(@Param('id') id: number, @Body() dto: UpdateNoticiaDto) {
+    console.log(dto);
+    console.log(id);
     return this.noticiaService.update(id, dto);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string) {
+  delete(@Param('id') id: number) {
     return this.noticiaService.delete(id);
   }
 }
