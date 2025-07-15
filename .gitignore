@@ -54,6 +54,10 @@ docker-data/
 docker-volume/
 docker-compose.override.yml
 
+# === Uploads & user-generated content ===
+uploads/
+**/uploads/
+
 # === Diagnostic reports (Node.js) ===
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 

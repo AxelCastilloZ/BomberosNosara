@@ -1,16 +1,13 @@
-import { IsString, IsUrl, IsDate } from 'class-validator';
+import { IsString } from 'class-validator';
 
 export class CreateNoticiaDto {
-  @IsString()
-  id!: string;
-
   @IsString()
   titulo!: string;
 
   @IsString()
   descripcion!: string;
 
-  @IsUrl()
+  @IsString()
   url!: string;
 
   @IsString()

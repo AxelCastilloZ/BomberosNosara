@@ -2,10 +2,10 @@ import axios from 'axios';
 
 export const uploadImage = async (file: File): Promise<string> => {
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('file', file);
 
   try {
-    const response = await axios.post(`${import.meta.env.VITE_API_URL}/upload/image`, formData, {
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/upload/uploadImage`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -16,4 +16,4 @@ export const uploadImage = async (file: File): Promise<string> => {
     console.error('Error uploading image:', error);
     throw new Error('Error al subir la imagen');
   }
-}; 
+};
