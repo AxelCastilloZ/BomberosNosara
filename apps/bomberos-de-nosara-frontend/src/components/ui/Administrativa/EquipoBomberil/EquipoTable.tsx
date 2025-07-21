@@ -3,7 +3,7 @@ import {
   useEquiposBomberiles,
   useActualizarEstadoActual,
   useDarDeBaja,
-} from '../../../../service/equipoBomberilService';
+} from '../../../../hooks/useEquiposBomberiles';
 import { EquipoBomberil } from '../../../../interfaces/EquipoBomberil/equipoBomberil';
 import { CatalogoEquipo } from '../../../../interfaces/EquipoBomberil/catalogoEquipo';
 import ModalDarDeBaja from './Modals/ModalDarDeBaja';
@@ -95,9 +95,13 @@ export default function EquipoTable({ onEdit }: Props) {
                       <td className="px-4 py-2">
                         <select
                           value={equipo.estadoActual}
-                          onChange={(e) => actualizarEstado.mutate({ id: equipo.id, estadoActual: e.target.value })}
-                          className="border px-2 py-1 rounded"
-                        >
+                        onChange={(e) =>
+                        actualizarEstado.mutate({
+                        id: equipo.id,
+                        estadoActual: e.target.value as EquipoBomberil['estadoActual'],
+                             })
+                               }
+                          className="border px-2 py-1 rounded">
                           <option value="activo">Activo</option>
                           <option value="dado de baja">Dado de baja</option>
                         </select>
