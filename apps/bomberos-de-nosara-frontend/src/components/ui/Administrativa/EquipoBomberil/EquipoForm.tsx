@@ -6,7 +6,7 @@ import {
   useUpdateEquipoBomberil,
   useCatalogos,
   useAddCatalogoEquipo,
-} from '../../../../service/equipoBomberilService';
+} from '../../../../hooks/useEquiposBomberiles';
 
 interface FormValues extends Omit<Partial<EquipoBomberil>, 'catalogo'> {
   catalogoId: string;
