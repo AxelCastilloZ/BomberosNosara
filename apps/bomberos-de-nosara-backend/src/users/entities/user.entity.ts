@@ -1,5 +1,11 @@
-
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from 'typeorm';
+// src/users/entities/user.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToMany,
+  JoinTable,
+} from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
 
 @Entity()
@@ -10,8 +16,8 @@ export class User {
   @Column({ unique: true })
   username!: string;
 
-  @Column({ unique: true })          // <— nuevo
-  email!: string;                    // <— nuevo
+  @Column({ unique: true }) // <— nuevo
+  email!: string; // <— nuevo
 
   @Column()
   password!: string;
