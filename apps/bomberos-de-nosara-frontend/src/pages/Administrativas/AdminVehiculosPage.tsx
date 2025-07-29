@@ -26,6 +26,7 @@ export default function AdminVehiculosPage() {
         </button>
       )}
 
+      {/* Vista principal */}
       {viewMode === 'dashboard' && (
         <>
           <div className="flex items-center gap-4 mb-6">
@@ -66,7 +67,8 @@ export default function AdminVehiculosPage() {
         </>
       )}
 
-      {['lista', 'agregar', 'estado', 'programar', 'registrar'].includes(viewMode) && (
+      {/* Lista de vehículos */}
+      {viewMode === 'lista' && (
         <div className="bg-white border border-gray-200 shadow rounded-lg p-6 mt-6">
           <DashboardVehiculo
             overrideModal={(vista, vehiculo) => {
@@ -77,22 +79,33 @@ export default function AdminVehiculosPage() {
         </div>
       )}
 
+      {/* Agregar vehículo */}
+      {viewMode === 'agregar' && (
+        <div className="bg-white border border-gray-200 shadow rounded-lg p-6 mt-6">
+          <AddVehiculo onSuccess={() => setViewMode('dashboard')} />
+        </div>
+      )}
+
+      {/* Actualizar estado */}
+      {viewMode === 'estado' && (
+        <UpdateStatus vehiculo={vehiculoSeleccionado ?? undefined} onClose={() => setViewMode('dashboard')} />
+      )}
+
+      {/* Programar mantenimiento */}
+      {viewMode === 'programar' && (
+        <ScheduleMaintenance vehiculoId={vehiculoSeleccionado?.id} onClose={() => setViewMode('dashboard')} />
+      )}
+
+      {/* Registrar mantenimiento */}
+      {viewMode === 'registrar' && (
+        <RecordMaintenance vehiculoId={vehiculoSeleccionado?.id} onClose={() => setViewMode('dashboard')} />
+      )}
+
+      {/* Vista unificada de mantenimiento */}
       {viewMode === 'mantenimiento' && (
         <div className="bg-white border border-gray-200 shadow rounded-lg p-6 mt-6">
           <MantenimientoVehiculo onBack={() => setViewMode('dashboard')} />
         </div>
-      )}
-
-      {viewMode === 'estado' && vehiculoSeleccionado && (
-        <UpdateStatus vehiculo={vehiculoSeleccionado} onClose={() => setViewMode('dashboard')} />
-      )}
-
-      {viewMode === 'programar' && vehiculoSeleccionado && (
-        <ScheduleMaintenance vehiculoId={vehiculoSeleccionado.id} onClose={() => setViewMode('dashboard')} />
-      )}
-
-      {viewMode === 'registrar' && vehiculoSeleccionado && (
-        <RecordMaintenance vehiculoId={vehiculoSeleccionado.id} onClose={() => setViewMode('dashboard')} />
       )}
     </div>
   );
