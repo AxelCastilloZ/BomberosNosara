@@ -19,6 +19,7 @@ import { UploadModule } from './upload/upload.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
 import { AppMobileModule } from './app-mobile/app-mobile.module';
+import { VoluntariosModule } from './voluntarios/voluntarios.module';
 
 @Module({
   imports: [
@@ -34,7 +35,9 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
         return existsSync(localPath) ? localPath : undefined;
       })(),
       validationSchema: Joi.object({
-        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
         PORT: Joi.number().default(3000),
 
         // --- DB (todo requerido) ---
@@ -69,9 +72,7 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
     }),
 
     // Rate limiting global (v5: ttl en milisegundos)
-    ThrottlerModule.forRoot([
-      { ttl: 60_000, limit: 100 },
-    ]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
 
     // Archivos estáticos (uploads)
     ServeStaticModule.forRoot({
@@ -79,7 +80,6 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
       serveRoot: '/uploads',
     }),
 
-    
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -98,10 +98,9 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
       }),
     }),
 
-  
     DonantesModule,
     NoticiaModule,
-    AuthModule,   
+    AuthModule,
     UsersModule,
     RolesModule,
     SeederModule,
@@ -111,6 +110,7 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
     VehiculosModule,
     WebSocketsModule,
     AppMobileModule,
+    VoluntariosModule,
   ],
 })
 export class AppModule {}
