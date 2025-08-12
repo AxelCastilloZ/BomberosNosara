@@ -24,7 +24,7 @@ export class Participacion {
   voluntario!: User;
 
   @Column({ type: 'enum', enum: TipoActividad })
-  actividad: TipoActividad | undefined;
+  actividad!: TipoActividad;
 
   @Column({ type: 'date' })
   fecha!: Date;
@@ -46,4 +46,7 @@ export class Participacion {
 
   @CreateDateColumn()
   fechaRegistro!: Date;
+
+  @Column({ type: 'text', nullable: true })
+  motivoRechazo?: string;
 }

@@ -5,6 +5,7 @@ import {
   IsString,
   IsDateString,
   Matches,
+  IsOptional,
 } from 'class-validator';
 import { TipoActividad } from '../entities/participacion.entity';
 
@@ -32,4 +33,8 @@ export class CreateParticipacionDto {
   @IsNotEmpty()
   @IsString()
   ubicacion!: string;
+
+  @IsOptional()
+  @IsString()
+  motivoRechazo?: string;
 }

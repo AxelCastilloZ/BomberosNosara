@@ -6,7 +6,8 @@ import {
   FaChartBar,
   FaComments,
   FaNewspaper,
-  FaBook
+  FaBook,
+  FaHandsHelping
 } from "react-icons/fa";
 import { getUserRoles } from '../../auth/AdminAuth'; 
 
@@ -68,6 +69,18 @@ const allDashboardItems = [
     href: "/admin/sugerencias",
     roles: ["SUPERUSER", "ADMIN"],
   },
+  {
+  icon: <FaHandsHelping size={24} />, 
+  label: "Voluntarios",
+  href: '/voluntario/registro-horas',
+  roles: ["VOLUNTARIO"],
+},
+{
+  icon: <FaHandsHelping size={24} />, 
+  label: "Voluntarios",
+  href: '/admin/participaciones',
+  roles: ["SUPERUSER", "ADMIN"],
+},
 ];
 
 const AdminDashboardPage = () => {

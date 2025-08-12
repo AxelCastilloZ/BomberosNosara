@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-router';
 
 import App from '../App';
-import { isAdmin, isSuperUser } from '../auth/AdminAuth';
+import { isAdmin, isSuperUser, isVoluntario } from '../auth/AdminAuth';
 import AboutSection from '../components/ui/AboutUs/AboutSection';
 import AdminDonantesPage from '../pages/AdminDonantesPage';
 import AdminLoginPage from '../pages/AdminLoginPage';
@@ -30,6 +30,8 @@ import AdminNoticiasPage from '../pages/AdminNoticiasPage';
 import AdminSuggestionsPage from '../pages/AdminSuggestionsPage';
 import SuggestionsPage from '../pages/SuggestionsPage';
 import DonarPage from '../pages/DonarPage';
+import AdminParticipacionesVolPage from '../pages/Administrativas/AdminParticipacionesVolPage';
+import AdminVoluntariadoPage from '../pages/Administrativas/AdminVoluntariadoPage';
 
 
 const isAdminAuthenticated=() => {
@@ -183,6 +185,22 @@ const routeTree=rootRoute.addChildren([
     },
   }),
 
+  createRoute({
+  path: '/voluntario/registro-horas',
+  component: AdminVoluntariadoPage,
+  getParentRoute: () => rootRoute,
+  beforeLoad: () => {
+    if (!isVoluntario()) throw redirect({ to: '/login' });
+  },
+}),
+createRoute({
+  path: '/admin/participaciones',
+  component: AdminParticipacionesVolPage,
+  getParentRoute: () => rootRoute,
+  beforeLoad: () => {
+    if (!isAdmin()) throw redirect({ to: '/login' });
+  },
+}),
 
 
 ]);

@@ -34,7 +34,9 @@ export function isAdmin() {
   return !!localStorage.getItem('token');
 }
 
-
+export function isVoluntario() {
+  return getUserRoles().includes('VOLUNTARIO');
+}
 
 
 
