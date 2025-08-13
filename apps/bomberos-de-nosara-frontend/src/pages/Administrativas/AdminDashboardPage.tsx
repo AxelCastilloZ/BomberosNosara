@@ -72,7 +72,7 @@ const allDashboardItems = [
   {
   icon: <FaHandsHelping size={24} />, 
   label: "Voluntarios",
-  href: '/voluntario/registro-horas',
+  href: '/voluntarios/registro-horas',
   roles: ["VOLUNTARIO"],
 },
 {

@@ -31,7 +31,7 @@ import AdminSuggestionsPage from '../pages/AdminSuggestionsPage';
 import SuggestionsPage from '../pages/SuggestionsPage';
 import DonarPage from '../pages/DonarPage';
 import AdminParticipacionesVolPage from '../pages/Administrativas/AdminParticipacionesVolPage';
-import AdminVoluntariadoPage from '../pages/Administrativas/AdminVoluntariadoPage';
+import AdminVoluntariadoPage from '../pages/Administrativas/AdminVoluntariosPage';
 
 
 const isAdminAuthenticated=() => {
@@ -186,7 +186,7 @@ const routeTree=rootRoute.addChildren([
   }),
 
   createRoute({
-  path: '/voluntario/registro-horas',
+  path: '/voluntarios/registro-horas',
   component: AdminVoluntariadoPage,
   getParentRoute: () => rootRoute,
   beforeLoad: () => {
