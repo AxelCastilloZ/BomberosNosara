@@ -27,7 +27,7 @@ import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
 import AdminNoticiasPage from '../pages/AdminNoticiasPage';
 import AdminChatPage from '../pages/Administrativas/AdminChatPage';
 import AdminParticipacionesVolPage from '../pages/Administrativas/AdminParticipacionesVolPage';
-import AdminVoluntariadoPage from '../pages/Administrativas/AdminVoluntariadoPage';
+import AdminVoluntariadoPage from '../pages/Administrativas/AdminVoluntariosPage';
 
 // 👇 nuevas páginas para el flujo de recuperación
 import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
@@ -121,7 +121,7 @@ const routeTree = rootRoute.addChildren([
   }),
 
   createRoute({
-  path: '/voluntario/registro-horas',
+  path: '/voluntarios/registro-horas',
   component: AdminVoluntariadoPage,
   getParentRoute: () => rootRoute,
   beforeLoad: () => {

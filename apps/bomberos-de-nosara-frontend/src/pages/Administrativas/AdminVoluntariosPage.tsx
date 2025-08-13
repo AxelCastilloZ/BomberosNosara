@@ -2,13 +2,12 @@ import { useState } from "react";
 import ParticipacionForm from "../../components/ui/Administrativa/Voluntarios/ParticipacionForm";
 import { useMisParticipaciones, useHorasAprobadas } from "../../hooks/useVoluntarios";
 
-export default function VoluntariadoPage() {
+export default function AdminVoluntariosPage() {
   const { data: participaciones = [], isLoading: isLoadingParticipaciones } = useMisParticipaciones();
   const { data: horas = 0, isLoading: isLoadingHoras } = useHorasAprobadas();
   const [showForm, setShowForm] = useState(false);
 
 
- console.log('Token actual:', localStorage.getItem('token'));
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-8">
@@ -103,7 +102,7 @@ export default function VoluntariadoPage() {
           <div
             className="fixed inset-0 bg-black bg-opacity-30 z-40"
             onClick={() => setShowForm(false)}
-          />
+           />
           <div className="fixed top-0 right-0 h-full w-full max-w-md bg-white shadow-xl z-50">
             <div className="p-6 flex flex-col h-full">
               <div className="flex justify-between items-center mb-4">
