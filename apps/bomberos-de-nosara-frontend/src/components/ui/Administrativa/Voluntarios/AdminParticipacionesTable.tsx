@@ -1,14 +1,13 @@
-// ParticipacionTable.tsx - VERSIÓN ULTRA SIMPLE
 import { useState } from "react";
 import { useTodasParticipaciones } from "../../../../hooks/useVoluntarios";
 import { Participacion } from "../../../../types/voluntarios";
 import CambiarEstadoModal from "../../Modals/Voluntarios/CambiarEstadoModal";
 
-export default function ParticipacionesTable({ estado }: { estado?: string }) {
+export default function AdminParticipacionesTable({ estado }: { estado?: string }) {
   const { data = [] } = useTodasParticipaciones(estado);
   const [selected, setSelected] = useState<number | null>(null);
 
-  console.log('🔍 Datos directos:', data);
+
 
   return (
     <>
@@ -35,15 +34,15 @@ export default function ParticipacionesTable({ estado }: { estado?: string }) {
               </tr>
             ) : (
               data.map((participacion: Participacion) => (
-                <tr key={participacion.id} className="hover:bg-yellow-50">
+                <tr key={participacion.id} className="hover:bg-gray-50">
                   <td className="px-4 py-2 text-sm text-gray-700">{participacion.fecha}</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{participacion.actividad}</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{participacion.descripcion}</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{participacion.ubicacion}</td>
                   <td className="px-4 py-2 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      participacion.estado === "aprobada" ? "bg-green-100 text-green-700" :
-                      participacion.estado === "pendiente" ? "bg-yellow-100 text-yellow-700" :
+                      participacion.estado === "aprobada" ? "bg-yellow-300 text-black" :
+                      participacion.estado === "pendiente" ? "bg-gray-200 text-black" :
                       "bg-red-100 text-red-700"
                     }`}>
                       {participacion.estado}

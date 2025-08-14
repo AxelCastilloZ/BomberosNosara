@@ -1,4 +1,4 @@
-import ParticipacionesTable from "../../components/ui/Administrativa/Voluntarios/ParticipacionTable";
+import AdminParticipacionesTable from "../../components/ui/Administrativa/Voluntarios/AdminParticipacionesTable";
 
 export default function AdminParticipacionesVolPage() {
   return (
@@ -27,7 +27,7 @@ export default function AdminParticipacionesVolPage() {
         <h1 className="text-2xl font-bold text-black mb-4">
           Participaciones de Voluntarios
         </h1>
-        <ParticipacionesTable />
+        <AdminParticipacionesTable />
       </div>
     </div>
   );

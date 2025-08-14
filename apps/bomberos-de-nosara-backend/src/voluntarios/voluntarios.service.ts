@@ -72,6 +72,7 @@ export class VoluntariosService {
     };
   }
 
+  // Service para listar el historial de participaciones de un voluntario
   async listarHistorial(user: User, estado?: string): Promise<any[]> {
     const where: any = { voluntario: { id: user.id } };
     if (estado) where.estado = estado;
@@ -87,6 +88,7 @@ export class VoluntariosService {
     }));
   }
 
+  // Service para listar todas las participaciones (admin)
   async listarTodasParticipaciones(estado?: string): Promise<any[]> {
     const where: any = {};
     if (estado) where.estado = estado;
@@ -102,6 +104,7 @@ export class VoluntariosService {
     }));
   }
 
+  //Service para el administrador que actualiza el estado de una participación
   async actualizarEstadoParticipacion(
     id: number,
     dto: ActualizarEstadoDto,
@@ -131,9 +134,21 @@ export class VoluntariosService {
     };
   }
 
+  //Service que obtiene las horas con estado 'aprobada' de un voluntario
   async obtenerHorasAprobadasPorVoluntario(userId: number): Promise<number> {
     const participaciones = await this.participacionRepo.find({
       where: { voluntario: { id: userId }, estado: 'aprobada' },
+    });
+
+    return participaciones.reduce((total, p) => {
+      return total + this.calcularHoras(p.horaInicio, p.horaFin);
+    }, 0);
+  }
+
+  //Service que obtiene las horas con estado 'pendiente' de un voluntario
+  async obtenerHorasPendientesPorVoluntario(userId: number): Promise<number> {
+    const participaciones = await this.participacionRepo.find({
+      where: { voluntario: { id: userId }, estado: 'pendiente' },
     });
 
     return participaciones.reduce((total, p) => {

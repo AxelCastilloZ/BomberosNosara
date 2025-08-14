@@ -31,7 +31,7 @@ import AdminSuggestionsPage from '../pages/AdminSuggestionsPage';
 import SuggestionsPage from '../pages/SuggestionsPage';
 import DonarPage from '../pages/DonarPage';
 import AdminParticipacionesVolPage from '../pages/Administrativas/AdminParticipacionesVolPage';
-import AdminVoluntariadoPage from '../pages/Administrativas/AdminVoluntariosPage';
+import VoluntariosPage from '../pages/Administrativas/VoluntariosPage';
 
 
 const isAdminAuthenticated=() => {
@@ -187,7 +187,7 @@ const routeTree=rootRoute.addChildren([
 
   createRoute({
   path: '/voluntarios/registro-horas',
-  component: AdminVoluntariadoPage,
+  component: VoluntariosPage,
   getParentRoute: () => rootRoute,
   beforeLoad: () => {
     if (!isVoluntario()) throw redirect({ to: '/login' });
