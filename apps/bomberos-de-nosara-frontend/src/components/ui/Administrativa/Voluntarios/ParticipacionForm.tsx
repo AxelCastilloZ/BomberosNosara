@@ -1,4 +1,3 @@
-// ParticipacionForm.tsx - TOTALMENTE FUNCIONAL
 import { useState } from "react";
 import { useCrearParticipacion } from "../../../../hooks/useVoluntarios";
 import { TipoActividad } from "../../../../types/voluntarios";
@@ -52,10 +51,9 @@ export default function ParticipacionForm({ onSuccess }: { onSuccess?: () => voi
       return;
     }
 
-    console.log(' ENVIANDO:', formData);
+  
     try {
       await crear.mutateAsync(formData);
-      console.log('ÉXITO - Participación creada');
       onSuccess?.();
       setFormData({
         actividad: TipoActividad.ENTRENAMIENTO,
@@ -74,7 +72,7 @@ export default function ParticipacionForm({ onSuccess }: { onSuccess?: () => voi
 
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg p-6 space-y-5">
-      <h2 className="text-2xl font-bold text-red-600 text-center">🚒 Registrar Participación</h2>
+      <h2 className="text-2xl font-bold text-black text-center"> Registrar Participación</h2>
 
       {/* Actividad */}
       <div>

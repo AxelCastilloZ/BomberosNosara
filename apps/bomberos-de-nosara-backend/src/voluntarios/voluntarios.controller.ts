@@ -23,12 +23,17 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { ActualizarEstadoDto } from './dto/ActualizarEstadoDto';
 
+interface AuthUser {
+  id: number;
+  rol: string;
+}
+
 @Controller('voluntarios')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VoluntariosController {
   constructor(private readonly voluntariosService: VoluntariosService) {}
 
-  // Voluntario crea participación
+  // Voluntario crea participaciones
   @Post('participaciones')
   @Roles(RoleEnum.VOLUNTARIO)
   async crear(@Body() dto: CreateParticipacionDto, @Req() req: Request) {
@@ -55,15 +60,25 @@ export class VoluntariosController {
   }
 
   // Voluntario ve sus horas aprobadas
-  @Get('mis-horas')
+  @Get('mis-horas-Aprobadas')
   @Roles(RoleEnum.VOLUNTARIO)
-  async misHoras(@Req() req: Request) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const user = req.user as any;
+  async misHoras(@Req() req: Request & { user: AuthUser }) {
     const horas =
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      await this.voluntariosService.obtenerHorasAprobadasPorVoluntario(user.id);
+      await this.voluntariosService.obtenerHorasAprobadasPorVoluntario(
+        req.user.id,
+      );
     return { horasAprobadas: horas };
+  }
+
+  // Voluntario ve sus horas pendientes
+  @Get('mis-horas-Pendientes')
+  @Roles(RoleEnum.VOLUNTARIO)
+  async misHorasPendientes(@Req() req: Request & { user: AuthUser }) {
+    const horas =
+      await this.voluntariosService.obtenerHorasPendientesPorVoluntario(
+        req.user.id,
+      );
+    return { horasPendientes: horas };
   }
 
   // Admin ve todas las participaciones

@@ -4,7 +4,7 @@ import { CreateParticipacionDto, UpdateEstadoDto } from "../types/voluntarios";
 
 export const voluntariadoService = {
   crear: (dto: CreateParticipacionDto) => {
-  console.log('📤 POST /voluntarios/participaciones', dto);
+  console.log('POST /voluntarios/participaciones', dto);
   return api.post('/voluntarios/participaciones', dto);
 },
 
@@ -17,5 +17,6 @@ export const voluntariadoService = {
   actualizarEstado: (id: number, dto: UpdateEstadoDto) =>
     api.patch(`/voluntarios/participaciones/${id}/estado`, dto),
 
-  obtenerHorasAprobadas: () => api.get('/voluntarios/mis-horas'),
+  obtenerHorasAprobadas: () => api.get('/voluntarios/mis-horas-Aprobadas'),
+  obtenerHorasPendientes: () => api.get('/voluntarios/mis-horas-Pendientes'),
 };
