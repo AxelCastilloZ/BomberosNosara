@@ -16,6 +16,7 @@ import { NoticiaModule } from './noticias/noticia.module';
 import { SugerenciaModule } from './suggestion/suggestion.module';
 import { EquipoBomberilModule } from './equipo-bomberil/equipo-bomberil.module';
 import { UploadModule } from './upload/upload.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -65,6 +66,9 @@ import { UploadModule } from './upload/upload.module';
     SugerenciaModule,
     EquipoBomberilModule,
     UploadModule,
+    ChatModule,
   ],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

@@ -5,6 +5,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import * as express from 'express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
+import { ServerOptions } from 'socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -13,10 +15,35 @@ async function bootstrap() {
     mkdirSync(uploadDir);
   }
 
+  // Enable CORS for both HTTP and WebSocket
+  const corsOrigins = [
+    'http://localhost:3000', // Frontend URL
+    'http://localhost:5173',
+    'http://localhost:5174',
+    process.env.FRONTEND_URL,
+  ].filter((origin): origin is string => Boolean(origin));
+
   app.enableCors({
-    origin: ['http://localhost:5174', 'http://localhost:5173'],
+    origin: corsOrigins,
     credentials: true,
   });
+
+  // Enable WebSocket adapter with custom CORS configuration
+  const webSocketAdapter = new class extends IoAdapter {
+    createIOServer(port: number, options?: ServerOptions): any {
+      const server = super.createIOServer(port, {
+        ...options,
+        cors: {
+          origin: corsOrigins,
+          methods: ['GET', 'POST'],
+          credentials: true,
+        },
+      });
+      return server;
+    }
+  }(app);
+  
+  app.useWebSocketAdapter(webSocketAdapter);
 
   app.useGlobalPipes(
     new ValidationPipe({

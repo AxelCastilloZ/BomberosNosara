@@ -17,6 +17,7 @@
     "@tanstack/react-router": "^1.121.41",
     "@tanstack/react-table": "^8.21.3",
     "axios": "^1.10.0",
+    "date-fns": "^4.1.0",
     "emailjs-com": "^3.2.0",
     "framer-motion": "^12.19.1",
     "jwt-decode": "^4.0.0",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
+    "@types/node": "^22.17.2",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "@types/react-slick": "^0.23.13",
