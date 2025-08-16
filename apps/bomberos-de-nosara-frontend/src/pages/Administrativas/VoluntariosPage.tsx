@@ -28,9 +28,10 @@ export default function VoluntariosPage() {
 
 
 
-      {/* Resumen de horas */}
+      
+       {/* Horas aprobadas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-      <section className="bg-white border rounded-lg p-4 flex justify-between items-center shadow-2xl">
+      <section className="bg-white border rounded-e-3xl p-4 flex justify-between items-center shadow-md">
         <h3 className="text-lg font-semibold text-gray-800">
           Total horas aprobadas:
         </h3>
@@ -40,7 +41,7 @@ export default function VoluntariosPage() {
       </section>
 
       {/* Sección de horas pendientes */}
-       <section className="bg-white border rounded-lg p-4 flex justify-between items-center shadow-2xl">
+       <section className="bg-white border rounded-s-3xl p-4 flex justify-between items-center shadow-md">
         <h3 className="text-lg font-semibold text-gray-800">
           Total horas pendientes:
         </h3>

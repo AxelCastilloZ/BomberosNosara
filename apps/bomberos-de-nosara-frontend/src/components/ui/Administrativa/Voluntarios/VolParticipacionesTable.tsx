@@ -1,13 +1,15 @@
+// VolParticipacionesTable.tsx - CON EFECTO HOVER INNOVADOR
+import { useState } from "react";
 import { createColumnHelper, useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table";
 import { useMisParticipaciones } from "../../../../hooks/useVoluntarios";
 import { Participacion } from "../../../../types/voluntarios";
-
 
 const columnHelper = createColumnHelper<Participacion>();
 
 export default function VolParticipacionesTable() {
   const { data: participaciones = [], isLoading } = useMisParticipaciones();
-  
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+
   const columns = [
     columnHelper.accessor("fecha", {
       header: "Fecha",
@@ -17,26 +19,57 @@ export default function VolParticipacionesTable() {
       header: "Actividad",
       cell: info => info.getValue() || "Sin actividad",
     }),
-     columnHelper.accessor("descripcion", {
+    columnHelper.accessor("descripcion", {
       header: "Descripción",
-      cell: info => info.getValue() || "Sin ubicación",
+      cell: info => info.getValue() || "Sin descripción",
     }),
     columnHelper.accessor("ubicacion", {
       header: "Ubicación",
       cell: info => info.getValue() || "Sin ubicación",
     }),
-    columnHelper.accessor("estado", {
+    {
+      accessorKey: "estado",
       header: "Estado",
-      cell: info => (
-        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-          info.getValue() === "aprobada" ? "bg-yellow-300 text-black" :
-          info.getValue() === "pendiente" ? "bg-gray-200 text-black" :
-          "bg-red-100 text-red-700"
-        }`}>
-          {info.getValue()}
-        </span>
-      ),
-    }),
+      cell: ({ row }: {row:{original:Participacion}}) => {
+        const estado = row.original.estado;
+        const motivo = row.original.motivoRechazo;
+        const id = row.original.id;
+
+        return (
+          <div 
+            className="relative group cursor-pointer"
+            onMouseEnter={() => setHoveredId(id)}
+            onMouseLeave={() => setHoveredId(null)}
+          >
+            {/* Punto indicador cuando es rechazada */}
+            {estado === "rechazada" && motivo && (
+              <div className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+            )}
+            
+            {/* Estado con efecto hover */}
+            <span className={`px-2 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
+              estado === "aprobada" ? "bg-yellow-300 text-black" :
+              estado === "pendiente" ? "bg-gray-200 text-black" :
+              "bg-red-100 text-red-700 hover:scale-110"
+            }`}>
+              {estado}
+            </span>
+
+            {/* Notita roja con efecto hover */}
+            {estado === "rechazada" && motivo && hoveredId === id && (
+              <div className="absolute z-10 top-full left-0 mt-2 bg-red-50 border-l-4 border-red-500 p-3 rounded shadow-lg max-w-xs animate-fadeIn">
+                <div className="relative">
+                  <div className="absolute -top-2 left-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-red-50"></div>
+                  <p className="text-sm text-red-800 font-medium">
+                    {motivo}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
     columnHelper.accessor("horasRegistradas", {
       header: "Horas",
       cell: info => info.getValue() || 0,

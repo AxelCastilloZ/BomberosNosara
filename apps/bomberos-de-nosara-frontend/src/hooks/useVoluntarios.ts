@@ -39,6 +39,7 @@ export const useCrearParticipacion = () => {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['mis-participaciones'] });
       qc.invalidateQueries({ queryKey: ['mis-horas'] });
+      qc.invalidateQueries({ queryKey: ['mis-horas-pendientes'] });
     },
   });
 };
