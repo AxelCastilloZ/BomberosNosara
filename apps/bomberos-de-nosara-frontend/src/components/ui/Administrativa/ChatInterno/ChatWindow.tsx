@@ -50,7 +50,7 @@ const ChatWindow=() => {
   const [messages, setMessages]=useState<Message[]>([]);
   const [isLoading, setIsLoading]=useState(false);
   const [error, setError]=useState<string|null>(null);
-  const [currentUser, setCurrentUser]=useState<any>(null);
+  const [currentUser, setCurrentUser]=useState<User|null>(null);
   const messagesEndRef=useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
@@ -454,7 +454,9 @@ const ChatWindow=() => {
               ):(
                 <div className="space-y-4 w-full">
                   {messages.map((message) => {
-                    const isOwn=message.senderId===currentUser?.id;
+                    const isOwn=message.sender?.id===currentUser?.id;
+                    console.log('message.senderId', message)
+                    console.log('currentUser', currentUser)
                     return (
                       <div
                         key={message.id}
