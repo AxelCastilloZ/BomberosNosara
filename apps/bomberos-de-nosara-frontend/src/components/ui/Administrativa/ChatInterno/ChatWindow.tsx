@@ -15,6 +15,8 @@ const API_URL='http://localhost:3000';
 interface User {
   id: number;
   username: string;
+  email?: string;
+  name?: string;
 }
 
 interface Message {
@@ -45,6 +47,8 @@ const ChatWindow=() => {
 
   // State
   const [users, setUsers]=useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers]=useState<User[]>([]);
+  const [searchQuery, setSearchQuery]=useState('');
   const [selectedUser, setSelectedUser]=useState<User|null>(null);
   const [conversation, setConversation]=useState<Conversation|null>(null);
   const [messages, setMessages]=useState<Message[]>([]);
@@ -55,6 +59,7 @@ const ChatWindow=() => {
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
   const typingTimeoutRef=useRef<Timeout|null>(null);
+  const searchInputRef=useRef<HTMLInputElement>(null);
 
   // Fetch current user data from localStorage
   useEffect(() => {
@@ -78,6 +83,21 @@ const ChatWindow=() => {
     }
   }, [token]);
 
+  // Filter users based on search query
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setFilteredUsers(users);
+    } else {
+      const query=searchQuery.toLowerCase();
+      const filtered=users.filter(user =>
+        user.username.toLowerCase().includes(query)||
+        user.email?.toLowerCase().includes(query)||
+        user.name?.toLowerCase().includes(query)
+      );
+      setFilteredUsers(filtered);
+    }
+  }, [searchQuery, users]);
+
   // Fetch available users
   useEffect(() => {
     const fetchUsers=async () => {
@@ -89,6 +109,7 @@ const ChatWindow=() => {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(response.data);
+        setFilteredUsers(response.data); // Initialize filtered users with all users
       } catch (err) {
         setError('Error al cargar los usuarios');
         console.error('Error fetching users:', err);
@@ -101,6 +122,17 @@ const ChatWindow=() => {
   }, [token]);
 
   // Fetch or create conversation when a user is selected
+  const handleSearchChange=(e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const clearSearch=() => {
+    setSearchQuery('');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
+
   const handleSelectUser=useCallback(async (user: User) => {
     if (!token||!currentUser) {
       console.error('No token or current user');
@@ -111,6 +143,7 @@ const ChatWindow=() => {
       setIsLoading(true);
       setSelectedUser(user);
       setError(null);
+      setSearchQuery(''); // Clear search when a user is selected
 
       // Try to find existing conversation
       try {
@@ -214,11 +247,15 @@ const ChatWindow=() => {
   }, [socket, conversation, currentUser, token]);
 
   // Handle going back to user list
-  const handleBackToList=useCallback(() => {
+  const handleBackToList=() => {
     setSelectedUser(null);
     setConversation(null);
     setMessages([]);
-  }, []);
+    setSearchQuery(''); // Clear search when going back to list
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  };
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -374,11 +411,27 @@ const ChatWindow=() => {
           <div className="p-4 border-b">
             <div className="relative">
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Buscar usuarios..."
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-4 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={searchQuery}
+                onChange={handleSearchChange}
               />
-              <FiSearch className="absolute right-3 top-3 text-gray-400" />
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
+                {searchQuery? (
+                  <button
+                    onClick={clearSearch}
+                    className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                ):(
+                  <FiSearch className="text-gray-400" />
+                )}
+              </div>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto">
@@ -390,23 +443,28 @@ const ChatWindow=() => {
               <div className="p-4 text-red-500">{error}</div>
             ):(
               <div className="divide-y">
-                {users.map((user) => (
-                  <button
-                    key={user.id}
-                    onClick={() => handleSelectUser(user)}
-                    className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center space-x-3"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                      <FiUser className="text-blue-500" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900 truncate">{user.username}</p>
-                      <p className="text-xs text-gray-500 truncate">
-                        {user.username===currentUser?.username? 'Tú':'Disponible'}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                {filteredUsers.length===0? (
+                  <div className="text-center py-4 text-gray-500">
+                    No se encontraron usuarios
+                  </div>
+                ):(
+                  filteredUsers.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => handleSelectUser(user)}
+                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center space-x-3"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <FiUser className="text-blue-500" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{user.username}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {user.username===currentUser?.username? 'Tú':'Disponible'}
+                        </p>
+                      </div>
+                    </button>
+                  )))}
               </div>
             )}
           </div>
