@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { useAuth } from '../hooks/useAuth';
 
 interface SocketContextType {
     socket: Socket|null;
@@ -26,11 +27,24 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }>=({ children
     const socketRef=useRef<Socket | null>(null);
     const [isConnected, setIsConnected] = useState<boolean>(false);
 
+    const { token } = useAuth(); // Get the JWT token from your auth context
+
     useEffect(() => {
-        // Initialize socket connection
-        socketRef.current=io(SOCKET_URL, {
+        if (!token) {
+            console.log('No auth token available, not connecting socket');
+            return;
+        }
+
+        // Initialize socket connection with auth token
+        socketRef.current = io(SOCKET_URL, {
             withCredentials: true,
             autoConnect: true,
+            auth: {
+                token: `Bearer ${token}`
+            },
+            extraHeaders: {
+                Authorization: `Bearer ${token}`
+            }
         });
 
         // Connection event handlers
@@ -54,12 +68,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }>=({ children
         // Clean up on unmount
         return () => {
             if (socketRef.current) {
-                socketRef.current.off('connect', onConnect);
-                socketRef.current.off('disconnect', onDisconnect);
                 socketRef.current.disconnect();
+                socketRef.current = null;
+                setIsConnected(false);
             }
         };
-    }, []);
+    }, [token]); // Reconnect when token changes
 
     // Memoize the context value to prevent unnecessary re-renders
     const contextValue = useMemo(() => ({
