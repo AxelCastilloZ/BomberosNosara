@@ -455,8 +455,6 @@ const ChatWindow=() => {
                 <div className="space-y-4 w-full">
                   {messages.map((message) => {
                     const isOwn=message.sender?.id===currentUser?.id;
-                    console.log('message.senderId', message)
-                    console.log('currentUser', currentUser)
                     return (
                       <div
                         key={message.id}
