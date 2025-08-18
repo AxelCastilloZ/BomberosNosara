@@ -19,25 +19,31 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     : '';
 
   return (
-    <div className={`flex flex-col mb-4 ${isOwn ? 'items-end' : 'items-start'}`}>
-      <div className="flex items-center mb-1">
+    <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} mb-2`}>
+      <div className="flex items-start gap-2 w-full">
         {!isOwn && (
-          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-            <span className="text-blue-500 text-sm font-medium">
+          <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+            <span className="text-gray-600 text-sm font-medium">
               {username.charAt(0).toUpperCase()}
             </span>
           </div>
         )}
-        <div 
-          className={`px-4 py-2 rounded-lg max-w-xs ${isOwn ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'}`}
-        >
+        <div className="flex flex-col max-w-[80%]">
           {!isOwn && (
-            <p className="text-xs font-medium text-gray-600 mb-1">{username}</p>
+            <span className="text-xs font-medium text-gray-600 mb-1">
+              {username}
+            </span>
           )}
-          <p className={isOwn ? 'text-white' : 'text-gray-800'}>{message}</p>
-          <p className={`text-xs mt-1 text-right ${isOwn ? 'text-blue-100' : 'text-gray-500'}`}>
+          <div 
+            className={`px-4 py-3 rounded-2xl ${isOwn 
+              ? 'bg-blue-500 text-white rounded-tr-none' 
+              : 'bg-gray-100 text-gray-800 rounded-tl-none'}`}
+          >
+            <p className="text-sm">{message}</p>
+          </div>
+          <span className={`text-[10px] mt-1 ${isOwn ? 'text-gray-400 text-right' : 'text-gray-400'}`}>
             {formattedTime}
-          </p>
+          </span>
         </div>
       </div>
     </div>

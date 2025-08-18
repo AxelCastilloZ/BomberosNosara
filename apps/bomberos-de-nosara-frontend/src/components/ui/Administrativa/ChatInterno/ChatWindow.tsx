@@ -3,7 +3,7 @@ import { useSocket } from '../../../../contexts/SocketContext';
 import { useAuth } from '../../../../hooks/useAuth';
 import MessageBubble from './MessageBubble';
 import { motion } from 'framer-motion';
-import { FiUser, FiMessageSquare, FiChevronLeft, FiLoader } from 'react-icons/fi';
+import { FiUser, FiMessageSquare, FiChevronLeft, FiLoader, FiPaperclip, FiImage, FiMoreVertical, FiSearch, FiCheckCircle } from 'react-icons/fi';
 import axios from 'axios';
 
 type Timeout=ReturnType<typeof setTimeout>;
@@ -167,13 +167,13 @@ const ChatWindow=() => {
   }, [token, currentUser]);
 
   // Handle sending a new message
-  const handleSendMessage = useCallback(async (content: string) => {
-    if (!socket || !content.trim() || !conversation || !currentUser) {
+  const handleSendMessage=useCallback(async (content: string) => {
+    if (!socket||!content.trim()||!conversation||!currentUser) {
       console.error('Missing required data for sending message');
       return;
     }
 
-    const newMessage: Message = {
+    const newMessage: Message={
       id: Date.now(), // Temporary ID for optimistic update
       content,
       senderId: currentUser.id,
@@ -182,7 +182,7 @@ const ChatWindow=() => {
       isRead: false,
       sender: {
         id: currentUser.id,
-        username: currentUser.username || 'Usuario',
+        username: currentUser.username||'Usuario',
       },
     };
 
@@ -227,13 +227,13 @@ const ChatWindow=() => {
 
   // Set up socket listeners
   useEffect(() => {
-    if (!socket || !isConnected || !conversation) return;
+    if (!socket||!isConnected||!conversation) return;
 
-    const handleNewMessage = (message: Message) => {
+    const handleNewMessage=(message: Message) => {
       console.log('Received new message:', message);
       setMessages(prev => {
         // Check if message already exists (by ID)
-        const messageExists = prev.some(m => m.id === message.id);
+        const messageExists=prev.some(m => m.id===message.id);
         if (!messageExists) {
           return [...prev, message];
         }
@@ -241,9 +241,9 @@ const ChatWindow=() => {
       });
     };
 
-    const handleUserTyping = (data: { userId: number; username: string; isTyping: boolean }) => {
+    const handleUserTyping=(data: { userId: number; username: string; isTyping: boolean }) => {
       setTypingUsers(prev => {
-        const newTypingUsers = new Set(prev);
+        const newTypingUsers=new Set(prev);
         if (data.isTyping) {
           newTypingUsers.add(data.username);
         } else {
@@ -262,9 +262,9 @@ const ChatWindow=() => {
     socket.on('typing', handleUserTyping);
     socket.on('messageSent', (data) => {
       console.log('Message sent confirmation:', data);
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === data.id ? { ...msg, id: data.id, status: 'delivered' } : msg
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id===data.id? { ...msg, id: data.id, status: 'delivered' }:msg
         )
       );
     });
@@ -338,31 +338,53 @@ const ChatWindow=() => {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg shadow-lg overflow-hidden">
+    <div className="fixed inset-0 flex flex-col bg-white">
       {/* Header */}
-      <div className="bg-red-600 text-white p-4 flex items-center justify-between">
-        <h2 className="text-xl font-bold">Chat Interno</h2>
-        {selectedUser&&(
-          <button
-            onClick={handleBackToList}
-            className="md:hidden text-white hover:text-gray-200"
-          >
-            <FiChevronLeft className="text-xl" />
-          </button>
-        )}
+      <div className="bg-red-600 text-white p-4 flex items-center justify-between shadow-md">
+        <div className="flex items-center">
+          {selectedUser&&(
+            <button
+              onClick={handleBackToList}
+              className="md:hidden mr-3 text-white hover:text-gray-200"
+            >
+              <FiChevronLeft className="text-xl" />
+            </button>
+          )}
+          <h2 className="text-xl font-bold">Chat Interno</h2>
+        </div>
+        <div className="text-sm">
+          {isConnected? (
+            <span className="flex items-center">
+              <span className="w-2 h-2 rounded-full bg-green-400 mr-2"></span>
+              Conectado
+            </span>
+          ):(
+            <span className="flex items-center">
+              <span className="w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
+              Conectando...
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden bg-gray-50">
         {/* User List */}
-        {!selectedUser? (
-          <div className="w-full md:w-1/3 border-r bg-white overflow-y-auto">
-            <div className="p-4 border-b">
-              <h3 className="font-medium text-gray-700">Usuarios</h3>
+        <div className={`${!selectedUser? 'flex':'hidden'} md:flex flex-col w-full md:w-80 border-r bg-white`}>
+          <div className="p-4 border-b">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Buscar usuarios..."
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <FiSearch className="absolute right-3 top-3 text-gray-400" />
             </div>
+          </div>
+          <div className="flex-1 overflow-y-auto">
             {isLoading? (
               <div className="flex items-center justify-center h-32">
-                <FiLoader className="animate-spin text-blue-500" />
+                <FiLoader className="animate-spin text-blue-500 text-xl" />
               </div>
             ):error? (
               <div className="p-4 text-red-500">{error}</div>
@@ -374,33 +396,35 @@ const ChatWindow=() => {
                     onClick={() => handleSelectUser(user)}
                     className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center space-x-3"
                   >
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                       <FiUser className="text-blue-500" />
                     </div>
-                    <span>{user.username}</span>
+                    <div className="min-w-0">
+                      <p className="font-medium text-gray-900 truncate">{user.username}</p>
+                      <p className="text-xs text-gray-500 truncate">
+                        {user.username===currentUser?.username? 'Tú':'Disponible'}
+                      </p>
+                    </div>
                   </button>
                 ))}
               </div>
             )}
           </div>
-        ):(
-          /* Chat Window */
-          <div className="flex-1 flex flex-col bg-white">
+        </div>
+
+        {/* Chat Area */}
+        {selectedUser&&(
+          <div className="flex-1 flex flex-col bg-white border-l border-gray-200">
             {/* Chat Header */}
-            <div className="p-4 border-b flex items-center">
-              <button
-                onClick={handleBackToList}
-                className="md:hidden mr-3 text-gray-500 hover:text-gray-700"
-              >
-                <FiChevronLeft className="text-xl" />
-              </button>
+            <div className="p-4 border-b flex items-center justify-between bg-white sticky top-0 z-10">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
                   <FiUser className="text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="font-medium">{selectedUser.username}</h3>
-                  <div className="text-xs text-gray-500">
+                  <h3 className="font-medium text-gray-900">{selectedUser.username}</h3>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <span className={`w-2 h-2 rounded-full mr-1 ${isConnected? 'bg-green-400':'bg-gray-400'}`}></span>
                     {isConnected? 'En línea':'Desconectado'}
                     {typingUsers.size>0&&(
                       <span className="ml-2 text-blue-500">
@@ -410,10 +434,13 @@ const ChatWindow=() => {
                   </div>
                 </div>
               </div>
+              <button className="text-gray-400 hover:text-gray-600">
+                <FiMoreVertical />
+              </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
               {messages.length===0? (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -425,55 +452,102 @@ const ChatWindow=() => {
                   <p className="text-sm mt-1">Envía un mensaje para comenzar la conversación</p>
                 </motion.div>
               ):(
-                messages.map((message) => (
-                  <MessageBubble
-                    key={message.id}
-                    message={message.content}
-                    isOwn={message.senderId===currentUser?.id}
-                    timestamp={message.createdAt}
-                    username={message.sender?.username||'Usuario'}
-                  />
-                ))
+                <div className="space-y-4 w-full">
+                  {messages.map((message) => {
+                    const isOwn=message.senderId===currentUser?.id;
+                    return (
+                      <div
+                        key={message.id}
+                        className={`flex ${isOwn? 'justify-end':'justify-start'}`}
+                      >
+                        <div className={`max-w-[80%] ${isOwn? 'ml-auto':'mr-auto'}`}>
+                          <MessageBubble
+                            message={message.content}
+                            isOwn={isOwn}
+                            timestamp={message.createdAt}
+                            username={message.sender?.username||'Usuario'}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
               )}
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t">
-              <div className="flex items-center">
-                <input
-                  type="text"
-                  placeholder="Escribe un mensaje..."
-                  className="flex-1 border rounded-l-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  value={inputValue}
-                  onChange={handleInputChange}
-                  onKeyDown={handleTyping}
-                  onKeyPress={(e) => {
-                    if (e.key==='Enter'&&!e.shiftKey) {
-                      e.preventDefault();
+            <div className="p-4 border-t bg-white">
+              <div className="bg-gray-50 rounded-lg border border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all">
+                <div className="p-2">
+                  <input
+                    type="text"
+                    placeholder="Escribe un mensaje..."
+                    className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none px-2 py-2"
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    onKeyDown={handleTyping}
+                    onKeyPress={(e) => {
+                      if (e.key==='Enter'&&!e.shiftKey) {
+                        e.preventDefault();
+                        if (inputValue.trim()) {
+                          handleSendMessage(inputValue.trim());
+                          setInputValue('');
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-b-lg">
+                  <div className="flex space-x-2">
+                    <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200">
+                      <FiPaperclip className="w-5 h-5" />
+                    </button>
+                    <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200">
+                      <FiImage className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <button
+                    className={`px-4 py-2 rounded-lg font-medium ${inputValue.trim()? 'bg-blue-500 text-white hover:bg-blue-600':'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                    onClick={() => {
                       if (inputValue.trim()) {
                         handleSendMessage(inputValue.trim());
                         setInputValue('');
                       }
-                    }
-                  }}
-                />
-                <button
-                  className="bg-blue-500 text-white px-4 py-2 rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  onClick={() => {
-                    if (inputValue.trim()) {
-                      handleSendMessage(inputValue.trim());
-                      setInputValue('');
-                    }
-                  }}
-                >
-                  Enviar
-                </button>
+                    }}
+                    disabled={!inputValue.trim()}
+                  >
+                    Enviar
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         )}
 
+        {!selectedUser&&(
+          <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50">
+            <div className="text-center p-8 max-w-md">
+              <FiMessageSquare className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <h3 className="text-xl font-medium text-gray-700 mb-2">Bienvenido al Chat Interno</h3>
+              <p className="text-gray-500 mb-6">Selecciona una conversación o inicia una nueva para comenzar a chatear.</p>
+              <div className="space-y-3 text-left max-w-xs mx-auto">
+                <div className="flex items-center text-sm text-gray-500">
+                  <FiCheckCircle className="text-green-500 mr-2" />
+                  <span>Mensajería en tiempo real</span>
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <FiCheckCircle className="text-green-500 mr-2" />
+                  <span>Archivos e imágenes</span>
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <FiCheckCircle className="text-green-500 mr-2" />
+                  <span>Historial de conversaciones</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
