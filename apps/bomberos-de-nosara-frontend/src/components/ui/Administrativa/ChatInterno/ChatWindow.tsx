@@ -18,7 +18,7 @@ interface User {
 }
 
 interface Message {
-  id: number;
+  id?: number;
   content: string;
   senderId: number;
   conversationId: number;
@@ -79,8 +79,9 @@ const ChatWindow=() => {
 
   // Fetch or create conversation when a user is selected
   const handleSelectUser=useCallback(async (user: User) => {
-    if (!token||!currentUser) return;
-
+    console.log(user);
+    //if (!token||!currentUser) return;
+    console.log(token);
     try {
       setIsLoading(true);
       setSelectedUser(user);
@@ -90,7 +91,7 @@ const ChatWindow=() => {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.data) {
+      if (response.status) {
         setConversation(response.data);
         setMessages(response.data.messages||[]);
       } else {
@@ -113,10 +114,14 @@ const ChatWindow=() => {
 
   // Handle sending a new message
   const handleSendMessage=useCallback(async (content: string) => {
-    if (!socket||!content.trim()||!conversation||!currentUser) return;
+    console.log(content);
+    console.log(socket);
+    console.log(conversation);
+    console.log(currentUser);
 
+    if (!socket||!content.trim()||!conversation) return;
+    console.log(content);
     const newMessage: Message={
-      id: Date.now(), // Temporary ID, will be replaced by server
       content,
       senderId: currentUser.id,
       conversationId: conversation.id,

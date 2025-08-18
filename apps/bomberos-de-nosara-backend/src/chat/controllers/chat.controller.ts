@@ -83,4 +83,16 @@ export class ChatController {
   async getAvailableUsers(@Request() req: { user: User }) {
     return this.chatService.getAvailableUsers(req.user.id);
   }
+
+  @Get('conversations/with/:userId')
+  async getConversationWithUser(
+    @Request() req: { user: User },
+    @Param('userId', ParseIntPipe) userId: number
+  ) {
+    if (userId === req.user.id) {
+      throw new BadRequestException('Cannot get a conversation with yourself');
+    }
+    
+    return this.chatService.getConversationWithUser(req.user.id, userId);
+  }
 }
