@@ -363,7 +363,7 @@ const ChatWindow=() => {
   if (isLoading&&!selectedUser) {
     return (
       <div className="flex items-center justify-center h-full">
-        <FiLoader className="animate-spin text-blue-500 text-2xl" />
+        <FiLoader className="animate-spin text-red-500 text-2xl" />
       </div>
     );
   }
@@ -416,7 +416,7 @@ const ChatWindow=() => {
                 ref={searchInputRef}
                 type="text"
                 placeholder="Buscar usuarios..."
-                className="w-full pl-4 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-4 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                 value={searchQuery}
                 onChange={handleSearchChange}
               />
@@ -439,7 +439,7 @@ const ChatWindow=() => {
           <div className="flex-1 overflow-y-auto">
             {isLoading? (
               <div className="flex items-center justify-center h-32">
-                <FiLoader className="animate-spin text-blue-500 text-xl" />
+                <FiLoader className="animate-spin text-red-500 text-xl" />
               </div>
             ):error? (
               <div className="p-4 text-red-500">{error}</div>
@@ -456,8 +456,8 @@ const ChatWindow=() => {
                       onClick={() => handleSelectUser(user)}
                       className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center space-x-3"
                     >
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <FiUser className="text-blue-500" />
+                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                        <FiUser className="text-red-500" />
                       </div>
                       <div className="min-w-0">
                         <p className="font-medium text-gray-900 truncate">{user.username}</p>
@@ -478,8 +478,8 @@ const ChatWindow=() => {
             {/* Chat Header */}
             <div className="p-4 border-b flex items-center justify-between bg-white sticky top-0 z-10">
               <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3 flex-shrink-0">
-                  <FiUser className="text-blue-500" />
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
+                  <FiUser className="text-red-500" />
                 </div>
                 <div>
                   <h3 className="font-medium text-gray-900">{selectedUser.username}</h3>
@@ -487,7 +487,7 @@ const ChatWindow=() => {
                     <span className={`w-2 h-2 rounded-full mr-1 ${isConnected? 'bg-green-400':'bg-gray-400'}`}></span>
                     {isConnected? 'En línea':'Desconectado'}
                     {typingUsers.size>0&&(
-                      <span className="ml-2 text-blue-500">
+                      <span className="ml-2 text-red-500">
                         {Array.from(typingUsers).join(', ')} está escribiendo...
                       </span>
                     )}
@@ -538,7 +538,7 @@ const ChatWindow=() => {
 
             {/* Message Input */}
             <div className="p-4 border-t bg-white">
-              <div className="bg-gray-50 rounded-lg border border-gray-200 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-200 transition-all">
+              <div className="bg-gray-50 rounded-lg border border-gray-200 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200 transition-all">
                 <div className="p-2">
                   <input
                     type="text"
@@ -568,7 +568,7 @@ const ChatWindow=() => {
                     </button>
                   </div>
                   <button
-                    className={`px-4 py-2 rounded-lg font-medium ${inputValue.trim()? 'bg-blue-500 text-white hover:bg-blue-600':'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
+                    className={`px-4 py-2 rounded-lg font-medium ${inputValue.trim()? 'bg-red-500 text-white hover:bg-red-600':'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
                     onClick={() => {
                       if (inputValue.trim()) {
                         handleSendMessage(inputValue.trim());

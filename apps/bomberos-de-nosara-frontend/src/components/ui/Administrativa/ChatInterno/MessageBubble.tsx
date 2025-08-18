@@ -20,7 +20,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
 
   // Different colors for different users (using a simple hash function)
   const getUserColor = (name: string) => {
-    if (isOwn) return 'bg-blue-600 text-white';
+    if (isOwn) return 'bg-red-600 text-white';
     
     // Generate a consistent color based on username
     const colors = [
@@ -49,8 +49,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3 px-2`}>
       <div className={`flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-start max-w-[90%]`}>
         {/* Avatar */}
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOwn ? 'ml-2' : 'mr-2'} ${isOwn ? 'bg-blue-100' : 'bg-gray-200'}`}>
-          <span className={`text-sm font-medium ${isOwn ? 'text-blue-600' : 'text-gray-600'}`}>
+        <div 
+          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOwn ? 'ml-2' : 'mr-2'} ${isOwn ? 'bg-red-100' : 'bg-gray-200'}`}
+        >
+          <span className={`text-sm font-medium ${isOwn ? 'text-red-600' : 'text-gray-600'}`}>
             {username.charAt(0).toUpperCase()}
           </span>
         </div>
