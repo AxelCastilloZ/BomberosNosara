@@ -41,7 +41,7 @@ interface Conversation {
 const ChatWindow=() => {
   // Hooks
   const { socket, isConnected }=useSocket();
-  const { token, user: currentUser }=useAuth();
+  const { token }=useAuth();
 
   // State
   const [users, setUsers]=useState<User[]>([]);
@@ -50,10 +50,33 @@ const ChatWindow=() => {
   const [messages, setMessages]=useState<Message[]>([]);
   const [isLoading, setIsLoading]=useState(false);
   const [error, setError]=useState<string|null>(null);
+  const [currentUser, setCurrentUser]=useState<any>(null);
   const messagesEndRef=useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
   const typingTimeoutRef=useRef<Timeout|null>(null);
+
+  // Fetch current user data from localStorage
+  useEffect(() => {
+    const fetchCurrentUser=async () => {
+      try {
+        const authUser=localStorage.getItem('authUser');
+        if (authUser) {
+          const response=await axios.get(`${API_URL}/users/${authUser}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setCurrentUser(response.data);
+        }
+      } catch (err) {
+        console.error('Error fetching current user:', err);
+        setError('Error al cargar la información del usuario');
+      }
+    };
+
+    if (token) {
+      fetchCurrentUser();
+    }
+  }, [token]);
 
   // Fetch available users
   useEffect(() => {
@@ -79,49 +102,79 @@ const ChatWindow=() => {
 
   // Fetch or create conversation when a user is selected
   const handleSelectUser=useCallback(async (user: User) => {
-    console.log(user);
-    //if (!token||!currentUser) return;
-    console.log(token);
+    if (!token||!currentUser) {
+      console.error('No token or current user');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setSelectedUser(user);
+      setError(null);
 
       // Try to find existing conversation
-      const response=await axios.get(`${API_URL}/chat/conversations/with/${user.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      try {
+        const response=await axios.get(`${API_URL}/chat/conversations/with/${user.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
-      if (response.status) {
-        setConversation(response.data);
-        setMessages(response.data.messages||[]);
-      } else {
-        // Create new conversation if none exists
-        const newConvResponse=await axios.post(
-          `${API_URL}/chat/conversations`,
-          { participantIds: [user.id] },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        setConversation(newConvResponse.data);
-        setMessages([]);
+        if (response.data) {
+          console.log('Found existing conversation:', response.data);
+          setConversation(response.data);
+
+          // Fetch messages for this conversation
+          try {
+            const messagesResponse=await axios.get(
+              `${API_URL}/chat/conversations/${response.data.id}/messages`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            console.log('Fetched messages:', messagesResponse.data);
+            setMessages(messagesResponse.data||[]);
+          } catch (error) {
+            console.error('Error fetching messages:', error);
+            setMessages([]);
+          }
+
+          return;
+        }
+      } catch (error) {
+        console.log('No existing conversation found, will create a new one');
       }
+
+      // Create new conversation if none exists
+      const newConvResponse=await axios.post(
+        `${API_URL}/chat/conversations`,
+        { participantIds: [user.id] },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log('Created new conversation:', newConvResponse.data);
+      setConversation(newConvResponse.data);
+      setMessages([]);
+
     } catch (err) {
-      setError('Error al cargar la conversación');
-      console.error('Error fetching conversation:', err);
+      const errorMessage=(err as Error).message||'Error al cargar la conversación';
+      setError(errorMessage);
+      console.error('Error in handleSelectUser:', err);
     } finally {
       setIsLoading(false);
     }
   }, [token, currentUser]);
 
   // Handle sending a new message
-  const handleSendMessage=useCallback(async (content: string) => {
-    console.log(content);
-    console.log(socket);
-    console.log(conversation);
-    console.log(currentUser);
+  const handleSendMessage = useCallback(async (content: string) => {
+    if (!socket || !content.trim() || !conversation || !currentUser) {
+      console.error('Missing required data for sending message');
+      return;
+    }
 
-    if (!socket||!content.trim()||!conversation) return;
-    console.log(content);
-    const newMessage: Message={
+    const newMessage: Message = {
+      id: Date.now(), // Temporary ID for optimistic update
       content,
       senderId: currentUser.id,
       conversationId: conversation.id,
@@ -129,7 +182,7 @@ const ChatWindow=() => {
       isRead: false,
       sender: {
         id: currentUser.id,
-        username: currentUser.username||'Usuario',
+        username: currentUser.username || 'Usuario',
       },
     };
 
@@ -137,25 +190,21 @@ const ChatWindow=() => {
     setMessages((prev) => [...prev, newMessage]);
 
     try {
-      // Send message to server
-      const response=await axios.post(
+      // Send message via WebSocket
+      socket.emit('sendMessage', {
+        content,
+        conversationId: conversation.id,
+        id: newMessage.id, // Include the temporary ID
+      });
+
+      // Also save to the database via HTTP
+      await axios.post(
         `${API_URL}/chat/messages`,
-        { content, conversationId: conversation.id },
+        { content, conversationId: conversation.id, senderId: currentUser.id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Update message with server data
-      setMessages((prev) =>
-        prev.map((m) => (m.id===newMessage.id? { ...response.data, sender: newMessage.sender }:m))
-      );
-
-      // Emit socket event
-      if (socket) {
-        socket.emit('sendMessage', {
-          ...response.data,
-          sender: newMessage.sender,
-        });
-      }
+      // The actual message update will happen via the 'newMessage' event
     } catch (err) {
       console.error('Error sending message:', err);
       // Revert optimistic update on error
@@ -178,17 +227,23 @@ const ChatWindow=() => {
 
   // Set up socket listeners
   useEffect(() => {
-    if (!socket||!isConnected||!conversation) return;
+    if (!socket || !isConnected || !conversation) return;
 
-    const handleNewMessage=(message: Message) => {
-      if (message.conversationId===conversation.id) {
-        setMessages((prev: Message[]) => [...prev, message]);
-      }
+    const handleNewMessage = (message: Message) => {
+      console.log('Received new message:', message);
+      setMessages(prev => {
+        // Check if message already exists (by ID)
+        const messageExists = prev.some(m => m.id === message.id);
+        if (!messageExists) {
+          return [...prev, message];
+        }
+        return prev;
+      });
     };
 
-    const handleUserTyping=(data: { userId: number; username: string; isTyping: boolean }) => {
-      setTypingUsers((prev: Set<string>) => {
-        const newTypingUsers=new Set(prev);
+    const handleUserTyping = (data: { userId: number; username: string; isTyping: boolean }) => {
+      setTypingUsers(prev => {
+        const newTypingUsers = new Set(prev);
         if (data.isTyping) {
           newTypingUsers.add(data.username);
         } else {
@@ -199,18 +254,28 @@ const ChatWindow=() => {
     };
 
     // Join conversation room
+    console.log('Joining conversation:', conversation.id);
     socket.emit('joinConversation', { conversationId: conversation.id });
 
     // Set up event listeners
     socket.on('newMessage', handleNewMessage);
     socket.on('typing', handleUserTyping);
+    socket.on('messageSent', (data) => {
+      console.log('Message sent confirmation:', data);
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === data.id ? { ...msg, id: data.id, status: 'delivered' } : msg
+        )
+      );
+    });
 
     // Clean up
     return () => {
       if (socket) {
+        console.log('Cleaning up socket listeners');
         socket.off('newMessage', handleNewMessage);
         socket.off('typing', handleUserTyping);
-        socket.emit('leaveConversation', { conversationId: conversation.id });
+        socket.off('messageSent');
       }
     };
   }, [socket, isConnected, conversation]);

@@ -23,14 +23,14 @@ import { ChatModule } from './chat/chat.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: (() => {
-        const localPath = join(__dirname, '..', '.env');
-        const dockerPath = '/app/.env';
+        const localPath=join(__dirname, '..', '.env');
+        const dockerPath='/app/.env';
 
-        if (process.env.NODE_ENV === 'production') {
-          return existsSync(dockerPath) ? dockerPath : localPath;
+        if (process.env.NODE_ENV==='production') {
+          return existsSync(dockerPath)? dockerPath:localPath;
         }
 
-        return existsSync(localPath) ? localPath : undefined;
+        return existsSync(localPath)? localPath:undefined;
       })(),
     }),
 
@@ -49,8 +49,8 @@ import { ChatModule } from './chat/chat.module';
         username: configService.get<string>('DATABASE_USER', 'root'),
         password: configService.get<string>('DATABASE_PASSWORD', ''),
         database: configService.get<string>('DATABASE_NAME', 'bomberosNosara'),
-        synchronize: true,
-        dropSchema: true,
+        synchronize: false,
+        dropSchema: false,
         autoLoadEntities: true,
         retryAttempts: 10,
         retryDelay: 3000,
@@ -71,4 +71,4 @@ import { ChatModule } from './chat/chat.module';
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }
