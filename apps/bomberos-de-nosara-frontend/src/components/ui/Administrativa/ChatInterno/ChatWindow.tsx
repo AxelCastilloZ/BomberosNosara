@@ -205,6 +205,7 @@ const ChatWindow=() => {
       console.error('Missing required data for sending message');
       return;
     }
+    console.log('Sending message:', currentUser);
 
     const newMessage: Message={
       id: Date.now(), // Temporary ID for optimistic update
@@ -215,7 +216,7 @@ const ChatWindow=() => {
       isRead: false,
       sender: {
         id: currentUser.id,
-        username: currentUser.username||'Usuario',
+        username: currentUser?.username||'Usuario',
       },
     };
 
@@ -227,6 +228,7 @@ const ChatWindow=() => {
       socket.emit('sendMessage', {
         content,
         conversationId: conversation.id,
+        sender: currentUser,
         id: newMessage.id, // Include the temporary ID
       });
 
