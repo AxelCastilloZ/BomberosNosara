@@ -706,37 +706,32 @@ const ChatWindow=() => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
                 </div>
               ):(
-                <div className="space-y-4">
-                  {messages.map((message, index) => {
-                    const isOwn=message.senderId===currentUser?.id;
-                    return (
-                      <div key={message.id||index} className={`flex ${isOwn? 'justify-end':'justify-start'}`}>
-                        <div
-                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn? 'bg-red-600 text-white':'bg-gray-200 text-gray-800'}`}
-                        >
-                          <div className="font-medium text-sm mb-1">
-                            {!isOwn&&message.sender?.username}
-                          </div>
-                          <div className="text-sm">{message.content}</div>
-                          <div className="text-right mt-1">
-                            <span className="text-xs opacity-70">
-                              {message.timestamp? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }):''}
-                            </span>
-                            {isOwn&&(
-                              <span className="ml-1">
-                                {message.isRead? (
-                                  <FiCheckCircle className="inline text-blue-400" />
-                                ):(
-                                  <FiCheck className="inline text-gray-400" />
-                                )}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
+                <div className="h-full flex flex-col">
+                  {messages.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-gray-500">
+                      <FiMessageSquare className="w-12 h-12 mb-4 text-gray-300" />
+                      <h3 className="text-lg font-medium text-gray-700 mb-1">No hay mensajes</h3>
+                      <p className="text-sm">Envía un mensaje para iniciar la conversación</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {messages.map((message, index) => {
+                        const isOwn=message.sender?.id===currentUser?.id;
+                        const username=isOwn? currentUser?.username||'Yo':message.sender?.username||'Usuario';
+
+                        return (
+                          <MessageBubble
+                            key={message.id||index}
+                            message={message.content}
+                            isOwn={isOwn}
+                            timestamp={message.timestamp||new Date().toISOString()}
+                            username={username}
+                          />
+                        );
+                      })}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
