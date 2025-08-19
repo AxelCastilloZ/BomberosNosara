@@ -17,7 +17,7 @@ import {
   FiCheck
 } from 'react-icons/fi';
 import axios from 'axios';
-import { RoleEnum } from '../../../../types/role.enum';
+import { RoleEnum, RoleLabels } from '../../../../types/role.enum';
 
 type Timeout=ReturnType<typeof setTimeout>;
 
@@ -30,7 +30,7 @@ interface User {
   username: string;
   email?: string;
   name?: string;
-  role: RoleEnum;
+  roles: any[];
 }
 
 interface ChatTarget {
@@ -81,13 +81,33 @@ const ChatWindow=() => {
   const [showGroups, setShowGroups]=useState(true);
   const [conversation, setConversation]=useState<Conversation|null>(null);
   const [messages, setMessages]=useState<Message[]>([]);
-  const [isLoading, setIsLoading]=useState(false);
+  const [isLoading, setIsLoading]=useState(true);
   const [error, setError]=useState<string|null>(null);
   const messagesEndRef=useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
   const typingTimeoutRef=useRef<Timeout|null>(null);
   const searchInputRef=useRef<HTMLInputElement>(null);
+
+  // Helper function to get users by role, excluding current user by default
+  const getUsersByRole=(roleName: string, excludeCurrentUser=true): User[] => {
+    if (!users) return [];
+
+    return users.filter(user => {
+      // Exclude current user if needed
+      if (excludeCurrentUser&&user.id===currentUser?.id) return false;
+
+      // Check if user has the specified role
+      return user.roles?.some(role =>
+        typeof role==='string'? role===roleName:role.name===roleName
+      );
+    });
+  };
+
+  // Helper function to get user's display name
+  const getUserDisplayName=(user: User): string => {
+    return user.name||user.username||'Usuario sin nombre';
+  };
 
   // Fetch current user data from localStorage
   useEffect(() => {
@@ -161,7 +181,7 @@ const ChatWindow=() => {
 
       try {
         setIsLoading(true);
-        const response=await axios.get(`${API_URL}/chat/users/available`, {
+        const response=await axios.get<User[]>(`${API_URL}/chat/users/available`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUsers(response.data);
@@ -382,10 +402,7 @@ const ChatWindow=() => {
 
     const messageContent=inputValue.trim();
     if (!messageContent||!socket||!selectedTarget||!currentUser||!currentUser) {
-      console.log(currentUser)
-      console.log(socket)
-      console.log(selectedTarget)
-      console.log(currentUser)
+
       console.error('Missing required data for sending message');
       return;
     }
@@ -604,7 +621,7 @@ const ChatWindow=() => {
               </div>
             ):(
               <div className="divide-y divide-gray-100">
-                {filteredUsers.map((user) => (
+                {filteredUsers.map((user: User) => (
                   user.id!==currentUser?.id&&(
                     <div
                       key={user.id}
@@ -619,7 +636,7 @@ const ChatWindow=() => {
                           {user.name||user.username}
                         </p>
                         <p className="text-sm text-gray-500 truncate">
-                          {user.role}
+                          {user.roles?.join(', ')}
                         </p>
                       </div>
                     </div>
@@ -640,56 +657,50 @@ const ChatWindow=() => {
           <div className="flex-1 flex flex-col bg-white border-l border-gray-200">
             {/* Chat Header */}
             <div className="p-4 border-b flex items-center justify-between bg-white sticky top-0 z-10">
-              <div className="flex items-center">
-                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
+              <div className="flex items-start">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 flex-shrink-0 mt-1">
                   <FiUser className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h2 className="font-semibold text-gray-900">{selectedTarget.name}</h2>
-                  {typingUsers.size>0&&(
+                  <h2 className="font-semibold text-gray-900">
+                    {selectedTarget.name}
+                    {selectedTarget.type==='role'&&(
+                      <span className="ml-2 text-xs font-normal text-gray-500">
+                        {(() => {
+                          const roleUsers=getUsersByRole(selectedTarget.role!, false);
+                          return `${roleUsers.length} ${roleUsers.length===1? 'miembro':'miembros'}`;
+                        })()}
+                      </span>
+                    )}
+                  </h2>
+                  {typingUsers.size>0? (
                     <p className="text-xs text-gray-500">Escribiendo...</p>
-                  )}
+                  ):selectedTarget.type==='role'? (
+                    <div className="space-y-1">
+                      {(() => {
+                        const roleUsers=getUsersByRole(selectedTarget.role!);
+
+                        if (roleUsers.length===0) {
+                          return <p className="text-xs text-gray-600">No hay otros usuarios disponibles en este grupo</p>;
+                        }
+
+                        return (
+                          <div className="text-xs text-gray-600">
+                            {roleUsers.map((user, index) => (
+                              <span key={user.id}>
+                                {getUserDisplayName(user)}
+                                {index < roleUsers.length - 1 ? ', ' : ''}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ):null}
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <button
-                  className="p-2 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-900"
-                  aria-label="Llamar"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                    />
-                  </svg>
-                </button>
-                <button
-                  className="p-2 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-900"
-                  aria-label="Videollamada"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                </button>
+
                 <button
                   className="p-2 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-900"
                   aria-label="Más opciones"
@@ -707,13 +718,13 @@ const ChatWindow=() => {
                 </div>
               ):(
                 <div className="h-full flex flex-col">
-                  {messages.length === 0 ? (
+                  {messages.length===0? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-gray-500">
                       <FiMessageSquare className="w-12 h-12 mb-4 text-gray-300" />
                       <h3 className="text-lg font-medium text-gray-700 mb-1">No hay mensajes</h3>
                       <p className="text-sm">Envía un mensaje para iniciar la conversación</p>
                     </div>
-                  ) : (
+                  ):(
                     <div className="space-y-1">
                       {messages.map((message, index) => {
                         const isOwn=message.sender?.id===currentUser?.id;
@@ -764,20 +775,7 @@ const ChatWindow=() => {
                 </div>
                 <div className="flex items-center justify-between p-2 border-t border-gray-100 bg-gray-50 rounded-b-lg">
                   <div className="flex space-x-2">
-                    <button
-                      type="button"
-                      className="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors"
-                      onClick={() => { }}
-                    >
-                      <FiPaperclip className="w-5 h-5" />
-                    </button>
-                    <button
-                      type="button"
-                      className="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors"
-                      onClick={() => { }}
-                    >
-                      <FiImage className="w-5 h-5" />
-                    </button>
+
                   </div>
                   <button
                     type="submit"
