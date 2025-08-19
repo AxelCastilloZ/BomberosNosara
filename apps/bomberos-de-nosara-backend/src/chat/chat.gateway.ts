@@ -5,12 +5,34 @@ import {
   SubscribeMessage,
   MessageBody,
   OnGatewayConnection,
-  OnGatewayDisconnect
+  OnGatewayDisconnect,
+  ConnectedSocket
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException } from '@nestjs/common';
+import { UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { RoleEnum } from '../roles/role.enum';
+import { ChatService } from './services/chat.service';
+
+interface ConnectedClient {
+  userId: string | number;
+  lastSeen: Date;
+  role?: RoleEnum;
+}
+
+interface DirectMessagePayload {
+  to: string | number;
+  message: string;
+  senderId: string | number;
+  isGroup?: boolean;
+}
+
+interface RoleMessagePayload {
+  role: RoleEnum;
+  message: string;
+  senderId: string | number;
+}
 
 @WebSocketGateway({
   cors: {
@@ -23,10 +45,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   // Track connected clients by their socket ID
-  private connectedClients=new Map<string, { userId: string|number; lastSeen: Date }>();
+  private connectedClients = new Map<string, ConnectedClient>();
 
-  constructor(private readonly jwtService: JwtService, private readonly configService: ConfigService) {
-    this.server=new Server();
+  constructor(
+    private readonly jwtService: JwtService, 
+    private readonly configService: ConfigService,
+    @Inject(forwardRef(() => ChatService))
+    private readonly chatService: ChatService
+  ) {
+    this.server = new Server();
   }
 
   afterInit(server: Server) {
@@ -38,35 +65,44 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       console.log(`Client connecting: ${client.id}`);
 
-      const token=this.getTokenFromSocket(client);
+      const token = this.getTokenFromSocket(client);
       if (!token) {
         console.log('No token provided');
         throw new UnauthorizedException('No token provided');
       }
 
-      const jwt_secret=this.configService.get<string>('JWT_SECRET');
-      const payload=this.jwtService.verify(token, { secret: jwt_secret });
+      const jwt_secret = this.configService.get<string>('JWT_SECRET');
+      const payload = this.jwtService.verify(token, { secret: jwt_secret });
 
       if (!payload) {
         console.log('Invalid token');
         throw new UnauthorizedException('Invalid token');
       }
 
-      // Store minimal client data
+      // Store minimal client data with role
       this.connectedClients.set(client.id, {
         userId: payload.sub,
-        lastSeen: new Date()
+        lastSeen: new Date(),
+        role: payload.role
       });
 
       console.log(`Client connected: ${client.id}, User ID: ${payload.sub}`);
 
-      // Join a room for this user to target messages
+      // Join user's personal room for direct messages
       await client.join(`user_${payload.sub}`);
+      
+      // Join role-based room
+      if (payload.role) {
+        const roleRoom = `role-${payload.role}`;
+        await client.join(roleRoom);
+        console.log(`User ${payload.sub} joined role room: ${roleRoom}`);
+      }
 
       client.emit('connected', {
         status: 'connected',
         clientId: client.id,
-        userId: payload.sub
+        userId: payload.sub,
+        role: payload.role
       });
 
     } catch (error) {
@@ -122,77 +158,218 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('sendMessage')
-  async handleMessage(client: Socket, payload: any) {
+  async handleMessage(
+    @MessageBody() data: DirectMessagePayload,
+    @ConnectedSocket() client: Socket
+  ) {
     try {
-      console.log('Received message from client:', client.id);
+      const { to, message, senderId, isGroup = false } = data;
+      console.log(`Sending message from ${senderId} to ${isGroup ? 'group' : 'user'} ${to}: ${message}`);
 
-      const clientData=this.connectedClients.get(client.id);
-      if (!clientData) {
-        console.log('Client not authenticated');
-        throw new UnauthorizedException('Not authenticated');
-      }
-
-      // Validate required fields
-      if (!payload||typeof payload!=='object') {
-        console.log('Invalid payload format');
-        throw new Error('Invalid message format');
-      }
-
-      if (!payload.conversationId) {
-        console.log('Missing conversationId in payload');
-        throw new Error('conversationId is required');
-      }
-
-      if (typeof payload.content==='undefined'||payload.content===null) {
-        console.log('Message content is required');
+      if (!message) {
         throw new Error('Message content is required');
       }
 
-      // Create message data with defaults
-      const messageData={
-        id: payload.id||Date.now().toString(),
-        content: String(payload.content||''),
-        conversationId: String(payload.conversationId),
-        senderId: clientData.userId,
-        createdAt: new Date().toISOString(),
-        isRead: false,
-        ...payload // Allow overriding any fields
-      };
+      let messageData;
+      
+      if (isGroup) {
+        // For group messages, we'll store them with a special conversation ID
+        // In a real app, you might want to create a proper group conversation
+        messageData = {
+          id: Date.now(),
+          content: message,
+          senderId,
+          to,
+          timestamp: new Date().toISOString(),
+          isGroup: true,
+          groupId: to,
+          sender: {
+            id: senderId,
+            username: 'Usuario' // TODO: Fetch from database
+          }
+        };
 
-      console.log('Broadcasting message to conversation:', messageData.conversationId);
+        // For group messages, send to the role room
+        this.server.to(`role-${to}`).emit('newMessage', messageData);
+      } else {
+        // For 1:1 messages, find or create conversation
+        const conversation = await this.chatService.getConversationWithUser(Number(senderId), Number(to));
+        
+        // Save the message to the database
+        const savedMessage = await this.chatService.createMessage({
+          content: message,
+          conversationId: conversation.id,
+          senderId: Number(senderId)
+        }, Number(senderId));
 
-      try {
-        // Emit to all clients in the conversation room (including the sender)
-        this.server.to(`conversation_${messageData.conversationId}`).emit('newMessage', messageData);
+        messageData = {
+          id: savedMessage.id,
+          content: savedMessage.content,
+          senderId: savedMessage.sender.id,
+          to: to,
+          timestamp: savedMessage.createdAt.toISOString(),
+          isGroup: false,
+          sender: {
+            id: savedMessage.sender.id,
+            username: 'Usuario' // TODO: Fetch from database
+          },
+          conversationId: savedMessage.conversation.id
+        };
 
-        // Send confirmation back to the sender
-        client.emit('messageSent', {
+        // Send to recipient
+        this.server.to(`user_${to}`).emit('newMessage', {
           ...messageData,
-          status: 'delivered'
+          isOwn: false
         });
-
-        return { success: true, message: 'Message sent' };
-      } catch (emitError) {
-        console.error('Error emitting message:', emitError);
-        throw new Error('Failed to send message');
       }
 
-    } catch (error) {
-      const errorMessage=error instanceof Error? error.message:'Unknown error';
-      console.error('Error handling message:', error);
-
-      // Only emit error to the client that sent the message
-      client.emit('error', {
-        message: 'Failed to send message',
-        error: errorMessage
+      // Always send back to sender with isOwn flag
+      client.emit('newMessage', {
+        ...messageData,
+        isOwn: true
       });
 
-      return { success: false, error: errorMessage };
+      return { 
+        success: true, 
+        message: messageData,
+        timestamp: new Date().toISOString() 
+      };
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to send message' 
+      };
+    }
+  }
+
+  @SubscribeMessage('sendToRole')
+  async handleRoleMessage(
+    @MessageBody() data: RoleMessagePayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    try {
+      const { role, message, senderId } = data;
+      console.log(`Sending message to role ${role} from ${senderId}: ${message}`);
+
+      if (!role || !message) {
+        throw new Error('Role and message content are required');
+      }
+
+      // For group messages, we'll store them with a special conversation ID
+      // In a real app, you might want to create a proper group conversation
+      const messageData = {
+        id: Date.now(),
+        content: message,
+        senderId,
+        to: role,
+        timestamp: new Date().toISOString(),
+        isGroup: true,
+        groupId: role,
+        sender: {
+          id: senderId,
+          username: 'Usuario' // TODO: Fetch from database
+        }
+      };
+
+      // In a real app, you would save the group message to the database here
+      // For example:
+      // await this.chatService.saveGroupMessage({
+      //   content: message,
+      //   role: role,
+      //   senderId: Number(senderId)
+      // });
+
+      // Broadcast to all users in the role room including sender
+      this.server.to(`role-${role}`).emit('newMessage', messageData);
+
+      // Also emit back to sender with isOwn flag
+      client.emit('newMessage', {
+        ...messageData,
+        isOwn: true
+      });
+
+      return { 
+        success: true, 
+        message: messageData,
+        timestamp: new Date().toISOString() 
+      };
+    } catch (error) {
+      console.error('Error sending role message:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Failed to send role message' 
+      };
+    }
+  }
+
+  @SubscribeMessage('typing')
+  async handleTyping(
+    @MessageBody() data: {
+      to: string | number;
+      isTyping: boolean;
+      userId: string | number;
+      username: string;
+      isGroup?: boolean;
+      role?: string;
+    },
+    @ConnectedSocket() client: Socket
+  ) {
+    try {
+      const clientData = this.connectedClients.get(client.id);
+      if (!clientData) {
+        throw new UnauthorizedException('Not authenticated');
+      }
+
+      const { to, isTyping, userId, username, isGroup = false, role } = data;
+
+      // Broadcast to the appropriate room
+      if (isGroup && role) {
+        // For group chats, send to everyone in the role room except the sender
+        client.to(`role-${role}`).emit('typing', {
+          userId,
+          username,
+          isTyping,
+          isGroup: true,
+          role,
+          timestamp: new Date().toISOString()
+        });
+      } else if (!isGroup) {
+        // For 1:1 chats, send only to the recipient
+        this.server.to(`user_${to}`).emit('typing', {
+          userId,
+          username,
+          isTyping,
+          isGroup: false,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error handling typing indicator:', error);
     }
   }
 
   @OnEvent('message.created')
   handleMessageCreatedEvent(payload: any) {
-    this.server.emit('newMessage', payload);
+    const { isGroup, groupId, to, senderId } = payload;
+    
+    if (isGroup && groupId) {
+      // For group messages, send to the role room
+      this.server.to(`role-${groupId}`).emit('newMessage', payload);
+    } else if (to) {
+      // For 1:1 messages, send to recipient
+      this.server.to(`user_${to}`).emit('newMessage', {
+        ...payload,
+        isOwn: false
+      });
+      
+      // And back to sender with isOwn flag
+      if (senderId) {
+        this.server.to(`user_${senderId}`).emit('newMessage', {
+          ...payload,
+          isOwn: true
+        });
+      }
+    }
   }
 }

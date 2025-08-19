@@ -10,7 +10,7 @@ import { RoleEnum } from '../roles/role.enum';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(RoleEnum.SUPERUSER)
+@Roles(RoleEnum.SUPERUSER, RoleEnum.ADMIN)
 export class UsersController {
   constructor(private readonly usersService: UsersService) { }
 

@@ -3,8 +3,21 @@ import { useSocket } from '../../../../contexts/SocketContext';
 import { useAuth } from '../../../../hooks/useAuth';
 import MessageBubble from './MessageBubble';
 import { motion } from 'framer-motion';
-import { FiUser, FiMessageSquare, FiChevronLeft, FiLoader, FiPaperclip, FiImage, FiMoreVertical, FiSearch, FiCheckCircle } from 'react-icons/fi';
+import {
+  FiUser,
+  FiUsers,
+  FiMessageSquare,
+  FiChevronLeft,
+  FiLoader,
+  FiPaperclip,
+  FiImage,
+  FiMoreVertical,
+  FiSearch,
+  FiCheckCircle,
+  FiCheck
+} from 'react-icons/fi';
 import axios from 'axios';
+import { RoleEnum } from '../../../../types/role.enum';
 
 type Timeout=ReturnType<typeof setTimeout>;
 
@@ -17,16 +30,30 @@ interface User {
   username: string;
   email?: string;
   name?: string;
+  role: RoleEnum;
+}
+
+interface ChatTarget {
+  id: string|number;
+  name: string;
+  type: 'user'|'role';
+  role?: RoleEnum;
 }
 
 interface Message {
   id?: number;
   content: string;
-  senderId: number;
-  conversationId: number;
-  createdAt: string;
-  isRead: boolean;
-  sender: {
+  senderId: number|string;
+  conversationId?: number;
+  timestamp?: string;
+  isRead?: boolean;
+  isOwn?: boolean;
+  isGroup?: boolean;
+  groupId?: string|number;
+  to?: string|number;
+  error?: string;
+  status?: string;
+  sender?: {
     id: number;
     username: string;
   };
@@ -44,17 +71,18 @@ const ChatWindow=() => {
   // Hooks
   const { socket, isConnected }=useSocket();
   const { token }=useAuth();
+  const [currentUser, setCurrentUser]=useState<User|null>(null);
 
   // State
   const [users, setUsers]=useState<User[]>([]);
   const [filteredUsers, setFilteredUsers]=useState<User[]>([]);
   const [searchQuery, setSearchQuery]=useState('');
-  const [selectedUser, setSelectedUser]=useState<User|null>(null);
+  const [selectedTarget, setSelectedTarget]=useState<ChatTarget|null>(null);
+  const [showGroups, setShowGroups]=useState(true);
   const [conversation, setConversation]=useState<Conversation|null>(null);
   const [messages, setMessages]=useState<Message[]>([]);
   const [isLoading, setIsLoading]=useState(false);
   const [error, setError]=useState<string|null>(null);
-  const [currentUser, setCurrentUser]=useState<User|null>(null);
   const messagesEndRef=useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
@@ -65,9 +93,9 @@ const ChatWindow=() => {
   useEffect(() => {
     const fetchCurrentUser=async () => {
       try {
-        const authUser=localStorage.getItem('authUser');
-        if (authUser) {
-          const response=await axios.get(`${API_URL}/users/${authUser}`, {
+        const currentUser=localStorage.getItem('authUser');
+        if (currentUser) {
+          const response=await axios.get(`${API_URL}/users/${currentUser}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           setCurrentUser(response.data);
@@ -82,6 +110,34 @@ const ChatWindow=() => {
       fetchCurrentUser();
     }
   }, [token]);
+  console.log('cuurent Y:', currentUser)
+  // Role groups for chat
+  const roleGroups: ChatTarget[]=[
+    {
+      id: RoleEnum.SUPERUSER,
+      name: 'Superusuarios',
+      type: 'role',
+      role: RoleEnum.SUPERUSER
+    },
+    {
+      id: RoleEnum.ADMIN,
+      name: 'Administradores',
+      type: 'role',
+      role: RoleEnum.ADMIN
+    },
+    {
+      id: RoleEnum.PERSONAL_BOMBERIL,
+      name: 'Personal Bomberil',
+      type: 'role',
+      role: RoleEnum.PERSONAL_BOMBERIL
+    },
+    {
+      id: RoleEnum.VOLUNTARIO,
+      name: 'Voluntarios',
+      type: 'role',
+      role: RoleEnum.VOLUNTARIO
+    }
+  ];
 
   // Filter users based on search query
   useEffect(() => {
@@ -121,27 +177,49 @@ const ChatWindow=() => {
     fetchUsers();
   }, [token]);
 
-  // Fetch or create conversation when a user is selected
-  const handleSearchChange=(e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
-  };
+  // Handle search input change
+  const handleSearchChange=(e: React.ChangeEvent<HTMLInputElement>): void => {
+    const value=e.target.value;
+    setSearchQuery(value);
 
-  const clearSearch=() => {
-    setSearchQuery('');
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
+    if (!value.trim()) {
+      setFilteredUsers(users);
+    } else {
+      const query=value.toLowerCase();
+      const filtered=users.filter(
+        user =>
+          user.username.toLowerCase().includes(query)||
+          (user.name&&user.name.toLowerCase().includes(query))||
+          (user.email&&user.email.toLowerCase().includes(query))
+      );
+      setFilteredUsers(filtered);
     }
   };
 
+  // Clear search input
+  const clearSearch=useCallback((): void => {
+    setSearchQuery('');
+    setFilteredUsers(users);
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [users, setSearchQuery, setFilteredUsers]);
+
   const handleSelectUser=useCallback(async (user: User) => {
-    if (!token||!currentUser) {
-      console.error('No token or current user');
+    console.log(user)
+    console.log(currentUser)
+    if (!token||!currentUser||!currentUser) {
+      console.error('Missing required user data');
       return;
     }
 
     try {
       setIsLoading(true);
-      setSelectedUser(user);
+      setSelectedTarget({
+        id: user.id,
+        name: user.name||user.username||'Usuario',
+        type: 'user'
+      });
       setError(null);
       setSearchQuery(''); // Clear search when a user is selected
 
@@ -165,202 +243,254 @@ const ChatWindow=() => {
             setMessages(messagesResponse.data||[]);
           } catch (error) {
             console.error('Error fetching messages:', error);
-            setMessages([]);
           }
-
-          return;
         }
       } catch (error) {
         console.log('No existing conversation found, will create a new one');
       }
 
-      // Create new conversation if none exists
-      const newConvResponse=await axios.post(
-        `${API_URL}/chat/conversations`,
-        { participantIds: [user.id] },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      console.log('Created new conversation:', newConvResponse.data);
-      setConversation(newConvResponse.data);
-      setMessages([]);
-
-    } catch (err) {
-      const errorMessage=(err as Error).message||'Error al cargar la conversación';
-      setError(errorMessage);
-      console.error('Error in handleSelectUser:', err);
+    } catch (error) {
+      console.error('Error in handleSelectUser:', error);
+      setError('Error al cargar la conversación');
     } finally {
       setIsLoading(false);
     }
-  }, [token, currentUser]);
+  }, [token, currentUser, currentUser]);
 
-  // Handle sending a new message
-  const handleSendMessage=useCallback(async (content: string) => {
-    if (!socket||!content.trim()||!conversation||!currentUser) {
-      console.error('Missing required data for sending message');
-      return;
-    }
-    console.log('Sending message:', currentUser);
+  // Set up socket listeners for messages and typing indicators
+  useEffect(() => {
+    if (!socket||!isConnected||!currentUser) return;
 
-    const newMessage: Message={
-      id: Date.now(), // Temporary ID for optimistic update
-      content,
-      senderId: currentUser.id,
-      conversationId: conversation.id,
-      createdAt: new Date().toISOString(),
-      isRead: false,
-      sender: {
-        id: currentUser.id,
-        username: currentUser?.username||'Usuario',
-      },
+    const handleNewMessage=(message: Message) => {
+      // Skip processing our own messages that we've already handled optimistically
+      if (message.senderId===currentUser.id&&message.isOwn!==false) {
+        return;
+      }
+
+      console.log('Received new message:', message);
+
+      setMessages(prevMessages => {
+        // Check if message already exists to prevent duplicates
+        if (prevMessages.some(msg => msg.id===message.id)) {
+          return prevMessages;
+        }
+        return [...prevMessages, message];
+      });
     };
 
-    // Optimistic update
-    setMessages((prev) => [...prev, newMessage]);
+    const handleUserTyping=(data: {
+      userId: number|string;
+      username: string;
+      isTyping: boolean;
+      isGroup?: boolean;
+      groupId?: string|number;
+      role?: string;
+    }) => {
+      // Skip our own typing indicators
+      if (data.userId===currentUser.id) return;
 
-    try {
-      // Send message via WebSocket
-      socket.emit('sendMessage', {
-        content,
-        conversationId: conversation.id,
-        sender: currentUser,
-        id: newMessage.id, // Include the temporary ID
-      });
-
-      // Also save to the database via HTTP
-      await axios.post(
-        `${API_URL}/chat/messages`,
-        { content, conversationId: conversation.id, senderId: currentUser.id },
-        { headers: { Authorization: `Bearer ${token}` } }
+      // Only process typing indicators for the current chat
+      const isForCurrentChat=(
+        // Group chat and this is for our current group
+        (selectedTarget?.type==='role'&&data.isGroup&&data.role===selectedTarget.role)||
+        // 1:1 chat and this is for our current conversation
+        (selectedTarget?.type==='user'&&data.userId===selectedTarget.id&&!data.isGroup)
       );
 
-      // The actual message update will happen via the 'newMessage' event
-    } catch (err) {
-      console.error('Error sending message:', err);
-      // Revert optimistic update on error
-      setMessages((prev) => prev.filter((m) => m.id!==newMessage.id));
-      setError('Error al enviar el mensaje');
-    }
-  }, [socket, conversation, currentUser, token]);
+      if (isForCurrentChat) {
+        setTypingUsers(prev => {
+          const newTypingUsers=new Set(prev);
+          if (data.isTyping) {
+            newTypingUsers.add(data.username);
+          } else {
+            newTypingUsers.delete(data.username);
+          }
+          return newTypingUsers;
+        });
+      }
+    };
 
-  // Handle going back to user list
-  const handleBackToList=() => {
-    setSelectedUser(null);
-    setConversation(null);
-    setMessages([]);
-    setSearchQuery(''); // Clear search when going back to list
-    if (searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-  };
+    // Set up event listeners
+    socket.on('newMessage', handleNewMessage);
+    socket.on('typing', handleUserTyping);
+    socket.on('message', handleNewMessage);
+
+    // Clean up function
+    return () => {
+      console.log('Cleaning up socket listeners');
+      socket.off('newMessage', handleNewMessage);
+      socket.off('typing', handleUserTyping);
+      socket.off('message', handleNewMessage);
+      setMessages([]);
+    };
+  }, [socket, isConnected, currentUser, selectedTarget]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Set up socket listeners
-  useEffect(() => {
-    if (!socket||!isConnected||!conversation) return;
-
-    const handleNewMessage=(message: Message) => {
-      console.log('Received new message:', message);
-      setMessages(prev => {
-        // Check if message already exists (by ID)
-        const messageExists=prev.some(m => m.id===message.id);
-        if (!messageExists) {
-          return [...prev, message];
-        }
-        return prev;
-      });
-    };
-
-    const handleUserTyping=(data: { userId: number; username: string; isTyping: boolean }) => {
-      setTypingUsers(prev => {
-        const newTypingUsers=new Set(prev);
-        if (data.isTyping) {
-          newTypingUsers.add(data.username);
-        } else {
-          newTypingUsers.delete(data.username);
-        }
-        return newTypingUsers;
-      });
-    };
-
-    // Join conversation room
-    console.log('Joining conversation:', conversation.id);
-    socket.emit('joinConversation', { conversationId: conversation.id });
-
-    // Set up event listeners
-    socket.on('newMessage', handleNewMessage);
-    socket.on('typing', handleUserTyping);
-    socket.on('messageSent', (data) => {
-      console.log('Message sent confirmation:', data);
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id===data.id? { ...msg, id: data.id, status: 'delivered' }:msg
-        )
-      );
-    });
-
-    // Clean up
-    return () => {
-      if (socket) {
-        console.log('Cleaning up socket listeners');
-        socket.off('newMessage', handleNewMessage);
-        socket.off('typing', handleUserTyping);
-        socket.off('messageSent');
-      }
-    };
-  }, [socket, isConnected, conversation]);
-
-  // Handle input change
-  const handleInputChange=(e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange=useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
     const value=e.target.value;
     setInputValue(value);
-
-    // Notify other users that we're typing
-    if (socket&&conversation&&currentUser?.username) {
-      socket.emit('typing', {
-        conversationId: conversation.id,
-        username: currentUser.username,
-        isTyping: value.length>0
-      });
-    }
-  };
-
-  // Handle typing indicator
-  const handleTyping=useCallback(() => {
-    if (!socket||!conversation||!currentUser?.username) return;
 
     // Clear any existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current=null;
     }
 
-    // Notify other users that this user is typing
-    socket.emit('typing', {
-      conversationId: conversation.id,
-      username: currentUser.username,
-      isTyping: true,
-    });
+    // Only send typing indicator if we have content and a selected target
+    if (value.trim()&&selectedTarget&&currentUser) {
+      // Send typing indicator
+      const typingData={
+        to: selectedTarget.id,
+        isTyping: true,
+        isGroup: selectedTarget.type==='role',
+        userId: currentUser.id,
+        username: currentUser.username||'Usuario',
+        role: selectedTarget.type==='role'? selectedTarget.role:undefined
+      };
 
-    // Set a timeout to stop the typing indicator after 3 seconds of inactivity
-    typingTimeoutRef.current=setTimeout(() => {
-      socket.emit('typing', {
-        conversationId: conversation.id,
-        username: currentUser.username,
-        isTyping: false,
-      });
-    }, 3000);
-  }, [socket, conversation, currentUser]);
+      socket?.emit('typing', typingData);
 
-  if (isLoading&&!selectedUser) {
+      // Set a timeout to stop the typing indicator after 1 second of inactivity
+      typingTimeoutRef.current=setTimeout(() => {
+        socket?.emit('typing', {
+          ...typingData,
+          isTyping: false
+        });
+
+        typingTimeoutRef.current=null;
+      }, 1000);
+    }
+  }, [selectedTarget, currentUser, socket]);
+
+  const handleBackToList=useCallback((): void => {
+    setSelectedTarget(null);
+    setConversation(null);
+    setMessages([]);
+    setSearchQuery('');
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [setSelectedTarget, setConversation, setMessages, setSearchQuery, searchInputRef]);
+
+  // Handle sending a message
+  const handleSendMessage=useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+
+    const messageContent=inputValue.trim();
+    if (!messageContent||!socket||!selectedTarget||!currentUser||!currentUser) {
+      console.log(currentUser)
+      console.log(socket)
+      console.log(selectedTarget)
+      console.log(currentUser)
+      console.error('Missing required data for sending message');
+      return;
+    }
+
+    const tempMessageId=Date.now();
+    const isGroupChat=selectedTarget.type==='role';
+
+    // Create message data for the server
+    const messageData={
+      id: tempMessageId,
+      content: messageContent,
+      senderId: currentUser.id,
+      to: selectedTarget.id,
+      timestamp: new Date().toISOString(),
+      isGroup: isGroupChat,
+      groupId: isGroupChat? selectedTarget.id:undefined,
+      sender: {
+        id: currentUser.id,
+        username: currentUser.username||'Usuario'
+      }
+    };
+
+    // Optimistically add the message to the UI
+    const tempMessage: Message={
+      ...messageData,
+      isOwn: true
+    };
+
+    // Add message to UI immediately
+    setMessages(prevMessages => [...prevMessages, tempMessage]);
+    setInputValue('');
+
+    try {
+      // Emit the message via WebSocket
+      if (isGroupChat) {
+        socket.emit(
+          'sendToRole',
+          {
+            role: selectedTarget.role,
+            message: messageContent,
+            senderId: currentUser.id,
+          },
+          (response: { success: boolean; message?: any; error?: string }) => {
+            if (!response.success) {
+              console.error('Failed to send group message:', response.error||'Unknown error');
+              // Update UI to show error state
+              setMessages(prevMessages =>
+                prevMessages.map(msg =>
+                  msg.id===tempMessageId
+                    ? {
+                      ...msg,
+                      error: response.error||'Failed to send message',
+                      status: 'error'
+                    }
+                    :msg
+                )
+              );
+            }
+          }
+        );
+      } else {
+        socket.emit(
+          'sendMessage',
+          {
+            to: selectedTarget.id,
+            message: messageContent,
+            senderId: currentUser.id,
+            isGroup: false
+          },
+          (response: { success: boolean; message?: any; error?: string }) => {
+            if (!response.success) {
+              console.error('Failed to send message:', response.error||'Unknown error');
+              // Update UI to show error state
+              setMessages(prevMessages =>
+                prevMessages.map(msg =>
+                  msg.id===tempMessageId
+                    ? {
+                      ...msg,
+                      error: response.error||'Failed to send message',
+                      status: 'error'
+                    }
+                    :msg
+                )
+              );
+            }
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Error al enviar mensaje:', error);
+      setMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.id===tempMessageId
+            ? {
+              ...msg,
+              error: 'Error sending message',
+              status: 'error'
+            }
+            :msg
+        )
+      );
+    }
+  }, [socket, selectedTarget, currentUser, currentUser, inputValue]);
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <FiLoader className="animate-spin text-red-500 text-2xl" />
@@ -368,165 +498,240 @@ const ChatWindow=() => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="p-4 text-red-500">
-        <p>{error}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white">
       {/* Header */}
       <div className="bg-red-600 text-white p-4 flex items-center justify-between shadow-md">
         <div className="flex items-center">
-          {selectedUser&&(
+          {selectedTarget&&(
             <button
               onClick={handleBackToList}
-              className="md:hidden mr-3 text-white hover:text-gray-200"
+              className="mr-4 p-1 rounded-full hover:bg-red-700 transition-colors"
+              aria-label="Volver a la lista"
             >
-              <FiChevronLeft className="text-xl" />
+              <FiChevronLeft className="w-6 h-6" />
             </button>
           )}
-          <h2 className="text-xl font-bold">Chat Interno</h2>
+          <h1 className="text-xl font-bold">Chat Interno</h1>
         </div>
-        <div className="text-sm">
-          {isConnected? (
-            <span className="flex items-center">
-              <span className="w-2 h-2 rounded-full bg-green-400 mr-2"></span>
-              Conectado
-            </span>
-          ):(
-            <span className="flex items-center">
-              <span className="w-2 h-2 rounded-full bg-gray-400 mr-2"></span>
-              Conectando...
-            </span>
-          )}
+        <div className="flex items-center space-x-2">
+          <button
+            className="p-2 rounded-full hover:bg-red-700 transition-colors"
+            aria-label="Buscar"
+            onClick={() => searchInputRef.current?.focus()}
+          >
+            <FiSearch className="w-5 h-5" />
+          </button>
+          <button
+            className="p-2 rounded-full hover:bg-red-700 transition-colors"
+            aria-label="Más opciones"
+          >
+            <FiMoreVertical className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden bg-gray-50">
-        {/* User List */}
-        <div className={`${!selectedUser? 'flex':'hidden'} md:flex flex-col w-full md:w-80 border-r bg-white`}>
-          <div className="p-4 border-b">
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <div className="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col">
+          {/* Search */}
+          <div className="p-3 border-b">
             <div className="relative">
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Buscar usuarios..."
-                className="w-full pl-4 pr-10 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="Buscar..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 value={searchQuery}
                 onChange={handleSearchChange}
               />
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center">
-                {searchQuery? (
-                  <button
-                    onClick={clearSearch}
-                    className="text-gray-400 hover:text-gray-600 focus:outline-none"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                ):(
-                  <FiSearch className="text-gray-400" />
-                )}
-              </div>
+              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              {searchQuery&&(
+                <button
+                  onClick={clearSearch}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  aria-label="Limpiar búsqueda"
+                >
+                  ×
+                </button>
+              )}
             </div>
           </div>
+
+          {/* Tabs */}
+          <div className="flex border-b">
+            <button
+              className={`flex-1 py-3 font-medium text-sm ${showGroups? 'text-red-600 border-b-2 border-red-600':'text-gray-500 hover:bg-gray-50'}`}
+              onClick={() => setShowGroups(true)}
+            >
+              Grupos
+            </button>
+            <button
+              className={`flex-1 py-3 font-medium text-sm ${!showGroups? 'text-red-600 border-b-2 border-red-600':'text-gray-500 hover:bg-gray-50'}`}
+              onClick={() => setShowGroups(false)}
+            >
+              Usuarios
+            </button>
+          </div>
+
+          {/* User/Group List */}
           <div className="flex-1 overflow-y-auto">
-            {isLoading? (
-              <div className="flex items-center justify-center h-32">
-                <FiLoader className="animate-spin text-red-500 text-xl" />
-              </div>
-            ):error? (
-              <div className="p-4 text-red-500">{error}</div>
-            ):(
-              <div className="divide-y">
-                {filteredUsers.length===0? (
-                  <div className="text-center py-4 text-gray-500">
-                    No se encontraron usuarios
+            {showGroups? (
+              <div className="divide-y divide-gray-100">
+                {roleGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    onClick={() => {
+                      setSelectedTarget({
+                        id: group.id,
+                        name: group.name,
+                        type: 'role',
+                        role: group.role
+                      });
+                    }}
+                    className="p-4 hover:bg-gray-50 cursor-pointer flex items-center space-x-3"
+                  >
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                      <FiUsers className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">{group.name}</p>
+                      <p className="text-sm text-gray-500 truncate">Grupo de chat</p>
+                    </div>
                   </div>
-                ):(
-                  filteredUsers.map((user) => (
-                    <button
+                ))}
+              </div>
+            ):(
+              <div className="divide-y divide-gray-100">
+                {filteredUsers.map((user) => (
+                  user.id!==currentUser?.id&&(
+                    <div
                       key={user.id}
                       onClick={() => handleSelectUser(user)}
-                      className="w-full text-left p-4 hover:bg-gray-50 transition-colors flex items-center space-x-3"
+                      className="p-4 hover:bg-gray-50 cursor-pointer flex items-center space-x-3"
                     >
-                      <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                        <FiUser className="text-red-500" />
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <FiUser className="w-5 h-5 text-red-600" />
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{user.username}</p>
-                        <p className="text-xs text-gray-500 truncate">
-                          {user.username===currentUser?.username? 'Tú':'Disponible'}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {user.name||user.username}
+                        </p>
+                        <p className="text-sm text-gray-500 truncate">
+                          {user.role}
                         </p>
                       </div>
-                    </button>
-                  )))}
+                    </div>
+                  )
+                ))}
+                {filteredUsers.length===0&&(
+                  <div className="p-4 text-center text-gray-500">
+                    No se encontraron usuarios
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
         {/* Chat Area */}
-        {selectedUser&&(
+        {selectedTarget? (
           <div className="flex-1 flex flex-col bg-white border-l border-gray-200">
             {/* Chat Header */}
             <div className="p-4 border-b flex items-center justify-between bg-white sticky top-0 z-10">
               <div className="flex items-center">
                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 flex-shrink-0">
-                  <FiUser className="text-red-500" />
+                  <FiUser className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-900">{selectedUser.username}</h3>
-                  <div className="flex items-center text-xs text-gray-500">
-                    <span className={`w-2 h-2 rounded-full mr-1 ${isConnected? 'bg-green-400':'bg-gray-400'}`}></span>
-                    {isConnected? 'En línea':'Desconectado'}
-                    {typingUsers.size>0&&(
-                      <span className="ml-2 text-red-500">
-                        {Array.from(typingUsers).join(', ')} está escribiendo...
-                      </span>
-                    )}
-                  </div>
+                  <h2 className="font-semibold text-gray-900">{selectedTarget.name}</h2>
+                  {typingUsers.size>0&&(
+                    <p className="text-xs text-gray-500">Escribiendo...</p>
+                  )}
                 </div>
               </div>
-              <button className="text-gray-400 hover:text-gray-600">
-                <FiMoreVertical />
-              </button>
+              <div className="flex items-center space-x-2">
+                <button
+                  className="p-2 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+                  aria-label="Llamar"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  className="p-2 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+                  aria-label="Videollamada"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                    />
+                  </svg>
+                </button>
+                <button
+                  className="p-2 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+                  aria-label="Más opciones"
+                >
+                  <FiMoreVertical className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-              {messages.length===0? (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="h-full flex flex-col items-center justify-center text-gray-500 p-8 text-center"
-                >
-                  <FiMessageSquare size={48} className="mb-4 opacity-30" />
-                  <h3 className="text-lg font-medium">No hay mensajes recientes</h3>
-                  <p className="text-sm mt-1">Envía un mensaje para comenzar la conversación</p>
-                </motion.div>
+            <div className="flex-1 p-4 overflow-y-auto">
+              {isLoading? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                </div>
               ):(
-                <div className="space-y-4 w-full">
-                  {messages.map((message) => {
-                    const isOwn=message.sender?.id===currentUser?.id;
+                <div className="space-y-4">
+                  {messages.map((message, index) => {
+                    const isOwn=message.senderId===currentUser?.id;
                     return (
-                      <div
-                        key={message.id}
-                        className={`flex ${isOwn? 'justify-end':'justify-start'}`}
-                      >
-                        <div className={`max-w-[80%] ${isOwn? 'ml-auto':'mr-auto'}`}>
-                          <MessageBubble
-                            message={message.content}
-                            isOwn={isOwn}
-                            timestamp={message.createdAt}
-                            username={message.sender?.username||'Usuario'}
-                          />
+                      <div key={message.id||index} className={`flex ${isOwn? 'justify-end':'justify-start'}`}>
+                        <div
+                          className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${isOwn? 'bg-red-600 text-white':'bg-gray-200 text-gray-800'}`}
+                        >
+                          <div className="font-medium text-sm mb-1">
+                            {!isOwn&&message.sender?.username}
+                          </div>
+                          <div className="text-sm">{message.content}</div>
+                          <div className="text-right mt-1">
+                            <span className="text-xs opacity-70">
+                              {message.timestamp? new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }):''}
+                            </span>
+                            {isOwn&&(
+                              <span className="ml-1">
+                                {message.isRead? (
+                                  <FiCheckCircle className="inline text-blue-400" />
+                                ):(
+                                  <FiCheck className="inline text-gray-400" />
+                                )}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -537,72 +742,80 @@ const ChatWindow=() => {
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t bg-white">
+            <form onSubmit={handleSendMessage} className="p-4 border-t bg-white">
               <div className="bg-gray-50 rounded-lg border border-gray-200 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200 transition-all">
                 <div className="p-2">
                   <input
                     type="text"
                     placeholder="Escribe un mensaje..."
-                    className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none px-2 py-2"
+                    className="w-full bg-transparent border-none focus:ring-0 text-gray-800 placeholder-gray-500"
                     value={inputValue}
                     onChange={handleInputChange}
-                    onKeyDown={handleTyping}
-                    onKeyPress={(e) => {
+                    onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
                       if (e.key==='Enter'&&!e.shiftKey) {
                         e.preventDefault();
-                        if (inputValue.trim()) {
-                          handleSendMessage(inputValue.trim());
-                          setInputValue('');
+                        const form=e.currentTarget.closest('form');
+                        if (form) {
+                          const formEvent={
+                            ...e,
+                            preventDefault: () => e.preventDefault(),
+                            currentTarget: form as HTMLFormElement
+                          } as unknown as React.FormEvent<HTMLFormElement>;
+                          handleSendMessage(formEvent);
                         }
                       }
                     }}
                   />
                 </div>
-                <div className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-b-lg">
+                <div className="flex items-center justify-between p-2 border-t border-gray-100 bg-gray-50 rounded-b-lg">
                   <div className="flex space-x-2">
-                    <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200">
+                    <button
+                      type="button"
+                      className="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors"
+                      onClick={() => { }}
+                    >
                       <FiPaperclip className="w-5 h-5" />
                     </button>
-                    <button className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-200">
+                    <button
+                      type="button"
+                      className="p-2 text-gray-500 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors"
+                      onClick={() => { }}
+                    >
                       <FiImage className="w-5 h-5" />
                     </button>
                   </div>
                   <button
-                    className={`px-4 py-2 rounded-lg font-medium ${inputValue.trim()? 'bg-red-500 text-white hover:bg-red-600':'bg-gray-200 text-gray-500 cursor-not-allowed'}`}
-                    onClick={() => {
-                      if (inputValue.trim()) {
-                        handleSendMessage(inputValue.trim());
-                        setInputValue('');
-                      }
-                    }}
+                    type="submit"
+                    className={`px-4 py-2 rounded-full text-white font-medium transition-colors ${inputValue.trim()? 'bg-red-600 hover:bg-red-700':'bg-gray-300 cursor-not-allowed'
+                      }`}
                     disabled={!inputValue.trim()}
                   >
                     Enviar
                   </button>
                 </div>
               </div>
-            </div>
+            </form>
           </div>
-        )}
-
-        {!selectedUser&&(
+        ):(
           <div className="hidden md:flex flex-1 items-center justify-center bg-gray-50">
             <div className="text-center p-8 max-w-md">
-              <FiMessageSquare className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-medium text-gray-700 mb-2">Bienvenido al Chat Interno</h3>
-              <p className="text-gray-500 mb-6">Selecciona una conversación o inicia una nueva para comenzar a chatear.</p>
-              <div className="space-y-3 text-left max-w-xs mx-auto">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <FiMessageSquare className="w-8 h-8" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Bienvenido al chat</h3>
+              <p className="text-gray-500 mb-6">Selecciona una conversación o inicia una nueva</p>
+              <div className="space-y-2">
                 <div className="flex items-center text-sm text-gray-500">
                   <FiCheckCircle className="text-green-500 mr-2" />
-                  <span>Mensajería en tiempo real</span>
+                  <span>Mensajes directos</span>
+                </div>
+                <div className="flex items-center text-sm text-gray-500">
+                  <FiCheckCircle className="text-green-500 mr-2" />
+                  <span>Grupos por rol</span>
                 </div>
                 <div className="flex items-center text-sm text-gray-500">
                   <FiCheckCircle className="text-green-500 mr-2" />
                   <span>Archivos e imágenes</span>
-                </div>
-                <div className="flex items-center text-sm text-gray-500">
-                  <FiCheckCircle className="text-green-500 mr-2" />
-                  <span>Historial de conversaciones</span>
                 </div>
               </div>
             </div>
@@ -612,5 +825,6 @@ const ChatWindow=() => {
     </div>
   );
 };
+
 
 export default ChatWindow;
