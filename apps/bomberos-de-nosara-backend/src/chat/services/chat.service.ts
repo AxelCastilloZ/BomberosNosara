@@ -89,8 +89,45 @@ export class ChatService {
     return conversation;
   }
 
+  async getConversationById(conversationId: number): Promise<Conversation> {
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+      relations: ['participants', 'messages', 'messages.sender'],
+    });
+    
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+    
+    return conversation;
+  }
+
+  async userHasAccessToConversation(userId: number, conversationId: number): Promise<boolean> {
+    const count = await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .innerJoin('conversation.participants', 'participant')
+      .where('conversation.id = :conversationId', { conversationId })
+      .andWhere('participant.id = :userId', { userId })
+      .getCount();
+    
+    return count > 0;
+  }
+
+  async getGroupConversations(userId: number): Promise<Conversation[]> {
+    return this.conversationRepository
+      .createQueryBuilder('conversation')
+      .leftJoinAndSelect('conversation.participants', 'participant')
+      .leftJoinAndSelect('conversation.messages', 'message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('participant.id = :userId', { userId })
+      .andWhere('conversation.isGroup = true')
+      .orderBy('message.createdAt', 'DESC')
+      .getMany();
+  }
+
   async createMessage(createMessageDto: CreateMessageDto, senderId: number): Promise<Message> {
     const { content, conversationId } = createMessageDto;
+    const isGroup = 'isGroup' in createMessageDto ? createMessageDto.isGroup : false;
 
     // Verify conversation exists and user is a participant
     const conversation = await this.conversationRepository
@@ -120,7 +157,6 @@ export class ChatService {
   }
 
   async getMessages(conversationId: number, userId: number): Promise<Message[]> {
-    // Verify user has access to this conversation
     const hasAccess = await this.conversationRepository
       .createQueryBuilder('conversation')
       .innerJoin('conversation.participants', 'participant')
@@ -140,7 +176,6 @@ export class ChatService {
   }
 
   async getConversationWithUser(currentUserId: number, otherUserId: number): Promise<Conversation> {
-    // Find or create a conversation between the two users
     const conversation = await this.conversationRepository
       .createQueryBuilder('conversation')
       .innerJoin('conversation.participants', 'participant')

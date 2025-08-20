@@ -16,22 +16,22 @@ import { RoleEnum } from '../roles/role.enum';
 import { ChatService } from './services/chat.service';
 
 interface ConnectedClient {
-  userId: string | number;
+  userId: string|number;
   lastSeen: Date;
   role?: RoleEnum;
 }
 
 interface DirectMessagePayload {
-  to: string | number;
+  to: string|number;
   message: string;
-  senderId: string | number;
+  senderId: string|number;
   isGroup?: boolean;
 }
 
 interface RoleMessagePayload {
   role: RoleEnum;
   message: string;
-  senderId: string | number;
+  senderId: string|number;
 }
 
 @WebSocketGateway({
@@ -45,15 +45,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   // Track connected clients by their socket ID
-  private connectedClients = new Map<string, ConnectedClient>();
+  private connectedClients=new Map<string, ConnectedClient>();
 
   constructor(
-    private readonly jwtService: JwtService, 
+    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => ChatService))
     private readonly chatService: ChatService
   ) {
-    this.server = new Server();
+    this.server=new Server();
   }
 
   afterInit(server: Server) {
@@ -65,14 +65,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       console.log(`Client connecting: ${client.id}`);
 
-      const token = this.getTokenFromSocket(client);
+      const token=this.getTokenFromSocket(client);
       if (!token) {
         console.log('No token provided');
         throw new UnauthorizedException('No token provided');
       }
 
-      const jwt_secret = this.configService.get<string>('JWT_SECRET');
-      const payload = this.jwtService.verify(token, { secret: jwt_secret });
+      const jwt_secret=this.configService.get<string>('JWT_SECRET');
+      const payload=this.jwtService.verify(token, { secret: jwt_secret });
 
       if (!payload) {
         console.log('Invalid token');
@@ -90,10 +90,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Join user's personal room for direct messages
       await client.join(`user_${payload.sub}`);
-      
+
       // Join role-based room
       if (payload.role) {
-        const roleRoom = `role-${payload.role}`;
+        const roleRoom=`role-${payload.role}`;
         await client.join(roleRoom);
         console.log(`User ${payload.sub} joined role room: ${roleRoom}`);
       }
@@ -138,23 +138,46 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('joinConversation')
-  async handleJoinConversation(client: Socket, data: { conversationId: string }) {
+  async handleJoinConversation(client: Socket, data: { conversationId: string, isGroup?: boolean }) {
     const clientData=this.connectedClients.get(client.id);
     if (!clientData) {
       throw new UnauthorizedException('Not authenticated');
     }
 
+    const { conversationId, isGroup=false }=data;
+
+    // If joining a group conversation, verify the user has access
+    if (isGroup) {
+      const hasAccess=await this.chatService.userHasAccessToConversation(
+        Number(clientData.userId),
+        Number(conversationId)
+      );
+
+      if (!hasAccess) {
+        throw new UnauthorizedException('You do not have access to this conversation');
+      }
+    }
+
     // Leave any existing conversation rooms
     client.rooms.forEach(room => {
-      if (room!==client.id&&room.startsWith('conversation_')) {
+      if (room!==client.id&&(room.startsWith('conversation_')||room.startsWith('group_'))) {
         client.leave(room);
       }
     });
 
     // Join the new conversation room
-    await client.join(`conversation_${data.conversationId}`);
-    console.log(`User ${clientData.userId} joined conversation ${data.conversationId}`);
-    return { success: true };
+    const roomName=isGroup? `group_${conversationId}`:`conversation_${conversationId}`;
+    await client.join(roomName);
+    console.log(`User ${clientData.userId} joined ${isGroup? 'group':'conversation'} ${conversationId}`);
+
+    // Notify the client they've successfully joined
+    client.emit('conversationJoined', {
+      conversationId,
+      isGroup,
+      room: roomName
+    });
+
+    return { success: true, room: roomName };
   }
 
   @SubscribeMessage('sendMessage')
@@ -163,46 +186,77 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket
   ) {
     try {
-      const { to, message, senderId, isGroup = false } = data;
-      console.log(`Sending message from ${senderId} to ${isGroup ? 'group' : 'user'} ${to}: ${message}`);
+      const { to, message, senderId, isGroup=false }=data;
+      console.log(`Sending message from ${senderId} to ${isGroup? 'group':'user'} ${to}: ${message}`);
 
       if (!message) {
         throw new Error('Message content is required');
       }
 
+      const toNumber=Number(to);
+      console.log('toNumber', toNumber);
+      if (isNaN(toNumber)) {
+        throw new Error(`Invalid ${isGroup? 'group':'user'} ID: ${to}`);
+      }
+
       let messageData;
-      
+
       if (isGroup) {
-        // For group messages, we'll store them with a special conversation ID
-        // In a real app, you might want to create a proper group conversation
-        messageData = {
-          id: Date.now(),
+        // For group messages, use the conversation service to handle the message
+        const conversation=await this.chatService.getConversationById(toNumber);
+        if (!conversation) {
+          throw new Error('Conversation not found');
+        }
+
+        // Verify user is a participant in the group
+        const isParticipant=conversation.participants.some(p => p.id===Number(senderId));
+        if (!isParticipant) {
+          throw new Error('You are not a participant of this group');
+        }
+
+        // Save the message to the database
+        const savedMessage=await this.chatService.createMessage({
           content: message,
-          senderId,
-          to,
-          timestamp: new Date().toISOString(),
+          conversationId: conversation.id
+        }, Number(senderId));
+
+        // Format the message for the client
+        messageData={
+          id: savedMessage.id,
+          content: savedMessage.content,
+          timestamp: savedMessage.createdAt.toISOString(),
+          conversationId: savedMessage.conversation.id,
           isGroup: true,
-          groupId: to,
+          groupId: savedMessage.conversation.id,
           sender: {
-            id: senderId,
-            username: 'Usuario' // TODO: Fetch from database
+            id: savedMessage.sender.id,
+            username: savedMessage.sender.username||'Usuario'
           }
         };
 
-        // For group messages, send to the role room
-        this.server.to(`role-${to}`).emit('newMessage', messageData);
+        // Get the room name for this group
+        const roomName=`group_${toNumber}`;
+
+        // Broadcast to all participants in the group room (including sender)
+        this.server.to(roomName).emit('newMessage', {
+          ...messageData,
+          isOwn: false
+        });
       } else {
         // For 1:1 messages, find or create conversation
-        const conversation = await this.chatService.getConversationWithUser(Number(senderId), Number(to));
-        
+        const conversation=await this.chatService.getConversationWithUser(
+          Number(senderId),
+          toNumber
+        );
+
         // Save the message to the database
-        const savedMessage = await this.chatService.createMessage({
+        const savedMessage=await this.chatService.createMessage({
           content: message,
           conversationId: conversation.id,
           senderId: Number(senderId)
         }, Number(senderId));
 
-        messageData = {
+        messageData={
           id: savedMessage.id,
           content: savedMessage.content,
           senderId: savedMessage.sender.id,
@@ -211,13 +265,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           isGroup: false,
           sender: {
             id: savedMessage.sender.id,
-            username: 'Usuario' // TODO: Fetch from database
+            username: savedMessage.sender.username||'Usuario'
           },
           conversationId: savedMessage.conversation.id
         };
 
         // Send to recipient
-        this.server.to(`user_${to}`).emit('newMessage', {
+        this.server.to(`user_${toNumber}`).emit('newMessage', {
           ...messageData,
           isOwn: false
         });
@@ -229,16 +283,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         isOwn: true
       });
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: messageData,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       };
     } catch (error) {
       console.error('Error sending message:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to send message' 
+      return {
+        success: false,
+        error: error instanceof Error? error.message:'Failed to send message'
       };
     }
   }
@@ -249,16 +303,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket
   ) {
     try {
-      const { role, message, senderId } = data;
+      const { role, message, senderId }=data;
       console.log(`Sending message to role ${role} from ${senderId}: ${message}`);
 
-      if (!role || !message) {
+      if (!role||!message) {
         throw new Error('Role and message content are required');
       }
 
       // For group messages, we'll store them with a special conversation ID
       // In a real app, you might want to create a proper group conversation
-      const messageData = {
+      const messageData={
         id: Date.now(),
         content: message,
         senderId,
@@ -289,16 +343,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         isOwn: true
       });
 
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: messageData,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
       };
     } catch (error) {
       console.error('Error sending role message:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to send role message' 
+      return {
+        success: false,
+        error: error instanceof Error? error.message:'Failed to send role message'
       };
     }
   }
@@ -306,9 +360,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('typing')
   async handleTyping(
     @MessageBody() data: {
-      to: string | number;
+      to: string|number;
       isTyping: boolean;
-      userId: string | number;
+      userId: string|number;
       username: string;
       isGroup?: boolean;
       role?: string;
@@ -316,15 +370,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket
   ) {
     try {
-      const clientData = this.connectedClients.get(client.id);
+      const clientData=this.connectedClients.get(client.id);
       if (!clientData) {
         throw new UnauthorizedException('Not authenticated');
       }
 
-      const { to, isTyping, userId, username, isGroup = false, role } = data;
+      const { to, isTyping, userId, username, isGroup=false, role }=data;
 
       // Broadcast to the appropriate room
-      if (isGroup && role) {
+      if (isGroup&&role) {
         // For group chats, send to everyone in the role room except the sender
         client.to(`role-${role}`).emit('typing', {
           userId,
@@ -351,9 +405,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @OnEvent('message.created')
   handleMessageCreatedEvent(payload: any) {
-    const { isGroup, groupId, to, senderId } = payload;
-    
-    if (isGroup && groupId) {
+    const { isGroup, groupId, to, senderId }=payload;
+
+    if (isGroup&&groupId) {
       // For group messages, send to the role room
       this.server.to(`role-${groupId}`).emit('newMessage', payload);
     } else if (to) {
@@ -362,7 +416,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         ...payload,
         isOwn: false
       });
-      
+
       // And back to sender with isOwn flag
       if (senderId) {
         this.server.to(`user_${senderId}`).emit('newMessage', {

@@ -90,20 +90,20 @@ const ChatWindow=() => {
   const typingTimeoutRef=useRef<Timeout|null>(null);
   const searchInputRef=useRef<HTMLInputElement>(null);
 
-  // Helper function to get users by role, excluding current user by default
-  const getUsersByRole=(roleName: string, excludeCurrentUser=true): User[] => {
+  // Memoized helper function to get users by role, excluding current user by default
+  const getUsersByRole = useCallback((roleName: string, excludeCurrentUser = true): User[] => {
     if (!users) return [];
 
     return users.filter(user => {
       // Exclude current user if needed
-      if (excludeCurrentUser&&user.id===currentUser?.id) return false;
+      if (excludeCurrentUser && user.id === currentUser?.id) return false;
 
       // Check if user has the specified role
       return user.roles?.some(role =>
-        typeof role==='string'? role===roleName:role.name===roleName
+        typeof role === 'string' ? role === roleName : role.name === roleName
       );
     });
-  };
+  }, [users, currentUser?.id]);
 
   // Helper function to get user's display name
   const getUserDisplayName=(user: User): string => {
@@ -231,6 +231,105 @@ const ChatWindow=() => {
     }
   };
 
+  // Get or create group conversation
+  const getOrCreateGroupConversation = useCallback(async (role: RoleEnum, groupName: string) => {
+    try {
+      const roleUsers = getUsersByRole(role, false);
+      const participantIds = roleUsers.map(user => user.id);
+      
+      const conversationResponse = await axios.post(
+        `${API_URL}/chat/conversations/group`,
+        {
+          participantIds,
+          groupName
+        },
+        { 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}` 
+          } 
+        }
+      );
+      
+      return conversationResponse.data.id;
+    } catch (err) {
+      console.error('Error getting/creating group conversation:', err);
+      throw err;
+    }
+  }, [token, getUsersByRole]);
+
+  // Memoize the joinConversation function to prevent recreation on every render
+  const joinConversation = useCallback(async (target: ChatTarget) => {
+    if (!socket) return;
+
+    try {
+      setIsLoading(true);
+      setMessages([]);
+      
+      const isGroup = target.type === 'role';
+      let conversationId = target.id;
+      
+      // For group conversations, get the actual conversation ID first
+      if (isGroup && target.role) {
+        conversationId = await getOrCreateGroupConversation(
+          target.role,
+          target.name
+        );
+      }
+      
+      // Join the conversation room
+      socket.emit('joinConversation', { 
+        conversationId,
+        isGroup
+      }, (response: any) => {
+        if (response?.error) {
+          console.error('Error joining conversation:', response.error);
+        }
+      });
+
+      // Get messages for the conversation
+      const response = await axios.get(
+        `${API_URL}/chat/conversations/${conversationId}/messages`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      const messages = response.data.map((msg: any) => ({
+        ...msg,
+        isOwn: msg.senderId === currentUser?.id || 
+              (msg.sender && msg.sender.id === currentUser?.id),
+        isGroup,
+        groupId: isGroup ? conversationId : undefined,
+        sender: {
+          id: msg.senderId || (msg.sender?.id || 0),
+          username: msg.sender?.username || 'Usuario'
+        }
+      }));
+
+      setMessages(messages);
+    } catch (err) {
+      console.error('Error loading conversation:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [socket, token, currentUser?.id, getOrCreateGroupConversation]);
+
+  // Join conversation when a target is selected
+  useEffect(() => {
+    if (!selectedTarget) return;
+    
+    joinConversation(selectedTarget);
+    
+    // Clean up on unmount or when changing conversations
+    return () => {
+      if (socket && selectedTarget) {
+        socket.emit('leaveConversation', { 
+          conversationId: selectedTarget.id,
+          isGroup: selectedTarget.type === 'role' 
+        });
+      }
+    };
+  }, [selectedTarget, joinConversation, socket]);
+
   // Filter users based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -351,20 +450,27 @@ const ChatWindow=() => {
     if (!socket||!isConnected||!currentUser) return;
 
     const handleNewMessage=(message: Message) => {
-      // Skip processing our own messages that we've already handled optimistically
-      if (message.senderId===currentUser.id&&message.isOwn!==false) {
-        return;
+      console.log('New message received:', message);
+      
+      // Check if the message is for the current conversation
+      const isForCurrentConversation = selectedTarget && (
+        // For 1:1 chats
+        (message.conversationId && message.conversationId === Number(selectedTarget.id)) ||
+        // For group chats
+        (message.isGroup && message.groupId && message.groupId.toString() === selectedTarget.id.toString()) ||
+        (message.isGroup && message.conversationId && message.conversationId.toString() === selectedTarget.id.toString())
+      );
+
+      if (isForCurrentConversation) {
+        setMessages(prev => [
+          ...prev, 
+          { 
+            ...message, 
+            isOwn: message.senderId === currentUser?.id || 
+                  (message.sender && message.sender.id === currentUser?.id)
+          }
+        ]);
       }
-
-      console.log('Received new message:', message);
-
-      setMessages(prevMessages => {
-        // Check if message already exists to prevent duplicates
-        if (prevMessages.some(msg => msg.id===message.id)) {
-          return prevMessages;
-        }
-        return [...prevMessages, message];
-      });
     };
 
     const handleUserTyping=(data: {
@@ -475,155 +581,71 @@ const ChatWindow=() => {
   }, [setSelectedTarget, setConversation, setMessages, setSearchQuery, searchInputRef]);
 
   // Handle sending a message
-  const handleSendMessage = useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
+    if (!inputValue.trim() || !selectedTarget || !socket) return;
 
-    const messageContent = inputValue.trim();
-    if (!messageContent || !socket || !selectedTarget || !currentUser) {
-      console.error('Missing required data for sending message');
-      return;
-    }
+    const isGroup = selectedTarget.type === 'role';
+    const messageData = {
+      to: selectedTarget.id,
+      message: inputValue,
+      senderId: currentUser?.id,
+      isGroup
+    };
 
-    const tempMessageId = Date.now();
-    const isGroupChat = selectedTarget.type === 'role';
-    let targetConversationId: number | undefined = conversationId || undefined;
+    // Optimistic update
+    const tempId = Date.now();
+    const newMessage: Message = {
+      id: tempId,
+      content: inputValue,
+      senderId: currentUser?.id || 0,
+      timestamp: new Date().toISOString(),
+      isOwn: true,
+      isGroup,
+      groupId: isGroup ? selectedTarget.id : undefined,
+      conversationId: !isGroup ? Number(selectedTarget.id) : undefined,
+      status: 'sending',
+      sender: {
+        id: currentUser?.id || 0,
+        username: currentUser?.username || 'Tú'
+      }
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    setInputValue('');
 
     try {
-      // For group chats, ensure we have a conversation ID
-      if (isGroupChat && !targetConversationId) {
-        setIsLoading(true);
-        
-        // Get all users with this role (excluding current user for participant list)
-        const roleUsers = getUsersByRole(selectedTarget.role as RoleEnum, false);
-        const participantIds = roleUsers.map(user => user.id);
-
-        // Create or get group conversation
-        const response = await axios.post(
-          `${API_URL}/chat/conversations/group`,
-          {
-            participantIds,
-            groupName: selectedTarget.name
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            }
-          }
-        );
-
-        // Update conversation ID for this group
-        targetConversationId = response.data.id;
-        setConversationId(targetConversationId || null);
-        
-        // Update selected target with the new conversation ID
-        setSelectedTarget(prev => ({
-          ...prev!,
-          id: targetConversationId as string | number
-        }));
-      }
-
-      // Create message data for the server
-      const messageData = {
-        id: tempMessageId,
-        content: messageContent,
-        senderId: currentUser.id,
-        to: isGroupChat ? targetConversationId || selectedTarget.id : selectedTarget.id,
-        timestamp: new Date().toISOString(),
-        isGroup: isGroupChat,
-        conversationId: isGroupChat ? targetConversationId : undefined,
-        groupId: isGroupChat ? selectedTarget.id : undefined,
-        sender: {
-          id: currentUser.id,
-          username: currentUser.username || 'Usuario'
+      // Send the message via WebSocket
+      socket.emit('sendMessage', messageData, (response: any) => {
+        if (response?.error) {
+          // Update message status to error
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId ? { ...msg, status: 'error', error: response.error } : msg
+            )
+          );
+        } else {
+          // Update message with server response
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === tempId
+                ? { ...msg, id: response.id, status: 'sent', timestamp: response.timestamp }
+                : msg
+            )
+          );
         }
-      };
-
-      // Optimistically add the message to the UI
-      const tempMessage: Message = {
-        ...messageData,
-        isOwn: true,
-        status: 'sending'
-      };
-
-      // Add message to UI immediately
-      setMessages(prevMessages => [...prevMessages, tempMessage]);
-      setInputValue('');
-      
-      // Scroll to bottom to show the new message
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-      // Emit the message via WebSocket
-      if (isGroupChat) {
-        socket.emit(
-          'sendToRole',
-          {
-            role: selectedTarget.role,
-            message: messageContent,
-            senderId: currentUser.id,
-            conversationId: targetConversationId // Include conversation ID in the message
-          },
-          (response: { success: boolean; message?: any; error?: string }) => {
-            if (!response.success) {
-              console.error('Failed to send group message:', response.error||'Unknown error');
-              // Update UI to show error state
-              setMessages(prevMessages =>
-                prevMessages.map(msg =>
-                  msg.id===tempMessageId
-                    ? {
-                      ...msg,
-                      error: response.error||'Failed to send message',
-                      status: 'error'
-                    }
-                    :msg
-                )
-              );
-            }
-          }
-        );
-      } else {
-        socket.emit(
-          'sendMessage',
-          {
-            to: selectedTarget.id,
-            message: messageContent,
-            senderId: currentUser.id,
-            isGroup: false
-          },
-          (response: { success: boolean; message?: any; error?: string }) => {
-            if (!response.success) {
-              console.error('Failed to send message:', response.error||'Unknown error');
-              // Update UI to show error state
-              setMessages(prevMessages =>
-                prevMessages.map(msg =>
-                  msg.id===tempMessageId
-                    ? {
-                      ...msg,
-                      error: response.error||'Failed to send message',
-                      status: 'error'
-                    }
-                    :msg
-                )
-              );
-            }
-          }
-        );
-      }
-    } catch (error) {
-      console.error('Error al enviar mensaje:', error);
-      setMessages(prevMessages =>
-        prevMessages.map(msg =>
-          msg.id===tempMessageId
-            ? {
-              ...msg,
-              error: 'Error sending message',
-              status: 'error'
-            }
-            :msg
+      });
+    } catch (err) {
+      console.error('Error sending message:', err);
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === tempId
+            ? { ...msg, status: 'error', error: 'Failed to send message' }
+            : msg
         )
       );
     }
-  }, [socket, selectedTarget, currentUser, currentUser, inputValue]);
+  };
 
   if (isLoading) {
     return (
