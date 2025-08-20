@@ -186,42 +186,45 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket
   ) {
     try {
-      const { to, message, senderId, isGroup=false }=data;
-      console.log(`Sending message from ${senderId} to ${isGroup? 'group':'user'} ${to}: ${message}`);
+      const { to, message, senderId, isGroup = false } = data;
+      console.log('Data:', data)
+      console.log(`Sending message from ${senderId} to ${isGroup ? 'group' : 'user'} ${to}: ${message}`);
 
       if (!message) {
         throw new Error('Message content is required');
       }
 
-      const toNumber=Number(to);
-      console.log('toNumber', toNumber);
-      if (isNaN(toNumber)) {
-        throw new Error(`Invalid ${isGroup? 'group':'user'} ID: ${to}`);
+      // Convert to number and validate
+      const targetId = Number(to);
+      console.log('Target ID:', targetId);
+      if (isNaN(targetId)) {
+        throw new Error(`Invalid ${isGroup ? 'group' : 'user'} ID: ${to}`);
       }
 
       let messageData;
+      let roomName: string;
 
       if (isGroup) {
-        // For group messages, use the conversation service to handle the message
-        const conversation=await this.chatService.getConversationById(toNumber);
+        // For group messages
+        const conversation = await this.chatService.getConversationById(targetId);
         if (!conversation) {
           throw new Error('Conversation not found');
         }
 
         // Verify user is a participant in the group
-        const isParticipant=conversation.participants.some(p => p.id===Number(senderId));
+        const isParticipant = conversation.participants.some(p => p.id === Number(senderId));
         if (!isParticipant) {
           throw new Error('You are not a participant of this group');
         }
 
         // Save the message to the database
-        const savedMessage=await this.chatService.createMessage({
+        const savedMessage = await this.chatService.createMessage({
           content: message,
           conversationId: conversation.id
         }, Number(senderId));
 
         // Format the message for the client
-        messageData={
+        messageData = {
           id: savedMessage.id,
           content: savedMessage.content,
           timestamp: savedMessage.createdAt.toISOString(),
@@ -230,55 +233,53 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           groupId: savedMessage.conversation.id,
           sender: {
             id: savedMessage.sender.id,
-            username: savedMessage.sender.username||'Usuario'
+            username: savedMessage.sender.username || 'Usuario'
           }
         };
 
-        // Get the room name for this group
-        const roomName=`group_${toNumber}`;
-
-        // Broadcast to all participants in the group room (including sender)
-        this.server.to(roomName).emit('newMessage', {
-          ...messageData,
-          isOwn: false
-        });
+        // Set room name for group
+        roomName = `group_${targetId}`;
+        
       } else {
-        // For 1:1 messages, find or create conversation
-        const conversation=await this.chatService.getConversationWithUser(
+        // For 1:1 messages
+        const conversation = await this.chatService.getConversationWithUser(
           Number(senderId),
-          toNumber
+          targetId
         );
 
         // Save the message to the database
-        const savedMessage=await this.chatService.createMessage({
+        const savedMessage = await this.chatService.createMessage({
           content: message,
           conversationId: conversation.id,
           senderId: Number(senderId)
         }, Number(senderId));
 
-        messageData={
+        messageData = {
           id: savedMessage.id,
           content: savedMessage.content,
           senderId: savedMessage.sender.id,
-          to: to,
+          to: targetId,
           timestamp: savedMessage.createdAt.toISOString(),
           isGroup: false,
           sender: {
             id: savedMessage.sender.id,
-            username: savedMessage.sender.username||'Usuario'
+            username: savedMessage.sender.username || 'Usuario'
           },
           conversationId: savedMessage.conversation.id
         };
 
-        // Send to recipient
-        this.server.to(`user_${toNumber}`).emit('newMessage', {
-          ...messageData,
-          isOwn: false
-        });
+        // Set room name for 1:1 chat (recipient's personal room)
+        roomName = `user_${targetId}`;
       }
 
-      // Always send back to sender with isOwn flag
-      client.emit('newMessage', {
+      // Emit to the appropriate room (group or user)
+      this.server.to(roomName).emit('newMessage', {
+        ...messageData,
+        isOwn: false
+      });
+
+      // Also send to sender in their personal room
+      this.server.to(`user_${senderId}`).emit('newMessage', {
         ...messageData,
         isOwn: true
       });
@@ -292,7 +293,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.error('Error sending message:', error);
       return {
         success: false,
-        error: error instanceof Error? error.message:'Failed to send message'
+        error: error instanceof Error ? error.message : 'Failed to send message'
       };
     }
   }

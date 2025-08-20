@@ -17,19 +17,19 @@ export class ChatService {
     private messageRepository: Repository<Message>,
     @InjectRepository(User)
     private userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async createConversation(createConversationDto: CreateConversationDto, currentUserId: number): Promise<Conversation> {
     // Ensure we have exactly 2 participants for 1:1 chat
-    if (createConversationDto.participantIds?.length !== 1) {
+    if (createConversationDto.participantIds?.length!==1) {
       throw new Error('1:1 chat requires exactly two participants');
     }
 
     // Add current user to participants
-    const participantIds = [...createConversationDto.participantIds, currentUserId];
-    
+    const participantIds=[...createConversationDto.participantIds, currentUserId];
+
     // Check if conversation already exists between these users
-    const existingConversation = await this.conversationRepository
+    const existingConversation=await this.conversationRepository
       .createQueryBuilder('conversation')
       .innerJoin('conversation.participants', 'participant')
       .groupBy('conversation.id')
@@ -45,16 +45,16 @@ export class ChatService {
     }
 
     // Find all participants
-    const participants = await this.userRepository.findBy({
+    const participants=await this.userRepository.findBy({
       id: In(participantIds)
     });
 
-    if (participants.length !== participantIds.length) {
+    if (participants.length!==participantIds.length) {
       throw new NotFoundException('One or more participants not found');
     }
 
     // Create new conversation
-    const conversation = this.conversationRepository.create({
+    const conversation=this.conversationRepository.create({
       participants,
     });
 
@@ -72,7 +72,7 @@ export class ChatService {
   }
 
   async getConversation(conversationId: number, userId: number): Promise<Conversation> {
-    const conversation = await this.conversationRepository
+    const conversation=await this.conversationRepository
       .createQueryBuilder('conversation')
       .leftJoinAndSelect('conversation.participants', 'participant')
       .leftJoinAndSelect('conversation.messages', 'message')
@@ -90,27 +90,27 @@ export class ChatService {
   }
 
   async getConversationById(conversationId: number): Promise<Conversation> {
-    const conversation = await this.conversationRepository.findOne({
+    const conversation=await this.conversationRepository.findOne({
       where: { id: conversationId },
       relations: ['participants', 'messages', 'messages.sender'],
     });
-    
+
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
-    
+
     return conversation;
   }
 
   async userHasAccessToConversation(userId: number, conversationId: number): Promise<boolean> {
-    const count = await this.conversationRepository
+    const count=await this.conversationRepository
       .createQueryBuilder('conversation')
       .innerJoin('conversation.participants', 'participant')
       .where('conversation.id = :conversationId', { conversationId })
       .andWhere('participant.id = :userId', { userId })
       .getCount();
-    
-    return count > 0;
+
+    return count>0;
   }
 
   async getGroupConversations(userId: number): Promise<Conversation[]> {
@@ -126,11 +126,11 @@ export class ChatService {
   }
 
   async createMessage(createMessageDto: CreateMessageDto, senderId: number): Promise<Message> {
-    const { content, conversationId } = createMessageDto;
-    const isGroup = 'isGroup' in createMessageDto ? createMessageDto.isGroup : false;
+    const { content, conversationId }=createMessageDto;
+    const isGroup='isGroup' in createMessageDto? createMessageDto.isGroup:false;
 
     // Verify conversation exists and user is a participant
-    const conversation = await this.conversationRepository
+    const conversation=await this.conversationRepository
       .createQueryBuilder('conversation')
       .leftJoin('conversation.participants', 'participant')
       .where('conversation.id = :conversationId', { conversationId })
@@ -142,7 +142,7 @@ export class ChatService {
     }
 
     // Create and save message
-    const message = this.messageRepository.create({
+    const message=this.messageRepository.create({
       content,
       conversation: { id: conversationId },
       sender: { id: senderId },
@@ -157,12 +157,12 @@ export class ChatService {
   }
 
   async getMessages(conversationId: number, userId: number): Promise<Message[]> {
-    const hasAccess = await this.conversationRepository
+    const hasAccess=await this.conversationRepository
       .createQueryBuilder('conversation')
       .innerJoin('conversation.participants', 'participant')
       .where('conversation.id = :conversationId', { conversationId })
       .andWhere('participant.id = :userId', { userId })
-      .getCount() > 0;
+      .getCount()>0;
 
     if (!hasAccess) {
       throw new ForbiddenException('Access to this conversation is denied');
@@ -176,7 +176,7 @@ export class ChatService {
   }
 
   async getConversationWithUser(currentUserId: number, otherUserId: number): Promise<Conversation> {
-    const conversation = await this.conversationRepository
+    const conversation=await this.conversationRepository
       .createQueryBuilder('conversation')
       .innerJoin('conversation.participants', 'participant')
       .groupBy('conversation.id')
@@ -217,9 +217,9 @@ export class ChatService {
    * @param userId - ID of the user to check for participation
    * @returns The conversation if found and user is a participant, otherwise undefined
    */
-  async findGroupConversation(groupName: string, userId: number): Promise<Conversation | undefined> {
+  async findGroupConversation(groupName: string, userId: number): Promise<Conversation|undefined> {
     // First find the conversation by group name
-    const conversation = await this.conversationRepository
+    const conversation=await this.conversationRepository
       .createQueryBuilder('conversation')
       .where('conversation.isGroup = :isGroup', { isGroup: true })
       .andWhere('conversation.groupName = :groupName', { groupName })
@@ -228,14 +228,14 @@ export class ChatService {
     if (!conversation) return undefined;
 
     // Then verify the user is a participant
-    const isParticipant = await this.conversationRepository
+    const isParticipant=await this.conversationRepository
       .createQueryBuilder('conversation')
       .innerJoin('conversation.participants', 'participant')
       .where('conversation.id = :conversationId', { conversationId: conversation.id })
       .andWhere('participant.id = :userId', { userId })
-      .getCount() > 0;
+      .getCount()>0;
 
-    return isParticipant ? conversation : undefined;
+    return isParticipant? conversation:undefined;
   }
 
   async createGroupConversation(
@@ -243,31 +243,31 @@ export class ChatService {
     currentUserId: number
   ): Promise<Conversation> {
     // Get all participants including the current user
-    const allParticipantIds = [...new Set([...createGroupDto.participantIds!, currentUserId])];
-    
+    const allParticipantIds=[...new Set([...createGroupDto.participantIds!, currentUserId])];
+
     // Find existing conversation with exact same participants
-    const existingConversation = await this.findGroupConversation(createGroupDto.groupName!, currentUserId);
+    const existingConversation=await this.findGroupConversation(createGroupDto.groupName!, currentUserId);
     if (existingConversation) {
       return existingConversation;
     }
 
     // Find all users to add to the conversation
-    const participants = await this.userRepository.find({
+    const participants=await this.userRepository.find({
       where: {
         id: In(allParticipantIds)
       }
     });
 
-    if (participants.length !== allParticipantIds.length) {
+    if (participants.length!==allParticipantIds.length) {
       throw new NotFoundException('One or more participants not found');
     }
 
     // Create new group conversation
-    const conversation = new Conversation();
-    conversation.participants = participants;
-    conversation.isGroup = true;
-    conversation.groupName = `${createGroupDto.groupName}-GROUP ${Date.now()}`;
-    conversation.createdBy = currentUserId;
+    const conversation=new Conversation();
+    conversation.participants=participants;
+    conversation.isGroup=true;
+    conversation.groupName=createGroupDto.groupName;
+    conversation.createdBy=currentUserId;
 
     return this.conversationRepository.save(conversation);
   }

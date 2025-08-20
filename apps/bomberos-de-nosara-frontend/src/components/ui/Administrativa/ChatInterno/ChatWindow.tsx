@@ -91,16 +91,16 @@ const ChatWindow=() => {
   const searchInputRef=useRef<HTMLInputElement>(null);
 
   // Memoized helper function to get users by role, excluding current user by default
-  const getUsersByRole = useCallback((roleName: string, excludeCurrentUser = true): User[] => {
+  const getUsersByRole=useCallback((roleName: string, excludeCurrentUser=true): User[] => {
     if (!users) return [];
 
     return users.filter(user => {
       // Exclude current user if needed
-      if (excludeCurrentUser && user.id === currentUser?.id) return false;
+      if (excludeCurrentUser&&user.id===currentUser?.id) return false;
 
       // Check if user has the specified role
       return user.roles?.some(role =>
-        typeof role === 'string' ? role === roleName : role.name === roleName
+        typeof role==='string'? role===roleName:role.name===roleName
       );
     });
   }, [users, currentUser?.id]);
@@ -180,23 +180,23 @@ const ChatWindow=() => {
 
       const conversation=response.data;
       setConversationId(conversation.id);
-      
+
       // Set the selected target with conversation details
       setSelectedTarget({
         id: conversation.id,
-        name: conversation.groupName || RoleLabels[role],
+        name: conversation.groupName||RoleLabels[role],
         type: 'role',
         role
       });
 
       // If there are existing messages, load them
-      if (conversation.messages?.length > 0) {
+      if (conversation.messages?.length>0) {
         const formattedMessages=conversation.messages.map((msg: any) => ({
           ...msg,
           isOwn: msg.senderId===currentUser?.id,
           sender: {
             id: msg.senderId,
-            username: msg.sender?.username || 'Usuario'
+            username: msg.sender?.username||'Usuario'
           }
         }));
         setMessages(formattedMessages);
@@ -208,11 +208,11 @@ const ChatWindow=() => {
       if (socket) {
         // Leave any previous room
         socket.emit('leaveConversation', { conversationId: conversationId });
-        
+
         // Join the new conversation room
-        socket.emit('joinConversation', { 
+        socket.emit('joinConversation', {
           conversationId: conversation.id,
-          userId: currentUser?.id 
+          userId: currentUser?.id
         });
       }
 
@@ -232,25 +232,25 @@ const ChatWindow=() => {
   };
 
   // Get or create group conversation
-  const getOrCreateGroupConversation = useCallback(async (role: RoleEnum, groupName: string) => {
+  const getOrCreateGroupConversation=useCallback(async (role: RoleEnum, groupName: string) => {
     try {
-      const roleUsers = getUsersByRole(role, false);
-      const participantIds = roleUsers.map(user => user.id);
-      
-      const conversationResponse = await axios.post(
+      const roleUsers=getUsersByRole(role, false);
+      const participantIds=roleUsers.map(user => user.id);
+
+      const conversationResponse=await axios.post(
         `${API_URL}/chat/conversations/group`,
         {
           participantIds,
           groupName
         },
-        { 
-          headers: { 
+        {
+          headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}` 
-          } 
+            'Authorization': `Bearer ${token}`
+          }
         }
       );
-      
+
       return conversationResponse.data.id;
     } catch (err) {
       console.error('Error getting/creating group conversation:', err);
@@ -259,26 +259,30 @@ const ChatWindow=() => {
   }, [token, getUsersByRole]);
 
   // Memoize the joinConversation function to prevent recreation on every render
-  const joinConversation = useCallback(async (target: ChatTarget) => {
+  const joinConversation=useCallback(async (target: ChatTarget) => {
     if (!socket) return;
 
     try {
       setIsLoading(true);
       setMessages([]);
-      
-      const isGroup = target.type === 'role';
-      let conversationId = target.id;
-      
+
+      const isGroup=target.type==='role';
+      let conversationId=target.id;
+
       // For group conversations, get the actual conversation ID first
-      if (isGroup && target.role) {
-        conversationId = await getOrCreateGroupConversation(
+      if (isGroup&&target.role) {
+        conversationId=await getOrCreateGroupConversation(
           target.role,
           target.name
         );
+        if (conversationId) {
+          setConversationId(Number(conversationId));
+        }
       }
-      
+      console.log('CONVERSATION ID:', conversationId);
+
       // Join the conversation room
-      socket.emit('joinConversation', { 
+      socket.emit('joinConversation', {
         conversationId,
         isGroup
       }, (response: any) => {
@@ -288,20 +292,21 @@ const ChatWindow=() => {
       });
 
       // Get messages for the conversation
-      const response = await axios.get(
+      const response=await axios.get(
         `${API_URL}/chat/conversations/${conversationId}/messages`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      const messages = response.data.map((msg: any) => ({
+      console.log('RESPONSE:', response.data);
+
+      const messages=response.data.map((msg: any) => ({
         ...msg,
-        isOwn: msg.senderId === currentUser?.id || 
-              (msg.sender && msg.sender.id === currentUser?.id),
+        isOwn: msg.senderId===currentUser?.id||
+          (msg.sender&&msg.sender.id===currentUser?.id),
         isGroup,
-        groupId: isGroup ? conversationId : undefined,
+        groupId: isGroup? conversationId:undefined,
         sender: {
-          id: msg.senderId || (msg.sender?.id || 0),
-          username: msg.sender?.username || 'Usuario'
+          id: msg.senderId||(msg.sender?.id||0),
+          username: msg.sender?.username||'Usuario'
         }
       }));
 
@@ -316,15 +321,15 @@ const ChatWindow=() => {
   // Join conversation when a target is selected
   useEffect(() => {
     if (!selectedTarget) return;
-    
+
     joinConversation(selectedTarget);
-    
+    console.log('SELECTED TARGET:', selectedTarget);
     // Clean up on unmount or when changing conversations
     return () => {
-      if (socket && selectedTarget) {
-        socket.emit('leaveConversation', { 
+      if (socket&&selectedTarget) {
+        socket.emit('leaveConversation', {
           conversationId: selectedTarget.id,
-          isGroup: selectedTarget.type === 'role' 
+          isGroup: selectedTarget.type==='role'
         });
       }
     };
@@ -451,26 +456,18 @@ const ChatWindow=() => {
 
     const handleNewMessage=(message: Message) => {
       console.log('New message received:', message);
-      
+      console.log('selectedTarget:', selectedTarget)
       // Check if the message is for the current conversation
-      const isForCurrentConversation = selectedTarget && (
-        // For 1:1 chats
-        (message.conversationId && message.conversationId === Number(selectedTarget.id)) ||
-        // For group chats
-        (message.isGroup && message.groupId && message.groupId.toString() === selectedTarget.id.toString()) ||
-        (message.isGroup && message.conversationId && message.conversationId.toString() === selectedTarget.id.toString())
-      );
 
-      if (isForCurrentConversation) {
-        setMessages(prev => [
-          ...prev, 
-          { 
-            ...message, 
-            isOwn: message.senderId === currentUser?.id || 
-                  (message.sender && message.sender.id === currentUser?.id)
-          }
-        ]);
-      }
+
+      setMessages(prev => [
+        ...prev,
+        {
+          ...message,
+          isOwn: message.senderId===currentUser?.id||
+            (message.sender&&message.sender.id===currentUser?.id)
+        }
+      ]);
     };
 
     const handleUserTyping=(data: {
@@ -581,34 +578,44 @@ const ChatWindow=() => {
   }, [setSelectedTarget, setConversation, setMessages, setSearchQuery, searchInputRef]);
 
   // Handle sending a message
-  const handleSendMessage = async (e: FormEvent) => {
+  const handleSendMessage=async (e: FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || !selectedTarget || !socket) return;
+    if (!inputValue.trim()||!selectedTarget||!socket||!currentUser) return;
 
-    const isGroup = selectedTarget.type === 'role';
-    const messageData = {
-      to: selectedTarget.id,
+    const isGroup=selectedTarget.type==='role';
+    const targetId=selectedTarget.id;
+    const senderId=currentUser.id;
+
+    // Prepare message data for the API
+    const messageData={
+      to: isGroup ? conversationId:selectedTarget.id,
       message: inputValue,
-      senderId: currentUser?.id,
-      isGroup
+      senderId: senderId,
+      isGroup: isGroup,
+      // Include conversationId for 1:1 chats if available
+      ...(!isGroup&&{ conversationId: Number(conversationId) })
     };
 
-    // Optimistic update
-    const tempId = Date.now();
-    const newMessage: Message = {
+    // Optimistic update234
+    const tempId=Date.now();
+    const newMessage: Message={
       id: tempId,
       content: inputValue,
-      senderId: currentUser?.id || 0,
+      senderId: senderId,
       timestamp: new Date().toISOString(),
       isOwn: true,
       isGroup,
-      groupId: isGroup ? selectedTarget.id : undefined,
-      conversationId: !isGroup ? Number(selectedTarget.id) : undefined,
+      // Include groupId for group chats
+      ...(isGroup&&{ groupId: targetId }),
+      // Include conversationId for 1:1 chats
+      ...(!isGroup&&{ conversationId: Number(targetId) }),
       status: 'sending',
       sender: {
-        id: currentUser?.id || 0,
-        username: currentUser?.username || 'Tú'
-      }
+        id: senderId,
+        username: currentUser.username||'Tú'
+      },
+      // Include recipient info for 1:1 chats
+      ...(!isGroup&&{ to: targetId })
     };
 
     setMessages(prev => [...prev, newMessage]);
@@ -621,16 +628,16 @@ const ChatWindow=() => {
           // Update message status to error
           setMessages(prev =>
             prev.map(msg =>
-              msg.id === tempId ? { ...msg, status: 'error', error: response.error } : msg
+              msg.id===tempId? { ...msg, status: 'error', error: response.error }:msg
             )
           );
         } else {
           // Update message with server response
           setMessages(prev =>
             prev.map(msg =>
-              msg.id === tempId
+              msg.id===tempId
                 ? { ...msg, id: response.id, status: 'sent', timestamp: response.timestamp }
-                : msg
+                :msg
             )
           );
         }
@@ -639,9 +646,9 @@ const ChatWindow=() => {
       console.error('Error sending message:', err);
       setMessages(prev =>
         prev.map(msg =>
-          msg.id === tempId
+          msg.id===tempId
             ? { ...msg, status: 'error', error: 'Failed to send message' }
-            : msg
+            :msg
         )
       );
     }
