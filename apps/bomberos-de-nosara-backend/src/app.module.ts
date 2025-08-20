@@ -15,6 +15,7 @@ import { SeederModule } from './seeder/seeder.module';
 import { NoticiaModule } from './noticias/noticia.module';
 import { SugerenciaModule } from './suggestion/suggestion.module';
 import { EquipoBomberilModule } from './equipo-bomberil/equipo-bomberil.module';
+import { MaterialEducativoModule } from './material-educativo/material-educativo.module';
 import { UploadModule } from './upload/upload.module';
 
 @Module({
@@ -65,6 +66,8 @@ import { UploadModule } from './upload/upload.module';
     SugerenciaModule,
     EquipoBomberilModule,
     UploadModule,
+    MaterialEducativoModule,
   ],
 })
 export class AppModule {}
+
