@@ -13,6 +13,7 @@ import {
 import { ChatService } from '../services/chat.service';
 import { CreateMessageDto } from '../dto/create-message.dto';
 import { CreateConversationDto } from '../dto/create-conversation.dto';
+import { CreateGroupConversationDto } from '../dto/create-group-conversation.dto';
 import { User } from '../../users/entities/user.entity';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
@@ -94,5 +95,32 @@ export class ChatController {
     }
     
     return this.chatService.getConversationWithUser(req.user.id, userId);
+  }
+
+  @Post('conversations/group')
+  async createGroupConversation(
+    @Request() req: { user: User },
+    @Body() createGroupDto: CreateGroupConversationDto
+  ) {
+    // Ensure the current user is included in the participants
+    const allParticipants = [...new Set([req.user.id, ...createGroupDto.participantIds!])];
+    
+    // Ensure at least one other participant besides the current user
+    if (allParticipants.length < 2) {
+      throw new BadRequestException('At least one other participant is required');
+    }
+
+    // Check if a conversation with these exact participants already exists
+    const existingConversation = await this.chatService.findGroupConversation(createGroupDto.groupName!, req.user.id);
+    
+    if (existingConversation) {
+      return existingConversation;
+    }
+
+    // Create new group conversation
+    return this.chatService.createGroupConversation({
+      participantIds: allParticipants,
+      groupName: createGroupDto.groupName
+    }, req.user.id);
   }
 }

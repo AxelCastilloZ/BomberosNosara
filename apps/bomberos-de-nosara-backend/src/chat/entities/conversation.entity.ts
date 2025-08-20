@@ -6,7 +6,8 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
-  Index
+  Index,
+  Column
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Message } from './message.entity';
@@ -34,8 +35,20 @@ export class Conversation {
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt!: Date;
 
+  @Column({ name: 'is_group', default: false })
+  isGroup!: boolean;
+
+  @Column({ name: 'group_name', nullable: true })
+  groupName?: string;
+
+  @Column({ name: 'created_by', nullable: true })
+  createdBy?: number;
+
   // Helper method to get the other participant in 1:1 chat
   getOtherParticipant(currentUserId: number): User|undefined {
-    return this.participants.find(user => user.id!==currentUserId);
+    if (this.isGroup) {
+      return undefined;
+    }
+    return this.participants.find(user => user.id !== currentUserId);
   }
 }

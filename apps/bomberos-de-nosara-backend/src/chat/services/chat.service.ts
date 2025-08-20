@@ -6,6 +6,7 @@ import { Conversation } from '../entities/conversation.entity';
 import { Message } from '../entities/message.entity';
 import { CreateMessageDto } from '../dto/create-message.dto';
 import { CreateConversationDto } from '../dto/create-conversation.dto';
+import { CreateGroupConversationDto } from '../dto/create-group-conversation.dto';
 
 @Injectable()
 export class ChatService {
@@ -166,11 +167,73 @@ export class ChatService {
    * @param currentUserId The ID of the current user to exclude
    * @returns List of users
    */
-  async getAvailableUsers(currentUserId: number): Promise<Partial<User>[]> {
+  async getAvailableUsers(currentUserId: number): Promise<User[]> {
     return this.userRepository.find({
-      where: { id: Not(currentUserId) },
+      where: {
+        id: Not(currentUserId),
+      },
       select: ['id', 'username'],
-      order: { username: 'ASC' },
     });
+  }
+
+  /**
+   * Find a group conversation by name and verify if the specified user is a participant
+   * @param groupName - Name of the group conversation to find
+   * @param userId - ID of the user to check for participation
+   * @returns The conversation if found and user is a participant, otherwise undefined
+   */
+  async findGroupConversation(groupName: string, userId: number): Promise<Conversation | undefined> {
+    // First find the conversation by group name
+    const conversation = await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .where('conversation.isGroup = :isGroup', { isGroup: true })
+      .andWhere('conversation.groupName = :groupName', { groupName })
+      .getOne();
+
+    if (!conversation) return undefined;
+
+    // Then verify the user is a participant
+    const isParticipant = await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .innerJoin('conversation.participants', 'participant')
+      .where('conversation.id = :conversationId', { conversationId: conversation.id })
+      .andWhere('participant.id = :userId', { userId })
+      .getCount() > 0;
+
+    return isParticipant ? conversation : undefined;
+  }
+
+  async createGroupConversation(
+    createGroupDto: CreateGroupConversationDto,
+    currentUserId: number
+  ): Promise<Conversation> {
+    // Get all participants including the current user
+    const allParticipantIds = [...new Set([...createGroupDto.participantIds!, currentUserId])];
+    
+    // Find existing conversation with exact same participants
+    const existingConversation = await this.findGroupConversation(createGroupDto.groupName!, currentUserId);
+    if (existingConversation) {
+      return existingConversation;
+    }
+
+    // Find all users to add to the conversation
+    const participants = await this.userRepository.find({
+      where: {
+        id: In(allParticipantIds)
+      }
+    });
+
+    if (participants.length !== allParticipantIds.length) {
+      throw new NotFoundException('One or more participants not found');
+    }
+
+    // Create new group conversation
+    const conversation = new Conversation();
+    conversation.participants = participants;
+    conversation.isGroup = true;
+    conversation.groupName = `${createGroupDto.groupName}-GROUP ${Date.now()}`;
+    conversation.createdBy = currentUserId;
+
+    return this.conversationRepository.save(conversation);
   }
 }

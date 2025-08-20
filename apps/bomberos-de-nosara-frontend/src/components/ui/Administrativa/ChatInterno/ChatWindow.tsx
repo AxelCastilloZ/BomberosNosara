@@ -81,8 +81,9 @@ const ChatWindow=() => {
   const [showGroups, setShowGroups]=useState(true);
   const [conversation, setConversation]=useState<Conversation|null>(null);
   const [messages, setMessages]=useState<Message[]>([]);
-  const [isLoading, setIsLoading]=useState(true);
-  const [error, setError]=useState<string|null>(null);
+  const [isLoading, setIsLoading]=useState(false);
+  const [isSending, setIsSending]=useState(false);
+  const [conversationId, setConversationId]=useState<number|null>(null);
   const messagesEndRef=useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
@@ -122,7 +123,6 @@ const ChatWindow=() => {
         }
       } catch (err) {
         console.error('Error fetching current user:', err);
-        setError('Error al cargar la información del usuario');
       }
     };
 
@@ -131,6 +131,7 @@ const ChatWindow=() => {
     }
   }, [token]);
   console.log('cuurent Y:', currentUser)
+
   // Role groups for chat
   const roleGroups: ChatTarget[]=[
     {
@@ -158,6 +159,77 @@ const ChatWindow=() => {
       role: RoleEnum.VOLUNTARIO
     }
   ];
+
+  const handleSelectRoleGroup=async (role: RoleEnum) => {
+    try {
+      setIsLoading(true);
+      // Get all users with this role (including current user for the API call)
+      const roleUsers=getUsersByRole(role, false);
+      const participantIds=roleUsers.map(user => user.id);
+
+      // Create or get group conversation
+      const response=await axios.post(`${API_URL}/chat/conversations/group`, {
+        participantIds,
+        groupName: RoleLabels[role]
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const conversation=response.data;
+      setConversationId(conversation.id);
+      
+      // Set the selected target with conversation details
+      setSelectedTarget({
+        id: conversation.id,
+        name: conversation.groupName || RoleLabels[role],
+        type: 'role',
+        role
+      });
+
+      // If there are existing messages, load them
+      if (conversation.messages?.length > 0) {
+        const formattedMessages=conversation.messages.map((msg: any) => ({
+          ...msg,
+          isOwn: msg.senderId===currentUser?.id,
+          sender: {
+            id: msg.senderId,
+            username: msg.sender?.username || 'Usuario'
+          }
+        }));
+        setMessages(formattedMessages);
+      } else {
+        setMessages([]);
+      }
+
+      // Set up socket listeners for this conversation
+      if (socket) {
+        // Leave any previous room
+        socket.emit('leaveConversation', { conversationId: conversationId });
+        
+        // Join the new conversation room
+        socket.emit('joinConversation', { 
+          conversationId: conversation.id,
+          userId: currentUser?.id 
+        });
+      }
+
+    } catch (error) {
+      console.error('Error creating group conversation:', error);
+      // Fallback to old behavior if API call fails
+      setSelectedTarget({
+        id: `role-${role}`,
+        name: RoleLabels[role],
+        type: 'role',
+        role
+      });
+      setMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Filter users based on search query
   useEffect(() => {
@@ -187,7 +259,6 @@ const ChatWindow=() => {
         setUsers(response.data);
         setFilteredUsers(response.data); // Initialize filtered users with all users
       } catch (err) {
-        setError('Error al cargar los usuarios');
         console.error('Error fetching users:', err);
       } finally {
         setIsLoading(false);
@@ -240,7 +311,6 @@ const ChatWindow=() => {
         name: user.name||user.username||'Usuario',
         type: 'user'
       });
-      setError(null);
       setSearchQuery(''); // Clear search when a user is selected
 
       // Try to find existing conversation
@@ -271,7 +341,6 @@ const ChatWindow=() => {
 
     } catch (error) {
       console.error('Error in handleSelectUser:', error);
-      setError('Error al cargar la conversación');
     } finally {
       setIsLoading(false);
     }
@@ -396,46 +465,94 @@ const ChatWindow=() => {
     }
   }, [setSelectedTarget, setConversation, setMessages, setSearchQuery, searchInputRef]);
 
+  const clearChatState=useCallback(() => {
+    setSelectedTarget(null);
+    setConversation(null);
+    setMessages([]);
+    setConversationId(null);
+    setSearchQuery('');
+    if (searchInputRef.current) searchInputRef.current.value='';
+  }, [setSelectedTarget, setConversation, setMessages, setSearchQuery, searchInputRef]);
+
   // Handle sending a message
-  const handleSendMessage=useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
+  const handleSendMessage = useCallback(async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
 
-    const messageContent=inputValue.trim();
-    if (!messageContent||!socket||!selectedTarget||!currentUser||!currentUser) {
-
+    const messageContent = inputValue.trim();
+    if (!messageContent || !socket || !selectedTarget || !currentUser) {
       console.error('Missing required data for sending message');
       return;
     }
 
-    const tempMessageId=Date.now();
-    const isGroupChat=selectedTarget.type==='role';
-
-    // Create message data for the server
-    const messageData={
-      id: tempMessageId,
-      content: messageContent,
-      senderId: currentUser.id,
-      to: selectedTarget.id,
-      timestamp: new Date().toISOString(),
-      isGroup: isGroupChat,
-      groupId: isGroupChat? selectedTarget.id:undefined,
-      sender: {
-        id: currentUser.id,
-        username: currentUser.username||'Usuario'
-      }
-    };
-
-    // Optimistically add the message to the UI
-    const tempMessage: Message={
-      ...messageData,
-      isOwn: true
-    };
-
-    // Add message to UI immediately
-    setMessages(prevMessages => [...prevMessages, tempMessage]);
-    setInputValue('');
+    const tempMessageId = Date.now();
+    const isGroupChat = selectedTarget.type === 'role';
+    let targetConversationId: number | undefined = conversationId || undefined;
 
     try {
+      // For group chats, ensure we have a conversation ID
+      if (isGroupChat && !targetConversationId) {
+        setIsLoading(true);
+        
+        // Get all users with this role (excluding current user for participant list)
+        const roleUsers = getUsersByRole(selectedTarget.role as RoleEnum, false);
+        const participantIds = roleUsers.map(user => user.id);
+
+        // Create or get group conversation
+        const response = await axios.post(
+          `${API_URL}/chat/conversations/group`,
+          {
+            participantIds,
+            groupName: selectedTarget.name
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+          }
+        );
+
+        // Update conversation ID for this group
+        targetConversationId = response.data.id;
+        setConversationId(targetConversationId || null);
+        
+        // Update selected target with the new conversation ID
+        setSelectedTarget(prev => ({
+          ...prev!,
+          id: targetConversationId as string | number
+        }));
+      }
+
+      // Create message data for the server
+      const messageData = {
+        id: tempMessageId,
+        content: messageContent,
+        senderId: currentUser.id,
+        to: isGroupChat ? targetConversationId || selectedTarget.id : selectedTarget.id,
+        timestamp: new Date().toISOString(),
+        isGroup: isGroupChat,
+        conversationId: isGroupChat ? targetConversationId : undefined,
+        groupId: isGroupChat ? selectedTarget.id : undefined,
+        sender: {
+          id: currentUser.id,
+          username: currentUser.username || 'Usuario'
+        }
+      };
+
+      // Optimistically add the message to the UI
+      const tempMessage: Message = {
+        ...messageData,
+        isOwn: true,
+        status: 'sending'
+      };
+
+      // Add message to UI immediately
+      setMessages(prevMessages => [...prevMessages, tempMessage]);
+      setInputValue('');
+      
+      // Scroll to bottom to show the new message
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+
       // Emit the message via WebSocket
       if (isGroupChat) {
         socket.emit(
@@ -444,6 +561,7 @@ const ChatWindow=() => {
             role: selectedTarget.role,
             message: messageContent,
             senderId: currentUser.id,
+            conversationId: targetConversationId // Include conversation ID in the message
           },
           (response: { success: boolean; message?: any; error?: string }) => {
             if (!response.success) {
@@ -689,7 +807,7 @@ const ChatWindow=() => {
                             {roleUsers.map((user, index) => (
                               <span key={user.id}>
                                 {getUserDisplayName(user)}
-                                {index < roleUsers.length - 1 ? ', ' : ''}
+                                {index<roleUsers.length-1? ', ':''}
                               </span>
                             ))}
                           </div>
