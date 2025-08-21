@@ -86,21 +86,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         role: payload.role
       });
 
-      console.log(`Client connected: ${client.id}, User ID: ${payload.sub}`);
+      console.log(`Client connected: ${client.id}, User ID: ${payload.sub}, Role: ${payload.roles[0]}`);
 
       // Join user's personal room for direct messages
       await client.join(`user_${payload.sub}`);
+      console.log('Payload:', payload)
+      // Join role-based rooms
+      if (payload.roles?.length) {
+        // Join each role room
+        for (const role of payload.roles) {
+          const roleRoom = `role-${role}`;
+          await client.join(roleRoom);
+          console.log(`[CONNECTION] User ${payload.sub} joined role room: ${roleRoom}`);
 
-      // Join role-based room
-      if (payload.role) {
-        const roleRoom=`role-${payload.role}`;
-        await client.join(roleRoom);
-        console.log(`[CONNECTION] User ${payload.sub} joined role room: ${roleRoom}`);
-
-        // Debug: Check how many clients are now in this role room
-        const socketsInRoom=await this.server.in(roleRoom).fetchSockets();
-        console.log(`[CONNECTION] Role room ${roleRoom} now has ${socketsInRoom.length} clients:`,
-          socketsInRoom.map(s => ({ socketId: s.id, userId: this.connectedClients.get(s.id)?.userId })));
+          // Debug: Check how many clients are now in this role room
+          const socketsInRoom = await this.server.in(roleRoom).fetchSockets();
+          console.log(`[CONNECTION] Role room ${roleRoom} now has ${socketsInRoom.length} clients:`,
+            socketsInRoom.map(s => ({ socketId: s.id, userId: this.connectedClients.get(s.id)?.userId })));
+        }
+      } else {
+        console.log(`[CONNECTION] No roles found in JWT payload for user ${payload.sub}`);
       }
 
       client.emit('connected', {
@@ -401,28 +406,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const roleRoom=`role-${role}`;
       console.log(`[GROUP CHAT] Broadcasting to role room: ${roleRoom} (excluding sender ${senderId})`);
 
-      // First, let's check what's in the role room
+      // Get all sockets in the role room
       const socketsInRoom=await this.server.in(roleRoom).fetchSockets();
       console.log(`[GROUP CHAT] Found ${socketsInRoom.length} sockets in room ${roleRoom}`);
       console.log(`[GROUP CHAT] Sockets in room:`, socketsInRoom.map(s => ({ id: s.id, userId: this.connectedClients.get(s.id)?.userId })));
 
-      // Use client.to() which should exclude the sender automatically
-      console.log(`[GROUP CHAT] Using client.to() to broadcast to role room excluding sender`);
-      client.to(roleRoom).emit('newMessage', {
-        ...messageData,
-        isOwn: false
-      });
+      // Send the message to all users in the role room except the sender
+      for (const socket of socketsInRoom) {
+        const socketUserId = this.connectedClients.get(socket.id)?.userId;
+        if (String(socketUserId) !== String(senderId)) {
+          // Only send to other users in the room, not the sender
+          this.server.to(socket.id).emit('newMessage', {
+            ...messageData,
+            isOwn: false
+          });
+        }
+      }
 
-      // Also try broadcasting to all users in the role room and let frontend handle deduplication
-      console.log(`[GROUP CHAT] Also broadcasting to entire room for debugging`);
-      this.server.to(roleRoom).emit('newMessage', {
-        ...messageData,
-        isOwn: false,
-        debug: true // Add debug flag to identify this broadcast
-      });
-
-      // Note: Sender will see their own message immediately in the frontend UI
-      // Sender is explicitly excluded from receiving the server broadcast
+      // The sender's message is already handled optimistically in the frontend
+      console.log(`[GROUP CHAT] Message sent to all group members except sender`);
 
       return {
         success: true,

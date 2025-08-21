@@ -657,7 +657,7 @@ const ChatWindow=() => {
       if (isGroup) {
         // For group messages, use sendToRole
         const groupMessageData={
-          role: RoleLabels[selectedTarget.role!], // Use the actual role enum value
+          role: selectedTarget.role!, // Use the actual role enum value, not the display label
           message: inputValue,
           senderId: senderId
         };
