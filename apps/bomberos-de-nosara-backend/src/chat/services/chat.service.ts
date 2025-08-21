@@ -171,30 +171,30 @@ export class ChatService {
     return this.messageRepository.find({
       where: { conversation: { id: conversationId } },
       relations: ['sender'],
-      order: { createdAt: 'ASC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
   async getConversationWithUser(currentUserId: number, otherUserId: number): Promise<Conversation> {
     const conversation=await this.conversationRepository
       .createQueryBuilder('conversation')
-      .innerJoin('conversation.participants', 'participant')
-      .groupBy('conversation.id')
-      .having('COUNT(participant.id) = 2')
-      .andHaving('SUM(CASE WHEN participant.id IN (:...ids) THEN 1 ELSE 0 END) = 2', {
-        ids: [currentUserId, otherUserId],
-      })
+      .innerJoin('conversation.participants', 'participant1', 'participant1.id = :currentUserId', { currentUserId })
+      .innerJoin('conversation.participants', 'participant2', 'participant2.id = :otherUserId', { otherUserId })
+      .where('conversation.isGroup = :isGroup', { isGroup: false })
       .getOne();
-
+    console.log('Conversation:', conversation);
     if (conversation) {
       return conversation;
     }
+    const participants=await this.userRepository.findBy({
+      id: In([currentUserId, otherUserId])
+    });
 
-    // If no conversation exists, create a new one
-    return this.createConversation(
-      { participantIds: [otherUserId] },
-      currentUserId
-    );
+    const newConversation=this.conversationRepository.create({
+      participants: participants,
+    });
+
+    return this.conversationRepository.save(newConversation);
   }
 
   /**
@@ -209,6 +209,20 @@ export class ChatService {
       },
       select: ['id', 'username'],
     });
+  }
+
+  /**
+   * Get all users with a specific role
+   * @param roleName The role name to filter by
+   * @returns List of users with the specified role
+   */
+  async getUsersByRole(roleName: string): Promise<User[]> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roles', 'role')
+      .where('role.name = :roleName', { roleName })
+      .select(['user.id', 'user.username'])
+      .getMany();
   }
 
   /**

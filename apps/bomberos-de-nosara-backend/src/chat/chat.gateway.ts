@@ -95,7 +95,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (payload.role) {
         const roleRoom=`role-${payload.role}`;
         await client.join(roleRoom);
-        console.log(`User ${payload.sub} joined role room: ${roleRoom}`);
+        console.log(`[CONNECTION] User ${payload.sub} joined role room: ${roleRoom}`);
+
+        // Debug: Check how many clients are now in this role room
+        const socketsInRoom=await this.server.in(roleRoom).fetchSockets();
+        console.log(`[CONNECTION] Role room ${roleRoom} now has ${socketsInRoom.length} clients:`,
+          socketsInRoom.map(s => ({ socketId: s.id, userId: this.connectedClients.get(s.id)?.userId })));
       }
 
       client.emit('connected', {
@@ -186,45 +191,48 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket
   ) {
     try {
-      const { to, message, senderId, isGroup = false } = data;
+      const { to, message, senderId, isGroup=false }=data;
       console.log('Data:', data)
-      console.log(`Sending message from ${senderId} to ${isGroup ? 'group' : 'user'} ${to}: ${message}`);
+      console.log(`Sending message from ${senderId} to ${isGroup? 'group':'user'} ${to}: ${message}`);
 
       if (!message) {
         throw new Error('Message content is required');
       }
 
       // Convert to number and validate
-      const targetId = Number(to);
+      const targetId=Number(to);
       console.log('Target ID:', targetId);
       if (isNaN(targetId)) {
-        throw new Error(`Invalid ${isGroup ? 'group' : 'user'} ID: ${to}`);
+        throw new Error(`Invalid ${isGroup? 'group':'user'} ID: ${to}`);
       }
 
       let messageData;
       let roomName: string;
 
       if (isGroup) {
+        console.log('Sending group message');
+        console.log('Target ID:', targetId);
+        console.log('Sender ID:', senderId);
         // For group messages
-        const conversation = await this.chatService.getConversationById(targetId);
+        const conversation=await this.chatService.getConversationById(targetId);
         if (!conversation) {
           throw new Error('Conversation not found');
         }
 
         // Verify user is a participant in the group
-        const isParticipant = conversation.participants.some(p => p.id === Number(senderId));
+        const isParticipant=conversation.participants.some(p => p.id===Number(senderId));
         if (!isParticipant) {
           throw new Error('You are not a participant of this group');
         }
 
         // Save the message to the database
-        const savedMessage = await this.chatService.createMessage({
+        const savedMessage=await this.chatService.createMessage({
           content: message,
           conversationId: conversation.id
         }, Number(senderId));
 
         // Format the message for the client
-        messageData = {
+        messageData={
           id: savedMessage.id,
           content: savedMessage.content,
           timestamp: savedMessage.createdAt.toISOString(),
@@ -233,28 +241,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           groupId: savedMessage.conversation.id,
           sender: {
             id: savedMessage.sender.id,
-            username: savedMessage.sender.username || 'Usuario'
+            username: savedMessage.sender.username||'Usuario'
           }
         };
 
         // Set room name for group
-        roomName = `group_${targetId}`;
-        
+        roomName=`group_${targetId}`;
+
       } else {
         // For 1:1 messages
-        const conversation = await this.chatService.getConversationWithUser(
+        const conversation=await this.chatService.getConversationWithUser(
           Number(senderId),
           targetId
         );
 
         // Save the message to the database
-        const savedMessage = await this.chatService.createMessage({
+        const savedMessage=await this.chatService.createMessage({
           content: message,
           conversationId: conversation.id,
           senderId: Number(senderId)
         }, Number(senderId));
 
-        messageData = {
+        messageData={
           id: savedMessage.id,
           content: savedMessage.content,
           senderId: savedMessage.sender.id,
@@ -263,13 +271,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           isGroup: false,
           sender: {
             id: savedMessage.sender.id,
-            username: savedMessage.sender.username || 'Usuario'
+            username: savedMessage.sender.username||'Usuario'
           },
           conversationId: savedMessage.conversation.id
         };
 
         // Set room name for 1:1 chat (recipient's personal room)
-        roomName = `user_${targetId}`;
+        roomName=`user_${targetId}`;
       }
 
       // Emit to the appropriate room (group or user)
@@ -293,123 +301,195 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.error('Error sending message:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to send message'
+        error: error instanceof Error? error.message:'Failed to send message'
       };
     }
   }
 
-@SubscribeMessage('sendToRole')
-async handleRoleMessage(
-  @MessageBody() data: RoleMessagePayload,
-  @ConnectedSocket() client: Socket
-) {
-  try {
-    const { role, message, senderId } = data;
-    console.log(`Sending message to role ${role} from ${senderId}: ${message}`);
+  @SubscribeMessage('sendToRole')
+  async handleRoleMessage(
+    @MessageBody() data: RoleMessagePayload,
+    @ConnectedSocket() client: Socket
+  ) {
+    try {
+      const { role, message, senderId }=data;
+      console.log('Role:', role);
 
-    if (!role || !message) {
-      throw new Error('Role and message content are required');
-    }
+      console.log(`[GROUP CHAT] Received data:`, JSON.stringify(data));
+      console.log(`[GROUP CHAT] Sending message to role ${role} from ${senderId}: ${message}`);
 
-    // For group messages, we'll store them with a special conversation ID
-    // In a real app, you might want to create a proper group conversation
-    const messageData = {
-      id: Date.now(),
-      content: message,
-      senderId,
-      to: role,
-      timestamp: new Date().toISOString(),
-      isGroup: true,
-      groupId: role,
-      sender: {
-        id: senderId,
-        username: 'Usuario' // TODO: Fetch from database
+      if (!role||!message) {
+        throw new Error('Role and message content are required');
       }
-    };
 
-    // In a real app, you would save the group message to the database here
-    // For example:
-    // await this.chatService.saveGroupMessage({
-    //   content: message,
-    //   role: role,
-    //   senderId: Number(senderId)
-    // });
+      // Find or create group conversation for this role (only create if absolutely necessary)
+      let groupConversation;
+      try {
+        console.log(`[GROUP CHAT] Looking for existing group conversation for role: ${role}`);
+        groupConversation=await this.chatService.findGroupConversation(role, Number(senderId));
 
-    // Broadcast to all users in the role room including sender
-    this.server.to(`role-${role}`).emit('newMessage', messageData);
+        if (!groupConversation) {
+          console.log(`[GROUP CHAT] No existing conversation found, creating new one`);
 
-    // Also emit back to sender with isOwn flag
-    client.emit('newMessage', {
-      ...messageData,
-      isOwn: true
-    });
+          // Double-check: try to find any group conversation with this role name
+          // This prevents race conditions where multiple users create the same group simultaneously
+          try {
+            // Use a more comprehensive search to avoid duplicates
+            const allConversations=await this.chatService.getConversations(Number(senderId));
+            const existingGroup=allConversations.find(conv =>
+              conv.isGroup&&conv.groupName===role
+            );
 
-    return {
-      success: true,
-      message: messageData,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    console.error('Error sending role message:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to send role message'
-    };
-  }
-}
+            if (existingGroup) {
+              console.log(`[GROUP CHAT] Found existing group conversation during double-check: ${existingGroup.id}`);
+              groupConversation=existingGroup;
+            } else {
+              // Create group conversation if it truly doesn't exist
+              const usersWithRole=await this.chatService.getUsersByRole(role);
+              console.log(`[GROUP CHAT] Found ${usersWithRole.length} users with role ${role}:`, usersWithRole.map(u => u.id));
+              const participantIds=usersWithRole.map((user: any) => user.id);
 
-@SubscribeMessage('typing')
-async handleTyping(
-  @MessageBody() data: {
-    to: string | number;
-    isTyping: boolean;
-    userId: string | number;
-    username: string;
-    isGroup?: boolean;
-    role?: string;
-  },
-  @ConnectedSocket() client: Socket
-) {
-  try {
-    const clientData = this.connectedClients.get(client.id);
-    if (!clientData) {
-      throw new UnauthorizedException('Not authenticated');
-    }
+              groupConversation=await this.chatService.createGroupConversation({
+                groupName: role,
+                participantIds: participantIds
+              }, Number(senderId));
+              console.log(`[GROUP CHAT] Created new group conversation with ID: ${groupConversation.id}`);
+            }
+          } catch (doubleCheckError) {
+            console.error('[GROUP CHAT] Error during double-check, proceeding with creation:', doubleCheckError);
+            // Fallback to original creation logic
+            const usersWithRole=await this.chatService.getUsersByRole(role);
+            const participantIds=usersWithRole.map((user: any) => user.id);
+            groupConversation=await this.chatService.createGroupConversation({
+              groupName: role,
+              participantIds: participantIds
+            }, Number(senderId));
+          }
+        } else {
+          console.log(`[GROUP CHAT] Using existing group conversation with ID: ${groupConversation.id}`);
+        }
+      } catch (error) {
+        console.error('[GROUP CHAT] Error handling group conversation:', error);
+        throw new Error('Failed to create or find group conversation');
+      }
 
-    const { to, isTyping, userId, username, isGroup = false, role } = data;
+      // Save message to database
+      console.log(`[GROUP CHAT] Saving message to database for conversation ${groupConversation.id}`);
+      const savedMessage=await this.chatService.createMessage({
+        content: message,
+        conversationId: groupConversation.id
+      }, Number(senderId));
+      console.log(`[GROUP CHAT] Message saved with ID: ${savedMessage.id}`);
 
-    // Broadcast to the appropriate room
-    if (isGroup && role) {
-      // For group chats, send to everyone in the role room except the sender
-      client.to(`role-${role}`).emit('typing', {
-        userId,
-        username,
-        isTyping,
+      const messageData={
+        id: savedMessage.id,
+        content: savedMessage.content,
+        senderId: savedMessage.sender.id,
+        conversationId: savedMessage.conversation.id,
+        timestamp: savedMessage.createdAt.toISOString(),
         isGroup: true,
-        role,
-        timestamp: new Date().toISOString()
-      });
-    } else if (!isGroup) {
-      // For 1:1 chats, send only to the recipient
-      this.server.to(`user_${to}`).emit('typing', {
-        userId,
-        username,
-        isTyping,
-        isGroup: false,
-        timestamp: new Date().toISOString()
-      });
-    }
-  } catch (error) {
-    console.error('Error handling typing indicator:', error);
-  }
-}
+        groupId: role,
+        sender: {
+          id: savedMessage.sender.id,
+          username: savedMessage.sender.username
+        }
+      };
 
-@OnEvent('message.created')
-handleMessageCreatedEvent(payload: any) {
-  // This event handler is for database-triggered events
-  // Since we're handling real-time messaging directly in the socket handlers,
-  // we can remove this to prevent duplicate messages
-  console.log('Message created event received:', payload);
-  // Optional: Handle any additional logic like notifications, logging, etc.
-}
+      console.log(`[GROUP CHAT] Prepared message data:`, JSON.stringify(messageData));
+
+      // Broadcast to all users in the role room EXCEPT the sender
+      const roleRoom=`role-${role}`;
+      console.log(`[GROUP CHAT] Broadcasting to role room: ${roleRoom} (excluding sender ${senderId})`);
+
+      // First, let's check what's in the role room
+      const socketsInRoom=await this.server.in(roleRoom).fetchSockets();
+      console.log(`[GROUP CHAT] Found ${socketsInRoom.length} sockets in room ${roleRoom}`);
+      console.log(`[GROUP CHAT] Sockets in room:`, socketsInRoom.map(s => ({ id: s.id, userId: this.connectedClients.get(s.id)?.userId })));
+
+      // Use client.to() which should exclude the sender automatically
+      console.log(`[GROUP CHAT] Using client.to() to broadcast to role room excluding sender`);
+      client.to(roleRoom).emit('newMessage', {
+        ...messageData,
+        isOwn: false
+      });
+
+      // Also try broadcasting to all users in the role room and let frontend handle deduplication
+      console.log(`[GROUP CHAT] Also broadcasting to entire room for debugging`);
+      this.server.to(roleRoom).emit('newMessage', {
+        ...messageData,
+        isOwn: false,
+        debug: true // Add debug flag to identify this broadcast
+      });
+
+      // Note: Sender will see their own message immediately in the frontend UI
+      // Sender is explicitly excluded from receiving the server broadcast
+
+      return {
+        success: true,
+        message: messageData,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('Error sending role message:', error);
+      return {
+        success: false,
+        error: error instanceof Error? error.message:'Failed to send role message'
+      };
+    }
+  }
+
+  @SubscribeMessage('typing')
+  async handleTyping(
+    @MessageBody() data: {
+      to: string|number;
+      isTyping: boolean;
+      userId: string|number;
+      username: string;
+      isGroup?: boolean;
+      role?: string;
+    },
+    @ConnectedSocket() client: Socket
+  ) {
+    try {
+      const clientData=this.connectedClients.get(client.id);
+      if (!clientData) {
+        throw new UnauthorizedException('Not authenticated');
+      }
+
+      const { to, isTyping, userId, username, isGroup=false, role }=data;
+
+      // Broadcast to the appropriate room
+      if (isGroup&&role) {
+        // For group chats, send to everyone in the role room except the sender
+        client.to(`role-${role}`).emit('typing', {
+          userId,
+          username,
+          isTyping,
+          isGroup: true,
+          role,
+          timestamp: new Date().toISOString()
+        });
+      } else if (!isGroup) {
+        // For 1:1 chats, send only to the recipient
+        this.server.to(`user_${to}`).emit('typing', {
+          userId,
+          username,
+          isTyping,
+          isGroup: false,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('Error handling typing indicator:', error);
+    }
+  }
+
+  @OnEvent('message.created')
+  handleMessageCreatedEvent(payload: any) {
+    // This event handler is for database-triggered events
+    // Since we're handling real-time messaging directly in the socket handlers,
+    // we can remove this to prevent duplicate messages
+    console.log('Message created event received:', payload);
+    // Optional: Handle any additional logic like notifications, logging, etc.
+  }
 }

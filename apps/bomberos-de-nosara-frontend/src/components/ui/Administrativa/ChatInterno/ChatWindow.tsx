@@ -163,64 +163,72 @@ const ChatWindow=() => {
   const handleSelectRoleGroup=async (role: RoleEnum) => {
     try {
       setIsLoading(true);
-      // Get all users with this role (including current user for the API call)
-      const roleUsers=getUsersByRole(role, false);
-      const participantIds=roleUsers.map(user => user.id);
+      console.log(`[FRONTEND GROUP] Selecting role group: ${role}`);
 
-      // Create or get group conversation
-      const response=await axios.post(`${API_URL}/chat/conversations/group`, {
-        participantIds,
-        groupName: RoleLabels[role]
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      const conversation=response.data;
-      setConversationId(conversation.id);
-
-      // Set the selected target with conversation details
+      // Don't create conversation upfront - let backend handle it when first message is sent
+      // Just set up the UI for the role group
       setSelectedTarget({
-        id: conversation.id,
-        name: conversation.groupName||RoleLabels[role],
+        id: role, // Use role as ID temporarily
+        name: RoleLabels[role],
         type: 'role',
         role
       });
 
-      // If there are existing messages, load them
-      if (conversation.messages?.length>0) {
-        const formattedMessages=conversation.messages.map((msg: any) => ({
-          ...msg,
-          isOwn: msg.senderId===currentUser?.id,
-          sender: {
-            id: msg.senderId,
-            username: msg.sender?.username||'Usuario'
+      // Try to load existing group conversation and messages
+      try {
+        console.log(`[FRONTEND GROUP] Checking for existing group conversation for role: ${role}`);
+
+        // Try to find existing conversation by checking if one exists
+        const existingConversation=await axios.get(`${API_URL}/chat/conversations`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+
+        // Find group conversation for this role
+        const groupConversation=existingConversation.data.find((conv: any) =>
+          conv.isGroup&&conv.groupName===role
+        );
+
+        if (groupConversation) {
+          console.log(`[FRONTEND GROUP] Found existing group conversation:`, groupConversation);
+          setConversationId(groupConversation.id);
+
+          // Update selected target with real conversation ID
+          setSelectedTarget({
+            id: groupConversation.id,
+            name: groupConversation.groupName||RoleLabels[role],
+            type: 'role',
+            role
+          });
+
+          // Load existing messages if any
+          if (groupConversation.messages?.length>0) {
+            const formattedMessages=groupConversation.messages.map((msg: any) => ({
+              ...msg,
+              isOwn: msg.senderId===currentUser?.id,
+              sender: {
+                id: msg.senderId,
+                username: msg.sender?.username||'Usuario'
+              }
+            }));
+            setMessages(formattedMessages);
+          } else {
+            setMessages([]);
           }
-        }));
-        setMessages(formattedMessages);
-      } else {
+        } else {
+          console.log(`[FRONTEND GROUP] No existing group conversation found for role: ${role}`);
+          setConversationId(null);
+          setMessages([]);
+        }
+      } catch (error) {
+        console.log(`[FRONTEND GROUP] Error checking for existing conversation:`, error);
+        setConversationId(null);
         setMessages([]);
       }
 
-      // Set up socket listeners for this conversation
-      if (socket) {
-        // Leave any previous room
-        socket.emit('leaveConversation', { conversationId: conversationId });
-
-        // Join the new conversation room
-        socket.emit('joinConversation', {
-          conversationId: conversation.id,
-          userId: currentUser?.id
-        });
-      }
-
     } catch (error) {
-      console.error('Error creating group conversation:', error);
-      // Fallback to old behavior if API call fails
+      console.error('Error selecting group conversation:', error);
       setSelectedTarget({
-        id: `role-${role}`,
+        id: role,
         name: RoleLabels[role],
         type: 'role',
         role
@@ -273,7 +281,7 @@ const ChatWindow=() => {
       if (isGroup&&target.role) {
         conversationId=await getOrCreateGroupConversation(
           target.role,
-          target.name
+          RoleLabels[target.role]
         );
         if (conversationId) {
           setConversationId(Number(conversationId));
@@ -455,40 +463,60 @@ const ChatWindow=() => {
     if (!socket||!isConnected||!currentUser) return;
 
     const handleNewMessage=(message: Message) => {
-      console.log('New message received:', message);
-      console.log('selectedTarget:', selectedTarget);
-  
+      console.log('[FRONTEND MESSAGE] New message received:', message);
+      console.log('[FRONTEND MESSAGE] selectedTarget:', selectedTarget);
+      console.log('[FRONTEND MESSAGE] conversationId:', conversationId);
+
       // Check if the message is for the current conversation
-      if (!selectedTarget) return;
-  
-      const isForCurrentConversation = 
-        (selectedTarget.type === 'role' && message.isGroup && message.groupId === selectedTarget.id) ||
-        (selectedTarget.type === 'user' && !message.isGroup && 
-         (message.senderId === selectedTarget.id || message.to === selectedTarget.id));
-  
-      if (!isForCurrentConversation) return;
-  
+      if (!selectedTarget) {
+        console.log('[FRONTEND MESSAGE] No selected target, ignoring message');
+        return;
+      }
+
+      const isForCurrentConversation=
+        (selectedTarget.type==='role'&&message.isGroup&&
+          (message.groupId===selectedTarget.role||message.groupId===selectedTarget.id))||
+        (selectedTarget.type==='user'&&!message.isGroup&&
+          (message.senderId===selectedTarget.id||message.to===selectedTarget.id))||
+        (selectedTarget.type==='role'&&message.isGroup&&message.conversationId===conversationId);
+
+      console.log('[FRONTEND MESSAGE] Is for current conversation:', isForCurrentConversation);
+      console.log('[FRONTEND MESSAGE] Conversation check details:', {
+        selectedType: selectedTarget.type,
+        messageIsGroup: message.isGroup,
+        messageGroupId: message.groupId,
+        selectedRole: selectedTarget.role,
+        selectedId: selectedTarget.id,
+        messageConversationId: message.conversationId,
+        currentConversationId: conversationId
+      });
+
+      if (!isForCurrentConversation) {
+        console.log('[FRONTEND MESSAGE] Message not for current conversation, ignoring');
+        return;
+      }
+
       // Prevent duplicate messages by checking if message already exists
       setMessages(prev => {
-        const messageExists = prev.some(existingMsg => 
-          existingMsg.id === message.id || 
-          (existingMsg.content === message.content && 
-           existingMsg.senderId === message.senderId && 
-           Math.abs(new Date(existingMsg.timestamp || '').getTime() - new Date(message.timestamp || '').getTime()) < 1000)
+        const messageExists=prev.some(existingMsg =>
+          existingMsg.id===message.id||
+          (existingMsg.content===message.content&&
+            existingMsg.senderId===message.senderId&&
+            Math.abs(new Date(existingMsg.timestamp||'').getTime()-new Date(message.timestamp||'').getTime())<1000)
         );
-        
+
         if (messageExists) {
           console.log('Duplicate message detected, skipping:', message);
           return prev;
         }
-        
+
         return [
           ...prev,
           {
             ...message,
-            isOwn: message.isOwn !== undefined ? message.isOwn : 
-                   (message.senderId === currentUser?.id || 
-                    (message.sender && message.sender.id === currentUser?.id))
+            isOwn: message.isOwn!==undefined? message.isOwn:
+              (message.senderId===currentUser?.id||
+                (message.sender&&message.sender.id===currentUser?.id))
           }
         ];
       });
@@ -605,12 +633,13 @@ const ChatWindow=() => {
     if (!inputValue.trim()||!selectedTarget||!socket||!currentUser) return;
 
     const isGroup=selectedTarget.type==='role';
+    console.log('isGroup:', isGroup);
     const targetId=selectedTarget.id;
     const senderId=currentUser.id;
 
     // Prepare message data for the API
     const messageData={
-      to: isGroup ? conversationId:selectedTarget.id,
+      to: isGroup? conversationId:selectedTarget.id,
       message: inputValue,
       senderId: senderId,
       isGroup: isGroup,
@@ -625,21 +654,63 @@ const ChatWindow=() => {
 
     try {
       // Send the message via WebSocket
-      const eventName = isGroup ? 'sendToRole' : 'sendMessage';
-      const socketData = isGroup ? {
-        role: targetId,
-        message: inputValue,
-        senderId: senderId
-      } : messageData;
-      
-      socket.emit(eventName, socketData, (response: any) => {
-        if (response?.error) {
-          console.error('Error sending message:', response.error);
-          // Show error message or handle error state
-        } else {
-          console.log('Message sent successfully:', response);
-        }
-      });
+      if (isGroup) {
+        // For group messages, use sendToRole
+        const groupMessageData={
+          role: RoleLabels[selectedTarget.role!], // Use the actual role enum value
+          message: inputValue,
+          senderId: senderId
+        };
+        console.log('[FRONTEND GROUP CHAT] Sending group message:', JSON.stringify(groupMessageData));
+        console.log('[FRONTEND GROUP CHAT] Selected target:', JSON.stringify(selectedTarget));
+
+        // Optimistic update: immediately show sender's own message
+        const optimisticMessage: Message={
+          id: Date.now(), // Temporary ID
+          content: inputValue,
+          senderId: senderId,
+          timestamp: new Date().toISOString(),
+          isOwn: true,
+          isGroup: true,
+          groupId: RoleLabels[selectedTarget.role!],
+          sender: {
+            id: senderId,
+            username: currentUser.username||'You'
+          }
+        };
+
+        // Add the message immediately to the UI
+        setMessages(prev => [...prev, optimisticMessage]);
+
+        socket.emit('sendToRole', groupMessageData, (response: any) => {
+          if (response?.error) {
+            console.error('Error sending group message:', response.error);
+            // Remove the optimistic message on error
+            setMessages(prev => prev.filter(msg => msg.id!==optimisticMessage.id));
+          } else {
+            console.log('Group message sent successfully:', response);
+            // Update the optimistic message with the real message data from server
+            if (response.message) {
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id===optimisticMessage.id
+                    ? { ...response.message, isOwn: true }
+                    :msg
+                )
+              );
+            }
+          }
+        });
+      } else {
+        // For 1:1 messages, use sendMessage
+        socket.emit('sendMessage', messageData, (response: any) => {
+          if (response?.error) {
+            console.error('Error sending message:', response.error);
+          } else {
+            console.log('Message sent successfully:', response);
+          }
+        });
+      }
     } catch (err) {
       console.error('Error sending message:', err);
     }
