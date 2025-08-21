@@ -456,18 +456,42 @@ const ChatWindow=() => {
 
     const handleNewMessage=(message: Message) => {
       console.log('New message received:', message);
-      console.log('selectedTarget:', selectedTarget)
+      console.log('selectedTarget:', selectedTarget);
+  
       // Check if the message is for the current conversation
-
-
-      setMessages(prev => [
-        ...prev,
-        {
-          ...message,
-          isOwn: message.senderId===currentUser?.id||
-            (message.sender&&message.sender.id===currentUser?.id)
+      if (!selectedTarget) return;
+  
+      const isForCurrentConversation = 
+        (selectedTarget.type === 'role' && message.isGroup && message.groupId === selectedTarget.id) ||
+        (selectedTarget.type === 'user' && !message.isGroup && 
+         (message.senderId === selectedTarget.id || message.to === selectedTarget.id));
+  
+      if (!isForCurrentConversation) return;
+  
+      // Prevent duplicate messages by checking if message already exists
+      setMessages(prev => {
+        const messageExists = prev.some(existingMsg => 
+          existingMsg.id === message.id || 
+          (existingMsg.content === message.content && 
+           existingMsg.senderId === message.senderId && 
+           Math.abs(new Date(existingMsg.timestamp || '').getTime() - new Date(message.timestamp || '').getTime()) < 1000)
+        );
+        
+        if (messageExists) {
+          console.log('Duplicate message detected, skipping:', message);
+          return prev;
         }
-      ]);
+        
+        return [
+          ...prev,
+          {
+            ...message,
+            isOwn: message.isOwn !== undefined ? message.isOwn : 
+                   (message.senderId === currentUser?.id || 
+                    (message.sender && message.sender.id === currentUser?.id))
+          }
+        ];
+      });
     };
 
     const handleUserTyping=(data: {
@@ -505,14 +529,12 @@ const ChatWindow=() => {
     // Set up event listeners
     socket.on('newMessage', handleNewMessage);
     socket.on('typing', handleUserTyping);
-    socket.on('message', handleNewMessage);
 
     // Clean up function
     return () => {
       console.log('Cleaning up socket listeners');
       socket.off('newMessage', handleNewMessage);
       socket.off('typing', handleUserTyping);
-      socket.off('message', handleNewMessage);
       setMessages([]);
     };
   }, [socket, isConnected, currentUser, selectedTarget]);
@@ -593,64 +615,33 @@ const ChatWindow=() => {
       senderId: senderId,
       isGroup: isGroup,
       // Include conversationId for 1:1 chats if available
-      ...(!isGroup&&{ conversationId: Number(conversationId) })
-    };
-
-    // Optimistic update234
-    const tempId=Date.now();
-    const newMessage: Message={
-      id: tempId,
-      content: inputValue,
-      senderId: senderId,
-      timestamp: new Date().toISOString(),
-      isOwn: true,
-      isGroup,
-      // Include groupId for group chats
-      ...(isGroup&&{ groupId: targetId }),
-      // Include conversationId for 1:1 chats
-      ...(!isGroup&&{ conversationId: Number(targetId) }),
-      status: 'sending',
-      sender: {
-        id: senderId,
-        username: currentUser.username||'Tú'
-      },
+      ...(!isGroup&&{ conversationId: Number(conversationId) }),
       // Include recipient info for 1:1 chats
       ...(!isGroup&&{ to: targetId })
     };
 
-    setMessages(prev => [...prev, newMessage]);
+    // Clear input immediately
     setInputValue('');
 
     try {
       // Send the message via WebSocket
-      socket.emit('sendMessage', messageData, (response: any) => {
+      const eventName = isGroup ? 'sendToRole' : 'sendMessage';
+      const socketData = isGroup ? {
+        role: targetId,
+        message: inputValue,
+        senderId: senderId
+      } : messageData;
+      
+      socket.emit(eventName, socketData, (response: any) => {
         if (response?.error) {
-          // Update message status to error
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id===tempId? { ...msg, status: 'error', error: response.error }:msg
-            )
-          );
+          console.error('Error sending message:', response.error);
+          // Show error message or handle error state
         } else {
-          // Update message with server response
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id===tempId
-                ? { ...msg, id: response.id, status: 'sent', timestamp: response.timestamp }
-                :msg
-            )
-          );
+          console.log('Message sent successfully:', response);
         }
       });
     } catch (err) {
       console.error('Error sending message:', err);
-      setMessages(prev =>
-        prev.map(msg =>
-          msg.id===tempId
-            ? { ...msg, status: 'error', error: 'Failed to send message' }
-            :msg
-        )
-      );
     }
   };
 

@@ -298,133 +298,118 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('sendToRole')
-  async handleRoleMessage(
-    @MessageBody() data: RoleMessagePayload,
-    @ConnectedSocket() client: Socket
-  ) {
-    try {
-      const { role, message, senderId }=data;
-      console.log(`Sending message to role ${role} from ${senderId}: ${message}`);
+@SubscribeMessage('sendToRole')
+async handleRoleMessage(
+  @MessageBody() data: RoleMessagePayload,
+  @ConnectedSocket() client: Socket
+) {
+  try {
+    const { role, message, senderId } = data;
+    console.log(`Sending message to role ${role} from ${senderId}: ${message}`);
 
-      if (!role||!message) {
-        throw new Error('Role and message content are required');
+    if (!role || !message) {
+      throw new Error('Role and message content are required');
+    }
+
+    // For group messages, we'll store them with a special conversation ID
+    // In a real app, you might want to create a proper group conversation
+    const messageData = {
+      id: Date.now(),
+      content: message,
+      senderId,
+      to: role,
+      timestamp: new Date().toISOString(),
+      isGroup: true,
+      groupId: role,
+      sender: {
+        id: senderId,
+        username: 'Usuario' // TODO: Fetch from database
       }
+    };
 
-      // For group messages, we'll store them with a special conversation ID
-      // In a real app, you might want to create a proper group conversation
-      const messageData={
-        id: Date.now(),
-        content: message,
-        senderId,
-        to: role,
-        timestamp: new Date().toISOString(),
+    // In a real app, you would save the group message to the database here
+    // For example:
+    // await this.chatService.saveGroupMessage({
+    //   content: message,
+    //   role: role,
+    //   senderId: Number(senderId)
+    // });
+
+    // Broadcast to all users in the role room including sender
+    this.server.to(`role-${role}`).emit('newMessage', messageData);
+
+    // Also emit back to sender with isOwn flag
+    client.emit('newMessage', {
+      ...messageData,
+      isOwn: true
+    });
+
+    return {
+      success: true,
+      message: messageData,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error sending role message:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send role message'
+    };
+  }
+}
+
+@SubscribeMessage('typing')
+async handleTyping(
+  @MessageBody() data: {
+    to: string | number;
+    isTyping: boolean;
+    userId: string | number;
+    username: string;
+    isGroup?: boolean;
+    role?: string;
+  },
+  @ConnectedSocket() client: Socket
+) {
+  try {
+    const clientData = this.connectedClients.get(client.id);
+    if (!clientData) {
+      throw new UnauthorizedException('Not authenticated');
+    }
+
+    const { to, isTyping, userId, username, isGroup = false, role } = data;
+
+    // Broadcast to the appropriate room
+    if (isGroup && role) {
+      // For group chats, send to everyone in the role room except the sender
+      client.to(`role-${role}`).emit('typing', {
+        userId,
+        username,
+        isTyping,
         isGroup: true,
-        groupId: role,
-        sender: {
-          id: senderId,
-          username: 'Usuario' // TODO: Fetch from database
-        }
-      };
-
-      // In a real app, you would save the group message to the database here
-      // For example:
-      // await this.chatService.saveGroupMessage({
-      //   content: message,
-      //   role: role,
-      //   senderId: Number(senderId)
-      // });
-
-      // Broadcast to all users in the role room including sender
-      this.server.to(`role-${role}`).emit('newMessage', messageData);
-
-      // Also emit back to sender with isOwn flag
-      client.emit('newMessage', {
-        ...messageData,
-        isOwn: true
-      });
-
-      return {
-        success: true,
-        message: messageData,
+        role,
         timestamp: new Date().toISOString()
-      };
-    } catch (error) {
-      console.error('Error sending role message:', error);
-      return {
-        success: false,
-        error: error instanceof Error? error.message:'Failed to send role message'
-      };
-    }
-  }
-
-  @SubscribeMessage('typing')
-  async handleTyping(
-    @MessageBody() data: {
-      to: string|number;
-      isTyping: boolean;
-      userId: string|number;
-      username: string;
-      isGroup?: boolean;
-      role?: string;
-    },
-    @ConnectedSocket() client: Socket
-  ) {
-    try {
-      const clientData=this.connectedClients.get(client.id);
-      if (!clientData) {
-        throw new UnauthorizedException('Not authenticated');
-      }
-
-      const { to, isTyping, userId, username, isGroup=false, role }=data;
-
-      // Broadcast to the appropriate room
-      if (isGroup&&role) {
-        // For group chats, send to everyone in the role room except the sender
-        client.to(`role-${role}`).emit('typing', {
-          userId,
-          username,
-          isTyping,
-          isGroup: true,
-          role,
-          timestamp: new Date().toISOString()
-        });
-      } else if (!isGroup) {
-        // For 1:1 chats, send only to the recipient
-        this.server.to(`user_${to}`).emit('typing', {
-          userId,
-          username,
-          isTyping,
-          isGroup: false,
-          timestamp: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      console.error('Error handling typing indicator:', error);
-    }
-  }
-
-  @OnEvent('message.created')
-  handleMessageCreatedEvent(payload: any) {
-    const { isGroup, groupId, to, senderId }=payload;
-
-    if (isGroup&&groupId) {
-      // For group messages, send to the role room
-      this.server.to(`role-${groupId}`).emit('newMessage', payload);
-    } else if (to) {
-      // For 1:1 messages, send to recipient
-      this.server.to(`user_${to}`).emit('newMessage', {
-        ...payload,
-        isOwn: false
       });
-
-      // And back to sender with isOwn flag
-      if (senderId) {
-        this.server.to(`user_${senderId}`).emit('newMessage', {
-          ...payload,
-          isOwn: true
-        });
-      }
+    } else if (!isGroup) {
+      // For 1:1 chats, send only to the recipient
+      this.server.to(`user_${to}`).emit('typing', {
+        userId,
+        username,
+        isTyping,
+        isGroup: false,
+        timestamp: new Date().toISOString()
+      });
     }
+  } catch (error) {
+    console.error('Error handling typing indicator:', error);
   }
+}
+
+@OnEvent('message.created')
+handleMessageCreatedEvent(payload: any) {
+  // This event handler is for database-triggered events
+  // Since we're handling real-time messaging directly in the socket handlers,
+  // we can remove this to prevent duplicate messages
+  console.log('Message created event received:', payload);
+  // Optional: Handle any additional logic like notifications, logging, etc.
+}
 }
