@@ -35,7 +35,7 @@ export default function VoluntariosPage() {
         <h3 className="text-lg font-semibold text-gray-800">
           Total horas aprobadas:
         </h3>
-        <span className="text-2xl font-bold">
+        <span className="text-2xl font-bold text-green-400">
           {isLoadingHorasA ? "..." : horasAprobadas}
         </span>
       </section>
@@ -66,11 +66,11 @@ export default function VoluntariosPage() {
 
       {/* Lista de participaciones */}
       <section>
-  <h2 className="text-2xl font-bold text-black pt-6 mb-3">
-    Mis Participaciones
-  </h2>
-  <VolParticipacionesTable />
-</section>
+       <h2 className="text-2xl font-bold text-black pt-6 mb-3">
+        Mis Participaciones
+       </h2>
+      <VolParticipacionesTable />
+      </section>
 
       {/* Slide-over panel */}
       {showForm && (

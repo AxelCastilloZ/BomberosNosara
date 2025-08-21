@@ -11,7 +11,7 @@ import { User } from '../../users/entities/user.entity';
 export enum TipoActividad {
   ENTRENAMIENTO = 'Entrenamiento',
   EMERGENCIA = 'Emergencia',
-  SERVICIO_COMUNITARIO = 'Servicio Comunitario',
+  SIMULACROS = 'Simulacros',
 }
 
 @Entity('participaciones')
