@@ -31,6 +31,8 @@ interface User {
   email?: string;
   name?: string;
   roles: any[];
+  online?: boolean;
+  lastSeen?: string;
 }
 
 interface ChatTarget {
@@ -76,6 +78,7 @@ const ChatWindow=() => {
   // State
   const [users, setUsers]=useState<User[]>([]);
   const [filteredUsers, setFilteredUsers]=useState<User[]>([]);
+  const [onlineUserIds, setOnlineUserIds]=useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery]=useState('');
   const [selectedTarget, setSelectedTarget]=useState<ChatTarget|null>(null);
   const [showGroups, setShowGroups]=useState(true);
@@ -266,14 +269,19 @@ const ChatWindow=() => {
     }
   }, [token, getUsersByRole]);
 
-  // Memoize the joinConversation function to prevent recreation on every render
+  // Memoize the joinConversation function with all its dependencies
   const joinConversation=useCallback(async (target: ChatTarget) => {
-    if (!socket) return;
+    if (!socket||!target) return;
+
+    // Only update if the target has actually changed
+    if (selectedTarget?.id===target.id&&selectedTarget?.type===target.type) {
+      return;
+    }
+
+    setIsLoading(true);
+    setMessages([]);
 
     try {
-      setIsLoading(true);
-      setMessages([]);
-
       const isGroup=target.type==='role';
       let conversationId=target.id;
 
@@ -287,27 +295,37 @@ const ChatWindow=() => {
           setConversationId(Number(conversationId));
         }
       }
-      console.log('CONVERSATION ID:', conversationId);
+
+      // Only proceed if we have a valid conversation ID
+      if (!conversationId) {
+        console.error('No conversation ID available');
+        return;
+      }
 
       // Join the conversation room
-      socket.emit('joinConversation', {
-        conversationId,
-        isGroup
-      }, (response: any) => {
-        if (response?.error) {
-          console.error('Error joining conversation:', response.error);
-        }
+      const joinPromise=new Promise<void>((resolve) => {
+        socket.emit('joinConversation', {
+          conversationId,
+          isGroup
+        }, (response: any) => {
+          if (response?.error) {
+            console.error('Error joining conversation:', response.error);
+          }
+          resolve();
+        });
       });
 
       // Get messages for the conversation
-      const response=await axios.get(
-        `${API_URL}/chat/conversations/${conversationId}/messages`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      console.log('RESPONSE:', response.data);
+      const [messagesResponse]=await Promise.all([
+        axios.get(
+          `${API_URL}/chat/conversations/${conversationId}/messages`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ),
+        joinPromise // Wait for join to complete
+      ]);
 
-      // Sort messages by timestamp in ascending order (oldest first)
-      const messages=response.data
+      // Process messages
+      const processedMessages=messagesResponse.data
         .map((msg: any) => ({
           ...msg,
           isOwn: msg.senderId===currentUser?.id||
@@ -318,33 +336,34 @@ const ChatWindow=() => {
             id: msg.senderId||(msg.sender?.id||0),
             username: msg.sender?.username||'Usuario'
           },
-          // Ensure timestamp is a valid date string
           timestamp: msg.timestamp||new Date().toISOString()
         }))
         .sort((a: Message, b: Message) =>
           new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
         );
 
-      setMessages(messages);
+      setMessages(processedMessages);
+      setSelectedTarget(target);
     } catch (err) {
       console.error('Error loading conversation:', err);
     } finally {
       setIsLoading(false);
     }
-  }, [socket, token, currentUser?.id, getOrCreateGroupConversation]);
+  }, [socket, token, currentUser?.id, getOrCreateGroupConversation, selectedTarget]);
 
   // Join conversation when a target is selected
   useEffect(() => {
     if (!selectedTarget) return;
 
-    joinConversation(selectedTarget);
-    console.log('SELECTED TARGET:', selectedTarget);
+    const currentTarget=selectedTarget; // Capture current value
+    joinConversation(currentTarget);
+
     // Clean up on unmount or when changing conversations
     return () => {
-      if (socket&&selectedTarget) {
+      if (socket&&currentTarget) {
         socket.emit('leaveConversation', {
-          conversationId: selectedTarget.id,
-          isGroup: selectedTarget.type==='role'
+          conversationId: currentTarget.id,
+          isGroup: currentTarget.type==='role'
         });
       }
     };
@@ -465,9 +484,143 @@ const ChatWindow=() => {
     }
   }, [token, currentUser, currentUser]);
 
-  // Set up socket listeners for messages and typing indicators
+  // Function to update a user's online status
+  const updateUserOnlineStatus=(userId: number, isOnline: boolean) => {
+    setUsers(prevUsers =>
+      prevUsers.map(user =>
+        user.id===userId? { ...user, online: isOnline, lastSeen: isOnline? new Date().toISOString():user.lastSeen }:user
+      )
+    );
+
+    setFilteredUsers(prevUsers =>
+      prevUsers.map(user =>
+        user.id===userId? { ...user, online: isOnline, lastSeen: isOnline? new Date().toISOString():user.lastSeen }:user
+      )
+    );
+
+    // Update the onlineUserIds set
+    setOnlineUserIds(prev => {
+      const newSet=new Set(prev);
+      if (isOnline) {
+        newSet.add(userId);
+      } else {
+        newSet.delete(userId);
+      }
+      return newSet;
+    });
+  };
+
+  // Memoize the handleUserOnline function
+  const handleUserOnline=useCallback((data: { userId: number; status: 'online'|'offline' }) => {
+    updateUserOnlineStatus(data.userId, data.status==='online');
+  }, [updateUserOnlineStatus]);
+
+  // Memoize the handleOnlineUsers function
+  const handleOnlineUsers=useCallback((userIds: number[]) => {
+    setOnlineUserIds(new Set(userIds));
+
+    // Update users' online status
+    setUsers(prevUsers =>
+      prevUsers.map(user => ({
+        ...user,
+        online: userIds.includes(user.id)
+      }))
+    );
+
+    setFilteredUsers(prevUsers =>
+      prevUsers.map(user => ({
+        ...user,
+        online: userIds.includes(user.id)
+      }))
+    );
+  }, [setUsers, setFilteredUsers]);
+
+  // Memoize the handleNewMessage function
+  const handleNewMessage=useCallback((message: Message) => {
+    if (!selectedTarget) return;
+
+    // Check if the message is for the current conversation
+    const isForCurrentConversation=
+      (selectedTarget.type==='role'&&message.isGroup&&
+        (message.groupId===selectedTarget.role||message.groupId===selectedTarget.id))||
+      (selectedTarget.type==='user'&&!message.isGroup&&
+        (message.senderId===selectedTarget.id||message.to===selectedTarget.id))||
+      (selectedTarget.type==='role'&&message.isGroup&&message.conversationId===conversationId);
+
+    if (!isForCurrentConversation) return;
+
+    // Prevent duplicate messages by checking if message already exists
+    setMessages(prev => {
+      const messageExists=prev.some(existingMsg =>
+        existingMsg.id===message.id||
+        (existingMsg.content===message.content&&
+          existingMsg.senderId===message.senderId&&
+          Math.abs(new Date(existingMsg.timestamp||'').getTime()-new Date(message.timestamp||'').getTime())<1000)
+      );
+
+      if (messageExists) return prev;
+
+      const newMessages=[
+        ...prev,
+        {
+          ...message,
+          isOwn: message.isOwn!==undefined? message.isOwn:
+            (message.senderId===currentUser?.id||
+              (message.sender&&message.sender.id===currentUser?.id)),
+          timestamp: message.timestamp||new Date().toISOString()
+        }
+      ];
+
+      // Sort messages by timestamp in ascending order (oldest first)
+      return newMessages.sort((a, b) =>
+        new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
+      );
+    });
+  }, [selectedTarget, conversationId, currentUser?.id]);
+
+  // Memoize the handleUserTyping function
+  const handleUserTyping=useCallback((data: {
+    userId: number|string;
+    username: string;
+    isTyping: boolean;
+    isGroup?: boolean;
+    groupId?: string|number;
+    role?: string;
+  }) => {
+    // Skip our own typing indicators
+    if (data.userId===currentUser?.id) return;
+
+    // Only process typing indicators for the current chat
+    const isForCurrentChat=(
+      // Group chat and this is for our current group
+      (selectedTarget?.type==='role'&&data.isGroup&&data.role===selectedTarget.role)||
+      // 1:1 chat and this is for our current conversation
+      (selectedTarget?.type==='user'&&data.userId===selectedTarget.id&&!data.isGroup)
+    );
+
+    if (isForCurrentChat) {
+      setTypingUsers(prev => {
+        const newTypingUsers=new Set(prev);
+        if (data.isTyping) {
+          newTypingUsers.add(data.username);
+        } else {
+          newTypingUsers.delete(data.username);
+        }
+        return newTypingUsers;
+      });
+    }
+  }, [currentUser?.id, selectedTarget]);
+
+  // Set up socket listeners for messages, typing indicators, and online status
   useEffect(() => {
     if (!socket||!isConnected||!currentUser) return;
+
+    // Set up event listeners
+    socket.on('userStatus', handleUserOnline);
+    socket.on('onlineUsers', handleOnlineUsers);
+
+    // Request the list of online users
+    socket.emit('getOnlineUsers');
 
     const handleNewMessage=(message: Message) => {
       console.log('[FRONTEND MESSAGE] New message received:', message);
@@ -568,25 +721,51 @@ const ChatWindow=() => {
       }
     };
 
-    // Set up event listeners
+    // Set up socket event listeners
     socket.on('newMessage', handleNewMessage);
     socket.on('typing', handleUserTyping);
+    socket.on('stopTyping', handleStopTyping);
+    socket.on('messageSent', handleMessageSent);
+    socket.on('messageError', handleMessageError);
+    socket.on('userStatus', handleUserOnline);
+    socket.on('onlineUsers', handleOnlineUsers);
+
+    // Request the list of online users
+    socket.emit('getOnlineUsers');
 
     // Clean up function
     return () => {
-      console.log('Cleaning up socket listeners');
       socket.off('newMessage', handleNewMessage);
       socket.off('typing', handleUserTyping);
-      setMessages([]);
+      socket.off('stopTyping', handleStopTyping);
+      socket.off('messageSent', handleMessageSent);
+      socket.off('messageError', handleMessageError);
+      socket.off('userStatus', handleUserOnline);
+      socket.off('onlineUsers', handleOnlineUsers);
     };
-  }, [socket, isConnected, currentUser, selectedTarget]);
+  }, [socket, isConnected, currentUser, selectedTarget, conversationId, token, joinConversation]);
 
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  // Handle message sent successfully
+  const handleMessageSent=useCallback((data: { message: Message }) => {
+    console.log('Message sent successfully:', data);
+  }, []);
 
-  const handleInputChange=useCallback((e: React.ChangeEvent<HTMLInputElement>): void => {
+  // Handle message error
+  const handleMessageError=useCallback((error: { message: string }) => {
+    console.error('Error sending message:', error.message);
+  }, []);
+
+  // Handle stop typing event
+  const handleStopTyping=useCallback((data: { userId: number|string; username: string }) => {
+    setTypingUsers(prev => {
+      const newTypingUsers=new Set(prev);
+      newTypingUsers.delete(data.username);
+      return newTypingUsers;
+    });
+  }, []);
+
+  // Handle input change for the message input
+  const handleInputChange=useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value=e.target.value;
     setInputValue(value);
 
@@ -843,28 +1022,33 @@ const ChatWindow=() => {
           <div className="flex-1 overflow-y-auto">
             {showGroups? (
               <div className="divide-y divide-gray-100">
-                {roleGroups.map((group) => (
-                  <div
-                    key={group.id}
-                    onClick={() => {
-                      setSelectedTarget({
-                        id: group.id,
-                        name: group.name,
-                        type: 'role',
-                        role: group.role
-                      });
-                    }}
-                    className="p-4 hover:bg-gray-50 cursor-pointer flex items-center space-x-3"
-                  >
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                      <FiUsers className="w-5 h-5 text-red-600" />
+                {roleGroups.map((group) => {
+                  const isSelected=selectedTarget?.id===group.id&&selectedTarget?.type==='role';
+                  return (
+                    <div
+                      key={group.id}
+                      onClick={async () => {
+                        const target={
+                          id: group.id,
+                          name: group.name,
+                          type: 'role' as const,
+                          role: group.role
+                        };
+                        setSelectedTarget(target);
+                        await joinConversation(target);
+                      }}
+                      className={`p-4 hover:bg-gray-50 cursor-pointer flex items-center space-x-3 ${isSelected? 'bg-gray-100':''}`}
+                    >
+                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                        <FiUsers className="w-5 h-5 text-red-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">{group.name}</p>
+                        <p className="text-sm text-gray-500 truncate">Grupo de chat</p>
+                      </div>
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">{group.name}</p>
-                      <p className="text-sm text-gray-500 truncate">Grupo de chat</p>
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ):(
               <div className="divide-y divide-gray-100">
@@ -873,17 +1057,30 @@ const ChatWindow=() => {
                     <div
                       key={user.id}
                       onClick={() => handleSelectUser(user)}
-                      className="p-4 hover:bg-gray-50 cursor-pointer flex items-center space-x-3"
+                      className="p-4 hover:bg-gray-50 cursor-pointer flex items-center space-x-3 relative"
                     >
-                      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-                        <FiUser className="w-5 h-5 text-red-600" />
+                      <div className="relative">
+                        <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                          <FiUser className="w-5 h-5 text-red-600" />
+                        </div>
+                        <div
+                          className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${onlineUserIds.has(user.id)? 'bg-green-500':'bg-gray-400'
+                            }`}
+                          title={onlineUserIds.has(user.id)? 'En línea':'Desconectado'}
+                        />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {user.name||user.username}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate">
-                          {user.roles?.join(', ')}
+                        <div className="flex items-center">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {user.name||user.username}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">
+                          {onlineUserIds.has(user.id)
+                            ? 'En línea'
+                            :user.lastSeen
+                              ? `Visto ${new Date(user.lastSeen).toLocaleTimeString()}`
+                              :'Desconectado'}
                         </p>
                       </div>
                     </div>
@@ -898,7 +1095,6 @@ const ChatWindow=() => {
             )}
           </div>
         </div>
-
         {/* Chat Area */}
         {selectedTarget? (
           <div className="flex-1 flex flex-col bg-white border-l border-gray-200">

@@ -62,59 +62,95 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server=server;
   }
 
+  // Get all currently connected user IDs
+  private getOnlineUserIds(): number[] {
+    const uniqueUserIds = new Set<number>();
+    this.connectedClients.forEach(client => {
+      if (typeof client.userId === 'number') {
+        uniqueUserIds.add(client.userId);
+      } else if (!isNaN(Number(client.userId))) {
+        uniqueUserIds.add(Number(client.userId));
+      }
+    });
+    return Array.from(uniqueUserIds);
+  }
+
+  // Notify all clients about a user's status change
+  private notifyUserStatus(userId: number | string, status: 'online' | 'offline') {
+    const statusData = { userId, status };
+    // Notify everyone about the status change
+    this.server.emit('userStatus', statusData);
+    console.log(`User ${userId} is now ${status}`);
+  }
+
+  // Notify a specific client about all online users
+  private notifyOnlineUsers(client: Socket) {
+    const onlineUserIds = this.getOnlineUserIds();
+    client.emit('onlineUsers', onlineUserIds);
+  }
+
+  @SubscribeMessage('getOnlineUsers')
+  handleGetOnlineUsers(@ConnectedSocket() client: Socket) {
+    this.notifyOnlineUsers(client);
+  }
+
   async handleConnection(client: Socket) {
     try {
       console.log(`Client connecting: ${client.id}`);
 
-      const token=this.getTokenFromSocket(client);
+      const token = this.getTokenFromSocket(client);
       if (!token) {
         console.log('No token provided');
         throw new UnauthorizedException('No token provided');
       }
 
-      const jwt_secret=this.configService.get<string>('JWT_SECRET');
-      const payload=this.jwtService.verify(token, { secret: jwt_secret });
+      const jwt_secret = this.configService.get<string>('JWT_SECRET');
+      const payload = this.jwtService.verify(token, { secret: jwt_secret });
 
       if (!payload) {
         console.log('Invalid token');
         throw new UnauthorizedException('Invalid token');
       }
 
+      const userId = payload.sub;
+      const userRoles = payload.roles || [];
+
       // Store minimal client data with role
       this.connectedClients.set(client.id, {
-        userId: payload.sub,
+        userId,
         lastSeen: new Date(),
         role: payload.role
       });
 
-      console.log(`Client connected: ${client.id}, User ID: ${payload.sub}, Role: ${payload.roles[0]}`);
+      console.log(`Client connected: ${client.id}, User ID: ${userId}, Role: ${userRoles[0]}`);
 
       // Join user's personal room for direct messages
-      await client.join(`user_${payload.sub}`);
-      console.log('Payload:', payload)
+      await client.join(`user_${userId}`);
+      
       // Join role-based rooms
-      if (payload.roles?.length) {
-        // Join each role room
-        for (const role of payload.roles) {
-          const roleRoom=`role-${role}`;
+      if (userRoles?.length) {
+        for (const role of userRoles) {
+          const roleRoom = `role-${role}`;
           await client.join(roleRoom);
-          console.log(`[CONNECTION] User ${payload.sub} joined role room: ${roleRoom}`);
-
-          // Debug: Check how many clients are now in this role room
-          const socketsInRoom=await this.server.in(roleRoom).fetchSockets();
-          console.log(`[CONNECTION] Role room ${roleRoom} now has ${socketsInRoom.length} clients:`,
-            socketsInRoom.map(s => ({ socketId: s.id, userId: this.connectedClients.get(s.id)?.userId })));
+          console.log(`[CONNECTION] User ${userId} joined role room: ${roleRoom}`);
         }
       } else {
-        console.log(`[CONNECTION] No roles found in JWT payload for user ${payload.sub}`);
+        console.log(`[CONNECTION] No roles found in JWT payload for user ${userId}`);
       }
 
+      // Notify the client about their connection status
       client.emit('connected', {
         status: 'connected',
         clientId: client.id,
-        userId: payload.sub,
+        userId,
         role: payload.role
       });
+
+      // Notify all clients about this user coming online
+      this.notifyUserStatus(userId, 'online');
+      
+      // Send the list of online users to the newly connected client
+      this.notifyOnlineUsers(client);
 
     } catch (error) {
       const errorMessage=error instanceof Error? error.message:'Unknown error';
@@ -137,15 +173,27 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return type==='Bearer'? token:null;
   }
 
-  handleDisconnect(client: Socket) {
-    const clientData=this.connectedClients.get(client.id);
-    if (clientData) {
-      console.log(`Client disconnected: ${client.id}, User ID: ${clientData.userId}`);
-      this.connectedClients.delete(client.id);
+  async handleDisconnect(client: Socket) {
+    const clientData = this.connectedClients.get(client.id);
+    if (!clientData) return;
 
-      // Leave all rooms
-      client.rooms.forEach(room => client.leave(room));
+    const { userId } = clientData;
+    console.log(`Client disconnected: ${client.id}, User ID: ${userId}`);
+    
+    // Remove client from connected clients
+    this.connectedClients.delete(client.id);
+
+    // Check if this was the last connection for this user
+    const isUserStillOnline = Array.from(this.connectedClients.values())
+      .some(client => client.userId === userId);
+
+    // If user has no more active connections, notify others they're offline
+    if (!isUserStillOnline) {
+      this.notifyUserStatus(userId, 'offline');
     }
+
+    // Leave all rooms
+    client.rooms.forEach(room => client.leave(room));
   }
 
   @SubscribeMessage('joinConversation')
