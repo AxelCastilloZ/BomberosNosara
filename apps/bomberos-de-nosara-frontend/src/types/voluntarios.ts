@@ -1,7 +1,7 @@
 export enum TipoActividad {
   ENTRENAMIENTO = 'Entrenamiento',
   EMERGENCIA = 'Emergencia',
-  SERVICIO_COMUNITARIO = 'Servicio Comunitario',
+  SIMULACROS = 'Simulacros',
 }
 
 export type Participacion = {

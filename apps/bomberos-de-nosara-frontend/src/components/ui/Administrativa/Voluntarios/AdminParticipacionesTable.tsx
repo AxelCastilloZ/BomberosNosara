@@ -46,7 +46,7 @@ export default function AdminParticipacionesTable({ estado }: { estado?: string 
                     )}
                     
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
-                      participacion.estado === "aprobada" ? "bg-yellow-300 text-black" :
+                      participacion.estado === "aprobada" ? "bg-green-200 text-black" :
                       participacion.estado === "pendiente" ? "bg-gray-200 text-black" :
                       "bg-red-100 text-red-700 hover:scale-110"
                     }`}>

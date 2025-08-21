@@ -48,7 +48,7 @@ export default function VolParticipacionesTable() {
             
             {/* Estado con efecto hover */}
             <span className={`px-2 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
-              estado === "aprobada" ? "bg-yellow-300 text-black" :
+              estado === "aprobada" ? "bg-green-200 text-black" :
               estado === "pendiente" ? "bg-gray-200 text-black" :
               "bg-red-100 text-red-700 hover:scale-110"
             }`}>
