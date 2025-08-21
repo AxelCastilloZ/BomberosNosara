@@ -306,17 +306,24 @@ const ChatWindow=() => {
       );
       console.log('RESPONSE:', response.data);
 
-      const messages=response.data.map((msg: any) => ({
-        ...msg,
-        isOwn: msg.senderId===currentUser?.id||
-          (msg.sender&&msg.sender.id===currentUser?.id),
-        isGroup,
-        groupId: isGroup? conversationId:undefined,
-        sender: {
-          id: msg.senderId||(msg.sender?.id||0),
-          username: msg.sender?.username||'Usuario'
-        }
-      }));
+      // Sort messages by timestamp in ascending order (oldest first)
+      const messages=response.data
+        .map((msg: any) => ({
+          ...msg,
+          isOwn: msg.senderId===currentUser?.id||
+            (msg.sender&&msg.sender.id===currentUser?.id),
+          isGroup,
+          groupId: isGroup? conversationId:undefined,
+          sender: {
+            id: msg.senderId||(msg.sender?.id||0),
+            username: msg.sender?.username||'Usuario'
+          },
+          // Ensure timestamp is a valid date string
+          timestamp: msg.timestamp||new Date().toISOString()
+        }))
+        .sort((a: Message, b: Message) =>
+          new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
+        );
 
       setMessages(messages);
     } catch (err) {
@@ -510,15 +517,22 @@ const ChatWindow=() => {
           return prev;
         }
 
-        return [
+        const newMessages=[
           ...prev,
           {
             ...message,
             isOwn: message.isOwn!==undefined? message.isOwn:
               (message.senderId===currentUser?.id||
-                (message.sender&&message.sender.id===currentUser?.id))
+                (message.sender&&message.sender.id===currentUser?.id)),
+            // Ensure timestamp is a valid date string
+            timestamp: message.timestamp||new Date().toISOString()
           }
         ];
+
+        // Sort messages by timestamp in ascending order (oldest first)
+        return newMessages.sort((a, b) =>
+          new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
+        );
       });
     };
 
@@ -659,7 +673,8 @@ const ChatWindow=() => {
         const groupMessageData={
           role: selectedTarget.role!, // Use the actual role enum value, not the display label
           message: inputValue,
-          senderId: senderId
+          senderId: senderId,
+          groupName: RoleLabels[selectedTarget.role!]
         };
         console.log('[FRONTEND GROUP CHAT] Sending group message:', JSON.stringify(groupMessageData));
         console.log('[FRONTEND GROUP CHAT] Selected target:', JSON.stringify(selectedTarget));
@@ -679,8 +694,20 @@ const ChatWindow=() => {
           }
         };
 
-        // Add the message immediately to the UI
-        setMessages(prev => [...prev, optimisticMessage]);
+        // Add the message immediately to the UI and sort
+        setMessages(prev => {
+          const newMessages=[
+            ...prev,
+            {
+              ...optimisticMessage,
+              timestamp: optimisticMessage.timestamp||new Date().toISOString()
+            }
+          ];
+          // Sort messages by timestamp in ascending order (oldest first)
+          return newMessages.sort((a, b) =>
+            new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
+          );
+        });
 
         socket.emit('sendToRole', groupMessageData, (response: any) => {
           if (response?.error) {
@@ -691,13 +718,24 @@ const ChatWindow=() => {
             console.log('Group message sent successfully:', response);
             // Update the optimistic message with the real message data from server
             if (response.message) {
-              setMessages(prev =>
-                prev.map(msg =>
+              setMessages(prev => {
+                const updatedMessages=prev.map(msg =>
                   msg.id===optimisticMessage.id
-                    ? { ...response.message, isOwn: true }
-                    :msg
-                )
-              );
+                    ? {
+                      ...response.message,
+                      isOwn: true,
+                      timestamp: response.message.timestamp||new Date().toISOString()
+                    }
+                    :{
+                      ...msg,
+                      timestamp: msg.timestamp||new Date().toISOString()
+                    }
+                );
+                // Sort messages by timestamp in ascending order (oldest first)
+                return updatedMessages.sort((a, b) =>
+                  new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
+                );
+              });
             }
           }
         });

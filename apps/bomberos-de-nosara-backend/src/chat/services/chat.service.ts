@@ -67,7 +67,7 @@ export class ChatService {
       .leftJoinAndSelect('conversation.participants', 'participant')
       .leftJoinAndSelect('conversation.messages', 'message')
       .where('participant.id = :userId', { userId })
-      .orderBy('message.createdAt', 'DESC')
+      .orderBy('message.createdAt', 'ASC')
       .getMany();
   }
 
@@ -171,7 +171,7 @@ export class ChatService {
     return this.messageRepository.find({
       where: { conversation: { id: conversationId } },
       relations: ['sender'],
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'ASC' },
     });
   }
 

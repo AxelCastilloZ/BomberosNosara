@@ -32,6 +32,7 @@ interface RoleMessagePayload {
   role: RoleEnum;
   message: string;
   senderId: string|number;
+  groupName: string;
 }
 
 @WebSocketGateway({
@@ -95,12 +96,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (payload.roles?.length) {
         // Join each role room
         for (const role of payload.roles) {
-          const roleRoom = `role-${role}`;
+          const roleRoom=`role-${role}`;
           await client.join(roleRoom);
           console.log(`[CONNECTION] User ${payload.sub} joined role room: ${roleRoom}`);
 
           // Debug: Check how many clients are now in this role room
-          const socketsInRoom = await this.server.in(roleRoom).fetchSockets();
+          const socketsInRoom=await this.server.in(roleRoom).fetchSockets();
           console.log(`[CONNECTION] Role room ${roleRoom} now has ${socketsInRoom.length} clients:`,
             socketsInRoom.map(s => ({ socketId: s.id, userId: this.connectedClients.get(s.id)?.userId })));
         }
@@ -317,8 +318,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket
   ) {
     try {
-      const { role, message, senderId }=data;
-      console.log('Role:', role);
+      const { role, message, senderId, groupName }=data;
+      console.log('Role:', data);
 
       console.log(`[GROUP CHAT] Received data:`, JSON.stringify(data));
       console.log(`[GROUP CHAT] Sending message to role ${role} from ${senderId}: ${message}`);
@@ -342,7 +343,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             // Use a more comprehensive search to avoid duplicates
             const allConversations=await this.chatService.getConversations(Number(senderId));
             const existingGroup=allConversations.find(conv =>
-              conv.isGroup&&conv.groupName===role
+              conv.isGroup&&conv.groupName===groupName
             );
 
             if (existingGroup) {
@@ -355,7 +356,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
               const participantIds=usersWithRole.map((user: any) => user.id);
 
               groupConversation=await this.chatService.createGroupConversation({
-                groupName: role,
+                groupName: groupName,
                 participantIds: participantIds
               }, Number(senderId));
               console.log(`[GROUP CHAT] Created new group conversation with ID: ${groupConversation.id}`);
@@ -366,7 +367,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             const usersWithRole=await this.chatService.getUsersByRole(role);
             const participantIds=usersWithRole.map((user: any) => user.id);
             groupConversation=await this.chatService.createGroupConversation({
-              groupName: role,
+              groupName: groupName,
               participantIds: participantIds
             }, Number(senderId));
           }
@@ -413,8 +414,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // Send the message to all users in the role room except the sender
       for (const socket of socketsInRoom) {
-        const socketUserId = this.connectedClients.get(socket.id)?.userId;
-        if (String(socketUserId) !== String(senderId)) {
+        const socketUserId=this.connectedClients.get(socket.id)?.userId;
+        if (String(socketUserId)!==String(senderId)) {
           // Only send to other users in the room, not the sender
           this.server.to(socket.id).emit('newMessage', {
             ...messageData,
