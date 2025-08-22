@@ -90,12 +90,52 @@ const ChatWindow=() => {
 
       if (excludeCurrentUser&&user.id===currentUser?.id) return false;
 
+      // SUPERUSER is automatically a member of all groups
+      const isSuperUser = user.roles?.some(role =>
+        typeof role==='string'? role===RoleEnum.SUPERUSER:role.name===RoleEnum.SUPERUSER
+      );
+      
+      if (isSuperUser) return true;
 
       return user.roles?.some(role =>
         typeof role==='string'? role===roleName:role.name===roleName
       );
     });
   }, [users, currentUser?.id]);
+
+  // Check if current user has a specific role
+  const currentUserHasRole = useCallback((roleName: string): boolean => {
+    if (!currentUser?.roles) return false;
+    return currentUser.roles.some(role => 
+      typeof role === 'string' ? role === roleName : role.name === roleName
+    );
+  }, [currentUser?.roles]);
+
+  // Check if current user is SUPERUSER
+  const isSuperUser = useCallback((): boolean => {
+    return currentUserHasRole(RoleEnum.SUPERUSER);
+  }, [currentUserHasRole]);
+
+  // Filter visible groups based on requirements
+  const getVisibleGroups = useCallback((): ChatTarget[] => {
+    return roleGroups.filter(group => {
+      // Get users with this role (including current user for count)
+      const roleUsers = getUsersByRole(group.role as string, false);
+      
+      // Group must have at least 2 members to be visible
+      if (roleUsers.length < 2) {
+        return false;
+      }
+      
+      // SUPERUSER can see all groups
+      if (isSuperUser()) {
+        return true;
+      }
+      
+      // Non-SUPERUSER can only see groups where they have the same role
+      return currentUserHasRole(group.role as string);
+    });
+  }, [roleGroups, getUsersByRole, isSuperUser, currentUserHasRole]);
 
 
   const getUserDisplayName=(user: User): string => {
@@ -128,6 +168,16 @@ const ChatWindow=() => {
     try {
       const roleUsers=getUsersByRole(role, false);
       const participantIds=roleUsers.map(user => user.id);
+      
+      // Ensure all SUPERUSER are included in the conversation
+      const superUsers = users.filter(user => 
+        user.roles?.some(userRole =>
+          typeof userRole==='string'? userRole===RoleEnum.SUPERUSER:userRole.name===RoleEnum.SUPERUSER
+        ) && !participantIds.includes(user.id)
+      );
+      
+      participantIds.push(...superUsers.map(user => user.id));
+      
       if (participantIds.length===0) {
         return null;
       }
@@ -136,7 +186,7 @@ const ChatWindow=() => {
 
       throw err;
     }
-  }, [getUsersByRole, getOrCreateGroupConversation]);
+  }, [getUsersByRole, getOrCreateGroupConversation, users]);
 
   const joinConversation=useCallback(async (target: ChatTarget) => {
     if (!socket||!target) return;
@@ -827,8 +877,11 @@ const ChatWindow=() => {
           <div className="flex-1 overflow-y-auto">
             {showGroups? (
               <div className="divide-y divide-gray-100">
-                {roleGroups.map((group) => {
+                {getVisibleGroups().map((group) => {
                   const isSelected=selectedTarget?.id===group.id&&selectedTarget?.type==='role';
+                  const roleUsers = getUsersByRole(group.role as string, false);
+                  const memberCount = roleUsers.length;
+                  
                   return (
                     <div
                       key={group.id}
@@ -849,11 +902,18 @@ const ChatWindow=() => {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-gray-900 truncate">{group.name}</p>
-                        <p className="text-sm text-gray-500 truncate">Grupo de chat</p>
+                        <p className="text-sm text-gray-500 truncate">
+                          {memberCount} {memberCount === 1 ? 'miembro' : 'miembros'}
+                        </p>
                       </div>
                     </div>
                   )
                 })}
+                {getVisibleGroups().length === 0 && (
+                  <div className="p-4 text-center text-gray-500">
+                    No hay grupos disponibles
+                  </div>
+                )}
               </div>
             ):(
               <div className="divide-y divide-gray-100">
