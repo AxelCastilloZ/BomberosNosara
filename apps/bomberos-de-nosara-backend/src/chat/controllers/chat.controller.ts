@@ -1,10 +1,10 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Body, 
-  Param, 
-  UseGuards, 
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  UseGuards,
   Request,
   ParseIntPipe,
   Query,
@@ -20,7 +20,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 @Controller('chat')
 @UseGuards(JwtAuthGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(private readonly chatService: ChatService) { }
 
   @Post('conversations')
   async createConversation(
@@ -49,10 +49,10 @@ export class ChatController {
     @Body() createMessageDto: CreateMessageDto
   ) {
     // Ensure the sender ID matches the authenticated user
-    if (createMessageDto.senderId !== req.user.id) {
+    if (createMessageDto.senderId!==req.user.id) {
       throw new BadRequestException('Sender ID does not match authenticated user');
     }
-    
+
     return this.chatService.createMessage(createMessageDto, req.user.id);
   }
 
@@ -72,11 +72,11 @@ export class ChatController {
     if (!body.userId) {
       throw new BadRequestException('User ID is required');
     }
-    
-    if (body.userId === req.user.id) {
+
+    if (body.userId===req.user.id) {
       throw new BadRequestException('Cannot create a conversation with yourself');
     }
-    
+
     return this.chatService.getConversationWithUser(req.user.id, body.userId);
   }
 
@@ -90,10 +90,10 @@ export class ChatController {
     @Request() req: { user: User },
     @Param('userId', ParseIntPipe) userId: number
   ) {
-    if (userId === req.user.id) {
+    if (userId===req.user.id) {
       throw new BadRequestException('Cannot get a conversation with yourself');
     }
-    
+
     return this.chatService.getConversationWithUser(req.user.id, userId);
   }
 
@@ -103,16 +103,16 @@ export class ChatController {
     @Body() createGroupDto: CreateGroupConversationDto
   ) {
     // Ensure the current user is included in the participants
-    const allParticipants = [...new Set([req.user.id, ...createGroupDto.participantIds!])];
-    
+    const allParticipants=[...new Set([req.user.id, ...createGroupDto.participantIds!])];
+
     // Ensure at least one other participant besides the current user
-    if (allParticipants.length < 2) {
+    if (allParticipants.length<2) {
       throw new BadRequestException('At least one other participant is required');
     }
 
     // Check if a conversation with these exact participants already exists
-    const existingConversation = await this.chatService.findGroupConversation(createGroupDto.groupName!, req.user.id);
-    
+    const existingConversation=await this.chatService.findGroupConversation(createGroupDto.groupName!, req.user.id);
+
     if (existingConversation) {
       return existingConversation;
     }

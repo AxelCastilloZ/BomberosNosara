@@ -203,12 +203,7 @@ export class ChatService {
    * @returns List of users
    */
   async getAvailableUsers(currentUserId: number): Promise<User[]> {
-    return this.userRepository.find({
-      where: {
-        id: Not(currentUserId),
-      },
-      select: ['id', 'username'],
-    });
+    return this.userRepository.find({ select: ['id', 'username'] });
   }
 
   /**

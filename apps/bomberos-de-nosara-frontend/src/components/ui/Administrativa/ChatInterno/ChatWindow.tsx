@@ -119,7 +119,8 @@ const ChatWindow=() => {
 
   // Helper function to get user's display name
   const getUserDisplayName=(user: User): string => {
-    return user.name||user.username||'Usuario sin nombre';
+    if (user.id === currentUser?.id) return 'Tú';
+    return user.name||user.username||'Usuario';
   };
 
   // Fetch current user data from localStorage
@@ -142,7 +143,6 @@ const ChatWindow=() => {
       fetchCurrentUser();
     }
   }, [token]);
-  console.log('cuurent Y:', currentUser)
 
   // Role groups for chat
   const roleGroups: ChatTarget[]=[
@@ -525,16 +525,24 @@ const ChatWindow=() => {
   }, [updateUserOnlineStatus]);
 
   // Memoize the handleOnlineUsers function
-  const handleOnlineUsers=useCallback((userIds: number[]) => {
-    setOnlineUserIds(new Set(userIds));
-
-    // Update users' online status
-    setUsers(prevUsers =>
-      prevUsers.map(user => ({
-        ...user,
-        online: userIds.includes(user.id)
-      }))
-    );
+  const handleOnlineUsers = useCallback((userIds: number[]) => {
+    // Only update if the online users have actually changed
+    setOnlineUserIds(prevIds => {
+      const newIds = new Set(userIds);
+      // Check if the sets are different
+      if (prevIds.size !== newIds.size || 
+          !Array.from(prevIds).every(id => newIds.has(id))) {
+        // Update users' online status only if online users changed
+        setUsers(prevUsers =>
+          prevUsers.map(user => ({
+            ...user,
+            online: newIds.has(user.id)
+          }))
+        );
+        return newIds;
+      }
+      return prevIds; // Return previous state if no changes
+    });
 
     setFilteredUsers(prevUsers =>
       prevUsers.map(user => ({
@@ -878,7 +886,7 @@ const ChatWindow=() => {
           groupId: RoleLabels[selectedTarget.role!],
           sender: {
             id: senderId,
-            username: currentUser.username||'You'
+            username: 'Tú'
           }
         };
 
@@ -1120,6 +1128,7 @@ const ChatWindow=() => {
                       <span className="ml-2 text-xs font-normal text-gray-500">
                         {(() => {
                           const roleUsers=getUsersByRole(selectedTarget.role!, false);
+                          console.log('roleUsers:', roleUsers);
                           return `${roleUsers.length} ${roleUsers.length===1? 'miembro':'miembros'}`;
                         })()}
                       </span>
@@ -1130,7 +1139,7 @@ const ChatWindow=() => {
                   ):selectedTarget.type==='role'? (
                     <div className="space-y-1">
                       {(() => {
-                        const roleUsers=getUsersByRole(selectedTarget.role!);
+                        const roleUsers=getUsersByRole(selectedTarget.role!, false);
 
                         if (roleUsers.length===0) {
                           return <p className="text-xs text-gray-600">No hay otros usuarios disponibles en este grupo</p>;
@@ -1180,7 +1189,7 @@ const ChatWindow=() => {
                     <div className="space-y-1">
                       {messages.map((message, index) => {
                         const isOwn=message.sender?.id===currentUser?.id;
-                        const username=isOwn? currentUser?.username||'Yo':message.sender?.username||'Usuario';
+                        const username=isOwn? 'Tú':message.sender?.username||'Usuario';
 
                         return (
                           <MessageBubble
