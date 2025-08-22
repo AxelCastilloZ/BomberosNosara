@@ -127,13 +127,12 @@ const ChatWindow=() => {
     }
   }, [token, fetchCurrentUser]);
 
-  // Get or create group conversation
   const handleGetOrCreateGroupConversation=useCallback(async (role: RoleEnum, groupName: string) => {
     try {
       const roleUsers=getUsersByRole(role, false);
       const participantIds=roleUsers.map(user => user.id);
       if (participantIds.length===0) {
-        return;
+        return null;
       }
       return await getOrCreateGroupConversation(participantIds, groupName);
     } catch (err) {
@@ -142,11 +141,9 @@ const ChatWindow=() => {
     }
   }, [getUsersByRole, getOrCreateGroupConversation]);
 
-  // Memoize the joinConversation function with all its dependencies
   const joinConversation=useCallback(async (target: ChatTarget) => {
     if (!socket||!target) return;
 
-    // Only update if the target has actually changed
     if (selectedTarget?.id===target.id&&selectedTarget?.type===target.type) {
       return;
     }
@@ -156,9 +153,8 @@ const ChatWindow=() => {
 
     try {
       const isGroup=target.type==='role';
-      let conversationId=target.id;
+      let conversationId=null;
 
-      // For group conversations, get the actual conversation ID first
       if (isGroup&&target.role) {
         const groupConversationId=await handleGetOrCreateGroupConversation(
           target.role,
@@ -170,13 +166,11 @@ const ChatWindow=() => {
         }
       }
 
-      // Only proceed if we have a valid conversation ID
       if (!conversationId) {
         console.error('No conversation ID available');
         return;
       }
 
-      // Join the conversation room
       const joinPromise=new Promise<void>((resolve) => {
         socket.emit('joinConversation', {
           conversationId,
@@ -188,33 +182,32 @@ const ChatWindow=() => {
           resolve();
         });
       });
+      if (conversationId) {
+        const [messagesData]=await Promise.all([
+          getConversationMessages(conversationId),
+          joinPromise
+        ]);
 
-      // Get messages for the conversation
-      const [messagesData]=await Promise.all([
-        getConversationMessages(conversationId),
-        joinPromise // Wait for join to complete
-      ]);
+        const processedMessages=messagesData
+          .map((msg: any) => ({
+            ...msg,
+            isOwn: msg.senderId===currentUser?.id||
+              (msg.sender&&msg.sender.id===currentUser?.id),
+            isGroup,
+            groupId: isGroup? conversationId:undefined,
+            sender: {
+              id: msg.senderId||(msg.sender?.id||0),
+              username: msg.sender?.username||'Usuario'
+            },
+            timestamp: msg.timestamp||new Date().toISOString()
+          }))
+          .sort((a: Message, b: Message) =>
+            new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
+          );
 
-      // Process messages
-      const processedMessages=messagesData
-        .map((msg: any) => ({
-          ...msg,
-          isOwn: msg.senderId===currentUser?.id||
-            (msg.sender&&msg.sender.id===currentUser?.id),
-          isGroup,
-          groupId: isGroup? conversationId:undefined,
-          sender: {
-            id: msg.senderId||(msg.sender?.id||0),
-            username: msg.sender?.username||'Usuario'
-          },
-          timestamp: msg.timestamp||new Date().toISOString()
-        }))
-        .sort((a: Message, b: Message) =>
-          new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
-        );
-
-      setMessages(processedMessages);
-      setSelectedTarget(target);
+        setMessages(processedMessages);
+        setSelectedTarget(target);
+      }
     } catch (err) {
       console.error('Error loading conversation:', err);
     } finally {
@@ -222,14 +215,12 @@ const ChatWindow=() => {
     }
   }, [socket, token, currentUser?.id, handleGetOrCreateGroupConversation, selectedTarget, getConversationMessages]);
 
-  // Join conversation when a target is selected
   useEffect(() => {
     if (!selectedTarget) return;
 
-    const currentTarget=selectedTarget; // Capture current value
+    const currentTarget=selectedTarget;
     joinConversation(currentTarget);
 
-    // Clean up on unmount or when changing conversations
     return () => {
       if (socket&&currentTarget) {
         socket.emit('leaveConversation', {
@@ -240,7 +231,6 @@ const ChatWindow=() => {
     };
   }, [selectedTarget, joinConversation, socket]);
 
-  // Filter users based on search query
   useEffect(() => {
     if (!searchQuery.trim()) {
       setFilteredUsers(users);
@@ -255,7 +245,6 @@ const ChatWindow=() => {
     }
   }, [searchQuery, users]);
 
-  // Fetch available users
   useEffect(() => {
     const loadUsers=async () => {
       if (!token) return;
@@ -264,7 +253,7 @@ const ChatWindow=() => {
         setIsLoading(true);
         const usersData=await fetchAvailableUsers();
         setUsers(usersData);
-        setFilteredUsers(usersData); // Initialize filtered users with all users
+        setFilteredUsers(usersData);
       } catch (err) {
         console.error('Error fetching users:', err);
       } finally {
@@ -275,7 +264,6 @@ const ChatWindow=() => {
     loadUsers();
   }, [token, fetchAvailableUsers]);
 
-  // Handle search input change
   const handleSearchChange=(e: React.ChangeEvent<HTMLInputElement>): void => {
     const value=e.target.value;
     setSearchQuery(value);
@@ -294,7 +282,6 @@ const ChatWindow=() => {
     }
   };
 
-  // Clear search input
   const clearSearch=useCallback((): void => {
     setSearchQuery('');
     setFilteredUsers(users);
@@ -318,9 +305,8 @@ const ChatWindow=() => {
         name: user.name||user.username||'Usuario',
         type: 'user'
       });
-      setSearchQuery(''); // Clear search when a user is selected
+      setSearchQuery('');
 
-      // Try to find existing conversation
       try {
         const conversationData=await findConversationWithUser(user.id);
 
@@ -328,7 +314,6 @@ const ChatWindow=() => {
           console.log('Found existing conversation:', conversationData);
           setConversation(conversationData);
 
-          // Fetch messages for this conversation
           try {
             const messagesData=await getConversationMessages(conversationData.id);
             console.log('Fetched messages:', messagesData);
@@ -348,7 +333,6 @@ const ChatWindow=() => {
     }
   }, [token, currentUser, findConversationWithUser, getConversationMessages]);
 
-  // Function to update a user's online status
   const updateUserOnlineStatus=(userId: number, isOnline: boolean) => {
     setUsers(prevUsers =>
       prevUsers.map(user =>
@@ -362,7 +346,6 @@ const ChatWindow=() => {
       )
     );
 
-    // Update the onlineUserIds set
     setOnlineUserIds(prev => {
       const newSet=new Set(prev);
       if (isOnline) {
@@ -374,20 +357,14 @@ const ChatWindow=() => {
     });
   };
 
-  // Memoize the handleUserOnline function
   const handleUserOnline=useCallback((data: { userId: number; status: 'online'|'offline' }) => {
     updateUserOnlineStatus(data.userId, data.status==='online');
   }, [updateUserOnlineStatus]);
-
-  // Memoize the handleOnlineUsers function
   const handleOnlineUsers=useCallback((userIds: number[]) => {
-    // Only update if the online users have actually changed
     setOnlineUserIds(prevIds => {
       const newIds=new Set(userIds);
-      // Check if the sets are different
       if (prevIds.size!==newIds.size||
         !Array.from(prevIds).every(id => newIds.has(id))) {
-        // Update users' online status only if online users changed
         setUsers(prevUsers =>
           prevUsers.map(user => ({
             ...user,
@@ -396,7 +373,7 @@ const ChatWindow=() => {
         );
         return newIds;
       }
-      return prevIds; // Return previous state if no changes
+      return prevIds;
     });
 
     setFilteredUsers(prevUsers =>
@@ -407,11 +384,9 @@ const ChatWindow=() => {
     );
   }, [setUsers, setFilteredUsers]);
 
-  // Memoize the handleNewMessage function
   const handleNewMessage=useCallback((message: Message) => {
     if (!selectedTarget) return;
 
-    // Check if the message is for the current conversation
     const isForCurrentConversation=
       (selectedTarget.type==='role'&&message.isGroup&&
         (message.groupId===selectedTarget.role||message.groupId===selectedTarget.id))||
@@ -421,7 +396,6 @@ const ChatWindow=() => {
 
     if (!isForCurrentConversation) return;
 
-    // Prevent duplicate messages by checking if message already exists
     setMessages(prev => {
       const messageExists=prev.some(existingMsg =>
         existingMsg.id===message.id||
@@ -443,14 +417,12 @@ const ChatWindow=() => {
         }
       ];
 
-      // Sort messages by timestamp in ascending order (oldest first)
       return newMessages.sort((a, b) =>
         new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
       );
     });
   }, [selectedTarget, conversationId, currentUser?.id]);
 
-  // Memoize the handleUserTyping function
   const handleUserTyping=useCallback((data: {
     userId: number|string;
     username: string;
@@ -459,14 +431,10 @@ const ChatWindow=() => {
     groupId?: string|number;
     role?: string;
   }) => {
-    // Skip our own typing indicators
     if (data.userId===currentUser?.id) return;
 
-    // Only process typing indicators for the current chat
     const isForCurrentChat=(
-      // Group chat and this is for our current group
       (selectedTarget?.type==='role'&&data.isGroup&&data.role===selectedTarget.role)||
-      // 1:1 chat and this is for our current conversation
       (selectedTarget?.type==='user'&&data.userId===selectedTarget.id&&!data.isGroup)
     );
 
@@ -483,15 +451,12 @@ const ChatWindow=() => {
     }
   }, [currentUser?.id, selectedTarget]);
 
-  // Set up socket listeners for messages, typing indicators, and online status
   useEffect(() => {
     if (!socket||!isConnected||!currentUser) return;
 
-    // Set up event listeners
     socket.on('userStatus', handleUserOnline);
     socket.on('onlineUsers', handleOnlineUsers);
 
-    // Request the list of online users
     socket.emit('getOnlineUsers');
 
     const handleNewMessage=(message: Message) => {
@@ -499,7 +464,6 @@ const ChatWindow=() => {
       console.log('[FRONTEND MESSAGE] selectedTarget:', selectedTarget);
       console.log('[FRONTEND MESSAGE] conversationId:', conversationId);
 
-      // Check if the message is for the current conversation
       if (!selectedTarget) {
         console.log('[FRONTEND MESSAGE] No selected target, ignoring message');
         return;
@@ -528,7 +492,6 @@ const ChatWindow=() => {
         return;
       }
 
-      // Prevent duplicate messages by checking if message already exists
       setMessages(prev => {
         const messageExists=prev.some(existingMsg =>
           existingMsg.id===message.id||
@@ -549,12 +512,10 @@ const ChatWindow=() => {
             isOwn: message.isOwn!==undefined? message.isOwn:
               (message.senderId===currentUser?.id||
                 (message.sender&&message.sender.id===currentUser?.id)),
-            // Ensure timestamp is a valid date string
             timestamp: message.timestamp||new Date().toISOString()
           }
         ];
 
-        // Sort messages by timestamp in ascending order (oldest first)
         return newMessages.sort((a, b) =>
           new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
         );
@@ -569,14 +530,10 @@ const ChatWindow=() => {
       groupId?: string|number;
       role?: string;
     }) => {
-      // Skip our own typing indicators
       if (data.userId===currentUser.id) return;
 
-      // Only process typing indicators for the current chat
       const isForCurrentChat=(
-        // Group chat and this is for our current group
         (selectedTarget?.type==='role'&&data.isGroup&&data.role===selectedTarget.role)||
-        // 1:1 chat and this is for our current conversation
         (selectedTarget?.type==='user'&&data.userId===selectedTarget.id&&!data.isGroup)
       );
 
@@ -593,7 +550,6 @@ const ChatWindow=() => {
       }
     };
 
-    // Set up socket event listeners
     socket.on('newMessage', handleNewMessage);
     socket.on('typing', handleUserTyping);
     socket.on('stopTyping', handleStopTyping);
@@ -602,10 +558,8 @@ const ChatWindow=() => {
     socket.on('userStatus', handleUserOnline);
     socket.on('onlineUsers', handleOnlineUsers);
 
-    // Request the list of online users
     socket.emit('getOnlineUsers');
 
-    // Clean up function
     return () => {
       socket.off('newMessage', handleNewMessage);
       socket.off('typing', handleUserTyping);
