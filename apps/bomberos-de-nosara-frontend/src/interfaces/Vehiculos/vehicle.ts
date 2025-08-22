@@ -1,7 +1,6 @@
 export type EstadoVehiculo =
   | 'activo'
   | 'en mantenimiento'
-  | 'en reparación'
   | 'dado de baja';
 
 export type TipoVehiculo =

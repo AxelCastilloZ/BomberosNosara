@@ -1,4 +1,4 @@
-// src/users/entities/user.entity.ts
+
 import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
 
@@ -10,10 +10,13 @@ export class User {
   @Column({ unique: true })
   username!: string;
 
+  @Column({ unique: true })          // <— nuevo
+  email!: string;                    // <— nuevo
+
   @Column()
   password!: string;
 
-  @ManyToMany(() => Role, { eager: true }) // eager carga automática
+  @ManyToMany(() => Role, { eager: true })
   @JoinTable()
   roles!: Role[];
 }

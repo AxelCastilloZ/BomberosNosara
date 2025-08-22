@@ -39,9 +39,8 @@ export default function VehiculoList({
 
   const getStatusLabel = (status: string) => {
     const labels = {
-      activo: 'Disponible',
+      activo: 'En servicio',
       'en mantenimiento': 'Mantenimiento',
-      'en reparación': 'Reparación',
       'dado de baja': 'Dado de baja',
     };
     return labels[status as keyof typeof labels] || status;
@@ -83,7 +82,6 @@ export default function VehiculoList({
             <option value="all">Todos los estados</option>
             <option value="activo">Disponible</option>
             <option value="en mantenimiento">Mantenimiento</option>
-            <option value="en reparación">Reparación</option>
             <option value="dado de baja">Dado de baja</option>
           </select>
 
@@ -174,19 +172,19 @@ export default function VehiculoList({
         </span>
         <div className="flex gap-4">
           <span className="text-slate-600">
-            Disponibles:{' '}
+            En servicio:{' '}
             <span className="font-medium text-emerald-600">
               {filteredVehicles.filter((v) => v.estadoActual.toLowerCase() === 'activo').length}
             </span>
           </span>
           <span className="text-slate-600">
-            En servicio:{' '}
+            En mantenimiento:{' '}
             <span className="font-medium text-amber-600">
               {filteredVehicles.filter((v) => v.estadoActual.toLowerCase() === 'en mantenimiento').length}
             </span>
           </span>
           <span className="text-slate-600">
-            Críticos:{' '}
+            Dados de baja:{' '}
             <span className="font-medium text-red-600">
               {filteredVehicles.filter((v) => v.estadoActual.toLowerCase() === 'en reparación').length}
             </span>

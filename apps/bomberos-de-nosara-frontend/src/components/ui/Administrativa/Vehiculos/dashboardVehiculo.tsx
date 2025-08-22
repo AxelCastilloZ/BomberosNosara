@@ -39,8 +39,7 @@ export default function DashboardVehiculo({ overrideModal }: DashboardVehiculoPr
     switch (status) {
       case 'activo': return 'bg-emerald-500';
       case 'en mantenimiento': return 'bg-amber-500';
-      case 'en reparación': return 'bg-red-500';
-      case 'dado de baja': return 'bg-gray-400';
+      case 'dado de baja': return 'bg-red-500';
       default: return 'bg-slate-300';
     }
   };

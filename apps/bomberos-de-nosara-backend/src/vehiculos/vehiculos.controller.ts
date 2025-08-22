@@ -41,6 +41,11 @@ export class VehiculosController {
     return this.service.registrarReposicion(id, dto);
   }
 
+
+
+
+
+  //mantenimiento
   @Put(':id/mantenimiento')
   registrarMantenimiento(@Param('id') id: string, @Body() dto: MantenimientoVehiculoDto | MantenimientoProgramadoVehiculoDto) {
     if ('fechaProximoMantenimiento' in dto) {

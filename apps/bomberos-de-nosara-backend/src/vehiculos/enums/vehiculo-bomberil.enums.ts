@@ -1,7 +1,6 @@
 export enum EstadoVehiculo {
   ACTIVO = 'activo',
   MANTENIMIENTO = 'en mantenimiento',
-  REPARACION = 'en reparación',
   BAJA = 'dado de baja',
 }
 
