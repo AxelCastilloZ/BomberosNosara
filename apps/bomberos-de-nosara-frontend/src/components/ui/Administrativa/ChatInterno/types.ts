@@ -1,39 +1,49 @@
 import { RoleEnum } from '../../../../types/role.enum';
 
+export type Timeout = ReturnType<typeof setTimeout>;
+
 export interface User {
   id: number;
   username: string;
-  name?: string;
   email?: string;
+  name?: string;
+  roles: any[];
+  online?: boolean;
+  lastSeen?: string;
+}
+
+export interface ChatTarget {
+  id: string|number;
+  name: string;
+  type: 'user'|'role';
   role?: RoleEnum;
-  roles?: RoleEnum[];
-  isOnline?: boolean;
-  lastActiveAt?: string;
 }
 
 export interface Message {
-  id: string | number;
+  id?: number;
   content: string;
-  senderId: number;
-  sender?: User;
-  timestamp: string;
-  isOwn?: boolean;
+  senderId: number|string;
+  conversationId?: number;
+  timestamp?: string;
   isRead?: boolean;
-  status?: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
-  conversationId?: string | number;
-  role?: string;
-  createdAt?: string;
-  updatedAt?: string;
+  isOwn?: boolean;
+  isGroup?: boolean;
+  groupId?: string|number;
+  to?: string|number;
+  error?: string;
+  status?: string;
+  sender?: {
+    id: number;
+    username: string;
+  };
 }
 
 export interface Conversation {
   id: number;
   participants: User[];
-  lastMessage?: Message;
-  unreadCount?: number;
+  messages: Message[];
   createdAt: string;
   updatedAt: string;
-  role?: RoleEnum;
 }
 
 export interface RoleGroup {
@@ -42,14 +52,4 @@ export interface RoleGroup {
   type: 'role';
   role: RoleEnum;
   userCount: number;
-}
-
-export interface ChatTarget {
-  id: string | number;
-  name: string;
-  type: 'user' | 'role';
-  role?: RoleEnum;
-  userCount?: number;
-  isOnline?: boolean;
-  lastActiveAt?: string;
 }

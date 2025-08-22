@@ -1,78 +1,62 @@
 import React, { useState, useEffect, useRef, useCallback, FormEvent } from 'react';
 import { useSocket } from '../../../../contexts/SocketContext';
 import { useAuth } from '../../../../hooks/useAuth';
+import { useChatApi } from '../../../../hooks/useChatApi';
 import MessageBubble from './MessageBubble';
-import { motion } from 'framer-motion';
 import {
   FiUser,
   FiUsers,
   FiMessageSquare,
   FiChevronLeft,
   FiLoader,
-  FiPaperclip,
-  FiImage,
   FiMoreVertical,
   FiSearch,
   FiCheckCircle,
-  FiCheck
 } from 'react-icons/fi';
-import axios from 'axios';
 import { RoleEnum, RoleLabels } from '../../../../types/role.enum';
+import { Timeout, User, ChatTarget, Message, Conversation } from './types';
 
-type Timeout=ReturnType<typeof setTimeout>;
 
-// API configuration
-const API_URL='http://localhost:3000';
 
-// Types
-interface User {
-  id: number;
-  username: string;
-  email?: string;
-  name?: string;
-  roles: any[];
-  online?: boolean;
-  lastSeen?: string;
-}
-
-interface ChatTarget {
-  id: string|number;
-  name: string;
-  type: 'user'|'role';
-  role?: RoleEnum;
-}
-
-interface Message {
-  id?: number;
-  content: string;
-  senderId: number|string;
-  conversationId?: number;
-  timestamp?: string;
-  isRead?: boolean;
-  isOwn?: boolean;
-  isGroup?: boolean;
-  groupId?: string|number;
-  to?: string|number;
-  error?: string;
-  status?: string;
-  sender?: {
-    id: number;
-    username: string;
-  };
-}
-
-interface Conversation {
-  id: number;
-  participants: User[];
-  messages: Message[];
-  createdAt: string;
-  updatedAt: string;
-}
+// Role groups for chat
+const roleGroups: ChatTarget[]=[
+  {
+    id: RoleEnum.SUPERUSER,
+    name: 'Superusuarios',
+    type: 'role',
+    role: RoleEnum.SUPERUSER
+  },
+  {
+    id: RoleEnum.ADMIN,
+    name: 'Administradores',
+    type: 'role',
+    role: RoleEnum.ADMIN
+  },
+  {
+    id: RoleEnum.PERSONAL_BOMBERIL,
+    name: 'Personal Bomberil',
+    type: 'role',
+    role: RoleEnum.PERSONAL_BOMBERIL
+  },
+  {
+    id: RoleEnum.VOLUNTARIO,
+    name: 'Voluntarios',
+    type: 'role',
+    role: RoleEnum.VOLUNTARIO
+  }
+];
 
 const ChatWindow=() => {
   // Hooks
   const { socket, isConnected }=useSocket();
   const { token }=useAuth();
+  const {
+    fetchCurrentUser,
+    fetchAvailableUsers,
+    getOrCreateGroupConversation,
+    getConversationMessages,
+    findConversationWithUser
+  }=useChatApi();
   const [currentUser, setCurrentUser]=useState<User|null>(null);
 
   // State
@@ -85,7 +69,6 @@ const ChatWindow=() => {
   const [conversation, setConversation]=useState<Conversation|null>(null);
   const [messages, setMessages]=useState<Message[]>([]);
   const [isLoading, setIsLoading]=useState(false);
-  const [isSending, setIsSending]=useState(false);
   const [conversationId, setConversationId]=useState<number|null>(null);
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
@@ -125,14 +108,14 @@ const ChatWindow=() => {
 
   // Fetch current user data from localStorage
   useEffect(() => {
-    const fetchCurrentUser=async () => {
+    const loadCurrentUser=async () => {
       try {
-        const currentUser=localStorage.getItem('authUser');
-        if (currentUser) {
-          const response=await axios.get(`${API_URL}/users/${currentUser}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          setCurrentUser(response.data);
+        const currentUserId=localStorage.getItem('authUser');
+        if (currentUserId) {
+          const userData=await fetchCurrentUser(currentUserId);
+          if (userData) {
+            setCurrentUser(userData);
+          }
         }
       } catch (err) {
         console.error('Error fetching current user:', err);
@@ -140,66 +123,24 @@ const ChatWindow=() => {
     };
 
     if (token) {
-      fetchCurrentUser();
+      loadCurrentUser();
     }
-  }, [token]);
-
-  // Role groups for chat
-  const roleGroups: ChatTarget[]=[
-    {
-      id: RoleEnum.SUPERUSER,
-      name: 'Superusuarios',
-      type: 'role',
-      role: RoleEnum.SUPERUSER
-    },
-    {
-      id: RoleEnum.ADMIN,
-      name: 'Administradores',
-      type: 'role',
-      role: RoleEnum.ADMIN
-    },
-    {
-      id: RoleEnum.PERSONAL_BOMBERIL,
-      name: 'Personal Bomberil',
-      type: 'role',
-      role: RoleEnum.PERSONAL_BOMBERIL
-    },
-    {
-      id: RoleEnum.VOLUNTARIO,
-      name: 'Voluntarios',
-      type: 'role',
-      role: RoleEnum.VOLUNTARIO
-    }
-  ];
+  }, [token, fetchCurrentUser]);
 
   // Get or create group conversation
-  const getOrCreateGroupConversation=useCallback(async (role: RoleEnum, groupName: string) => {
+  const handleGetOrCreateGroupConversation=useCallback(async (role: RoleEnum, groupName: string) => {
     try {
       const roleUsers=getUsersByRole(role, false);
       const participantIds=roleUsers.map(user => user.id);
       if (participantIds.length===0) {
         return;
       }
-      const conversationResponse=await axios.post(
-        `${API_URL}/chat/conversations/group`,
-        {
-          participantIds,
-          groupName
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      return conversationResponse.data.id;
+      return await getOrCreateGroupConversation(participantIds, groupName);
     } catch (err) {
       console.error('Error getting/creating group conversation:', err);
       throw err;
     }
-  }, [token, getUsersByRole]);
+  }, [getUsersByRole, getOrCreateGroupConversation]);
 
   // Memoize the joinConversation function with all its dependencies
   const joinConversation=useCallback(async (target: ChatTarget) => {
@@ -219,12 +160,13 @@ const ChatWindow=() => {
 
       // For group conversations, get the actual conversation ID first
       if (isGroup&&target.role) {
-        conversationId=await getOrCreateGroupConversation(
+        const groupConversationId=await handleGetOrCreateGroupConversation(
           target.role,
           RoleLabels[target.role]
         );
-        if (conversationId) {
-          setConversationId(Number(conversationId));
+        if (groupConversationId) {
+          conversationId=groupConversationId;
+          setConversationId(Number(groupConversationId));
         }
       }
 
@@ -248,16 +190,13 @@ const ChatWindow=() => {
       });
 
       // Get messages for the conversation
-      const [messagesResponse]=await Promise.all([
-        axios.get(
-          `${API_URL}/chat/conversations/${conversationId}/messages`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        ),
+      const [messagesData]=await Promise.all([
+        getConversationMessages(conversationId),
         joinPromise // Wait for join to complete
       ]);
 
       // Process messages
-      const processedMessages=messagesResponse.data
+      const processedMessages=messagesData
         .map((msg: any) => ({
           ...msg,
           isOwn: msg.senderId===currentUser?.id||
@@ -281,7 +220,7 @@ const ChatWindow=() => {
     } finally {
       setIsLoading(false);
     }
-  }, [socket, token, currentUser?.id, getOrCreateGroupConversation, selectedTarget]);
+  }, [socket, token, currentUser?.id, handleGetOrCreateGroupConversation, selectedTarget, getConversationMessages]);
 
   // Join conversation when a target is selected
   useEffect(() => {
@@ -318,16 +257,14 @@ const ChatWindow=() => {
 
   // Fetch available users
   useEffect(() => {
-    const fetchUsers=async () => {
+    const loadUsers=async () => {
       if (!token) return;
 
       try {
         setIsLoading(true);
-        const response=await axios.get<User[]>(`${API_URL}/chat/users/available`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUsers(response.data);
-        setFilteredUsers(response.data); // Initialize filtered users with all users
+        const usersData=await fetchAvailableUsers();
+        setUsers(usersData);
+        setFilteredUsers(usersData); // Initialize filtered users with all users
       } catch (err) {
         console.error('Error fetching users:', err);
       } finally {
@@ -335,8 +272,8 @@ const ChatWindow=() => {
       }
     };
 
-    fetchUsers();
-  }, [token]);
+    loadUsers();
+  }, [token, fetchAvailableUsers]);
 
   // Handle search input change
   const handleSearchChange=(e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -385,22 +322,17 @@ const ChatWindow=() => {
 
       // Try to find existing conversation
       try {
-        const response=await axios.get(`${API_URL}/chat/conversations/with/${user.id}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const conversationData=await findConversationWithUser(user.id);
 
-        if (response.data) {
-          console.log('Found existing conversation:', response.data);
-          setConversation(response.data);
+        if (conversationData) {
+          console.log('Found existing conversation:', conversationData);
+          setConversation(conversationData);
 
           // Fetch messages for this conversation
           try {
-            const messagesResponse=await axios.get(
-              `${API_URL}/chat/conversations/${response.data.id}/messages`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
-            console.log('Fetched messages:', messagesResponse.data);
-            setMessages(messagesResponse.data||[]);
+            const messagesData=await getConversationMessages(conversationData.id);
+            console.log('Fetched messages:', messagesData);
+            setMessages(messagesData||[]);
           } catch (error) {
             console.error('Error fetching messages:', error);
           }
@@ -414,7 +346,7 @@ const ChatWindow=() => {
     } finally {
       setIsLoading(false);
     }
-  }, [token, currentUser, currentUser]);
+  }, [token, currentUser, findConversationWithUser, getConversationMessages]);
 
   // Function to update a user's online status
   const updateUserOnlineStatus=(userId: number, isOnline: boolean) => {
@@ -916,9 +848,7 @@ const ChatWindow=() => {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
         <div className="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col">
-          {/* Search */}
           <div className="p-3 border-b">
             <div className="relative">
               <input
@@ -942,7 +872,6 @@ const ChatWindow=() => {
             </div>
           </div>
 
-          {/* Tabs */}
           <div className="flex border-b">
             <button
               className={`flex-1 py-3 font-medium text-sm ${showGroups? 'text-red-600 border-b-2 border-red-600':'text-gray-500 hover:bg-gray-50'}`}
@@ -958,7 +887,6 @@ const ChatWindow=() => {
             </button>
           </div>
 
-          {/* User/Group List */}
           <div className="flex-1 overflow-y-auto">
             {showGroups? (
               <div className="divide-y divide-gray-100">
@@ -1035,10 +963,8 @@ const ChatWindow=() => {
             )}
           </div>
         </div>
-        {/* Chat Area */}
         {selectedTarget? (
           <div className="flex-1 flex flex-col bg-white border-l border-gray-200">
-            {/* Chat Header */}
             <div className="p-4 border-b flex items-center justify-between bg-white sticky top-0 z-10">
               <div className="flex items-start">
                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center mr-3 flex-shrink-0 mt-1">
@@ -1094,7 +1020,6 @@ const ChatWindow=() => {
               </div>
             </div>
 
-            {/* Messages */}
             <div ref={messagesContainerRef} className="flex-1 p-4 overflow-y-auto">
               {isLoading? (
                 <div className="h-full flex items-center justify-center">
@@ -1131,7 +1056,6 @@ const ChatWindow=() => {
               )}
             </div>
 
-            {/* Message Input */}
             <form onSubmit={handleSendMessage} className="p-4 border-t bg-white">
               <div className="bg-gray-50 rounded-lg border border-gray-200 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-200 transition-all">
                 <div className="p-2">
@@ -1189,10 +1113,6 @@ const ChatWindow=() => {
                 <div className="flex items-center text-sm text-gray-500">
                   <FiCheckCircle className="text-green-500 mr-2" />
                   <span>Grupos por rol</span>
-                </div>
-                <div className="flex items-center text-sm text-gray-500">
-                  <FiCheckCircle className="text-green-500 mr-2" />
-                  <span>Archivos e imágenes</span>
                 </div>
               </div>
             </div>
