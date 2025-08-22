@@ -18,7 +18,7 @@ import { Timeout, User, ChatTarget, Message, Conversation } from './types';
 
 
 
-// Role groups for chat
+
 const roleGroups: ChatTarget[]=[
   {
     id: RoleEnum.SUPERUSER,
@@ -47,7 +47,7 @@ const roleGroups: ChatTarget[]=[
 ];
 
 const ChatWindow=() => {
-  // Hooks
+
   const { socket, isConnected }=useSocket();
   const { token }=useAuth();
   const {
@@ -59,7 +59,7 @@ const ChatWindow=() => {
   }=useChatApi();
   const [currentUser, setCurrentUser]=useState<User|null>(null);
 
-  // State
+
   const [users, setUsers]=useState<User[]>([]);
   const [filteredUsers, setFilteredUsers]=useState<User[]>([]);
   const [onlineUserIds, setOnlineUserIds]=useState<Set<number>>(new Set());
@@ -77,36 +77,33 @@ const ChatWindow=() => {
   const messagesEndRef=useRef<HTMLDivElement>(null);
   const messagesContainerRef=useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages or selected target changes
   useEffect(() => {
     if (messagesEndRef.current) {
-      // Use smooth scroll for better UX
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, selectedTarget]);
 
-  // Memoized helper function to get users by role, excluding current user by default
   const getUsersByRole=useCallback((roleName: string, excludeCurrentUser=true): User[] => {
     if (!users) return [];
 
     return users.filter(user => {
-      // Exclude current user if needed
+
       if (excludeCurrentUser&&user.id===currentUser?.id) return false;
 
-      // Check if user has the specified role
+
       return user.roles?.some(role =>
         typeof role==='string'? role===roleName:role.name===roleName
       );
     });
   }, [users, currentUser?.id]);
 
-  // Helper function to get user's display name
+
   const getUserDisplayName=(user: User): string => {
     if (user.id===currentUser?.id) return 'Tú';
     return user.name||user.username||'Usuario';
   };
 
-  // Fetch current user data from localStorage
+
   useEffect(() => {
     const loadCurrentUser=async () => {
       try {
@@ -118,7 +115,7 @@ const ChatWindow=() => {
           }
         }
       } catch (err) {
-        console.error('Error fetching current user:', err);
+
       }
     };
 
@@ -136,7 +133,7 @@ const ChatWindow=() => {
       }
       return await getOrCreateGroupConversation(participantIds, groupName);
     } catch (err) {
-      console.error('Error getting/creating group conversation:', err);
+
       throw err;
     }
   }, [getUsersByRole, getOrCreateGroupConversation]);
@@ -167,7 +164,7 @@ const ChatWindow=() => {
       }
 
       if (!conversationId) {
-        console.error('No conversation ID available');
+
         return;
       }
 
@@ -177,7 +174,7 @@ const ChatWindow=() => {
           isGroup
         }, (response: any) => {
           if (response?.error) {
-            console.error('Error joining conversation:', response.error);
+
           }
           resolve();
         });
@@ -209,7 +206,7 @@ const ChatWindow=() => {
         setSelectedTarget(target);
       }
     } catch (err) {
-      console.error('Error loading conversation:', err);
+
     } finally {
       setIsLoading(false);
     }
@@ -255,7 +252,7 @@ const ChatWindow=() => {
         setUsers(usersData);
         setFilteredUsers(usersData);
       } catch (err) {
-        console.error('Error fetching users:', err);
+
       } finally {
         setIsLoading(false);
       }
@@ -291,10 +288,9 @@ const ChatWindow=() => {
   }, [users, setSearchQuery, setFilteredUsers]);
 
   const handleSelectUser=useCallback(async (user: User) => {
-    console.log(user)
-    console.log(currentUser)
+
     if (!token||!currentUser||!currentUser) {
-      console.error('Missing required user data');
+
       return;
     }
 
@@ -311,23 +307,23 @@ const ChatWindow=() => {
         const conversationData=await findConversationWithUser(user.id);
 
         if (conversationData) {
-          console.log('Found existing conversation:', conversationData);
+
           setConversation(conversationData);
 
           try {
             const messagesData=await getConversationMessages(conversationData.id);
-            console.log('Fetched messages:', messagesData);
+
             setMessages(messagesData||[]);
           } catch (error) {
-            console.error('Error fetching messages:', error);
+
           }
         }
       } catch (error) {
-        console.log('No existing conversation found, will create a new one');
+
       }
 
     } catch (error) {
-      console.error('Error in handleSelectUser:', error);
+
     } finally {
       setIsLoading(false);
     }
@@ -460,12 +456,10 @@ const ChatWindow=() => {
     socket.emit('getOnlineUsers');
 
     const handleNewMessage=(message: Message) => {
-      console.log('[FRONTEND MESSAGE] New message received:', message);
-      console.log('[FRONTEND MESSAGE] selectedTarget:', selectedTarget);
-      console.log('[FRONTEND MESSAGE] conversationId:', conversationId);
+
 
       if (!selectedTarget) {
-        console.log('[FRONTEND MESSAGE] No selected target, ignoring message');
+
         return;
       }
 
@@ -476,19 +470,10 @@ const ChatWindow=() => {
           (message.senderId===selectedTarget.id||message.to===selectedTarget.id))||
         (selectedTarget.type==='role'&&message.isGroup&&message.conversationId===conversationId);
 
-      console.log('[FRONTEND MESSAGE] Is for current conversation:', isForCurrentConversation);
-      console.log('[FRONTEND MESSAGE] Conversation check details:', {
-        selectedType: selectedTarget.type,
-        messageIsGroup: message.isGroup,
-        messageGroupId: message.groupId,
-        selectedRole: selectedTarget.role,
-        selectedId: selectedTarget.id,
-        messageConversationId: message.conversationId,
-        currentConversationId: conversationId
-      });
+
 
       if (!isForCurrentConversation) {
-        console.log('[FRONTEND MESSAGE] Message not for current conversation, ignoring');
+
         return;
       }
 
@@ -501,7 +486,7 @@ const ChatWindow=() => {
         );
 
         if (messageExists) {
-          console.log('Duplicate message detected, skipping:', message);
+
           return prev;
         }
 
@@ -571,17 +556,17 @@ const ChatWindow=() => {
     };
   }, [socket, isConnected, currentUser, selectedTarget, conversationId, token, joinConversation]);
 
-  // Handle message sent successfully
+
   const handleMessageSent=useCallback((data: { message: Message }) => {
-    console.log('Message sent successfully:', data);
+
   }, []);
 
-  // Handle message error
+
   const handleMessageError=useCallback((error: { message: string }) => {
-    console.error('Error sending message:', error.message);
+
   }, []);
 
-  // Handle stop typing event
+
   const handleStopTyping=useCallback((data: { userId: number|string; username: string }) => {
     setTypingUsers(prev => {
       const newTypingUsers=new Set(prev);
@@ -590,20 +575,20 @@ const ChatWindow=() => {
     });
   }, []);
 
-  // Handle input change for the message input
+
   const handleInputChange=useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value=e.target.value;
     setInputValue(value);
 
-    // Clear any existing timeout
+
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current=null;
     }
 
-    // Only send typing indicator if we have content and a selected target
+
     if (value.trim()&&selectedTarget&&currentUser) {
-      // Send typing indicator
+
       const typingData={
         to: selectedTarget.id,
         isTyping: true,
@@ -615,7 +600,7 @@ const ChatWindow=() => {
 
       socket?.emit('typing', typingData);
 
-      // Set a timeout to stop the typing indicator after 1 second of inactivity
+
       typingTimeoutRef.current=setTimeout(() => {
         socket?.emit('typing', {
           ...typingData,
@@ -646,45 +631,44 @@ const ChatWindow=() => {
     if (searchInputRef.current) searchInputRef.current.value='';
   }, [setSelectedTarget, setConversation, setMessages, setSearchQuery, searchInputRef]);
 
-  // Handle sending a message
+
   const handleSendMessage=async (e: FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim()||!selectedTarget||!socket||!currentUser) return;
 
     const isGroup=selectedTarget.type==='role';
-    console.log('isGroup:', isGroup);
+
     const targetId=selectedTarget.id;
     const senderId=currentUser.id;
 
-    // Prepare message data for the API
+
     const messageData={
       to: isGroup? conversationId:selectedTarget.id,
       message: inputValue,
       senderId: senderId,
       isGroup: isGroup,
-      // Include conversationId for 1:1 chats if available
+
       ...(!isGroup&&{ conversationId: Number(conversationId) }),
-      // Include recipient info for 1:1 chats
+
       ...(!isGroup&&{ to: targetId })
     };
 
-    // Clear input immediately
+
     setInputValue('');
 
     try {
-      // Send the message via WebSocket
+
       if (isGroup) {
-        // For group messages, use sendToRole
+
         const groupMessageData={
           role: selectedTarget.role!, // Use the actual role enum value, not the display label
           message: inputValue,
           senderId: senderId,
           groupName: RoleLabels[selectedTarget.role!]
         };
-        console.log('[FRONTEND GROUP CHAT] Sending group message:', JSON.stringify(groupMessageData));
-        console.log('[FRONTEND GROUP CHAT] Selected target:', JSON.stringify(selectedTarget));
 
-        // Optimistic update: immediately show sender's own message
+
+
         const optimisticMessage: Message={
           id: Date.now(), // Temporary ID
           content: inputValue,
@@ -699,7 +683,7 @@ const ChatWindow=() => {
           }
         };
 
-        // Add the message immediately to the UI and sort
+
         setMessages(prev => {
           const newMessages=[
             ...prev,
@@ -708,7 +692,6 @@ const ChatWindow=() => {
               timestamp: optimisticMessage.timestamp||new Date().toISOString()
             }
           ];
-          // Sort messages by timestamp in ascending order (oldest first)
           return newMessages.sort((a, b) =>
             new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
           );
@@ -716,12 +699,12 @@ const ChatWindow=() => {
 
         socket.emit('sendToRole', groupMessageData, (response: any) => {
           if (response?.error) {
-            console.error('Error sending group message:', response.error);
-            // Remove the optimistic message on error
+
+
             setMessages(prev => prev.filter(msg => msg.id!==optimisticMessage.id));
           } else {
-            console.log('Group message sent successfully:', response);
-            // Update the optimistic message with the real message data from server
+
+
             if (response.message) {
               setMessages(prev => {
                 const updatedMessages=prev.map(msg =>
@@ -736,7 +719,7 @@ const ChatWindow=() => {
                       timestamp: msg.timestamp||new Date().toISOString()
                     }
                 );
-                // Sort messages by timestamp in ascending order (oldest first)
+
                 return updatedMessages.sort((a, b) =>
                   new Date(a.timestamp||0).getTime()-new Date(b.timestamp||0).getTime()
                 );
@@ -745,17 +728,17 @@ const ChatWindow=() => {
           }
         });
       } else {
-        // For 1:1 messages, use sendMessage
+
         socket.emit('sendMessage', messageData, (response: any) => {
           if (response?.error) {
-            console.error('Error sending message:', response.error);
+
           } else {
-            console.log('Message sent successfully:', response);
+
           }
         });
       }
     } catch (err) {
-      console.error('Error sending message:', err);
+
     }
   };
 
@@ -931,7 +914,7 @@ const ChatWindow=() => {
                       <span className="ml-2 text-xs font-normal text-gray-500">
                         {(() => {
                           const roleUsers=getUsersByRole(selectedTarget.role!, false);
-                          console.log('roleUsers:', roleUsers);
+
                           return `${roleUsers.length} ${roleUsers.length===1? 'miembro':'miembros'}`;
                         })()}
                       </span>
