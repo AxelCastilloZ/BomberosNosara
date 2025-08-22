@@ -87,11 +87,20 @@ const ChatWindow=() => {
   const [isLoading, setIsLoading]=useState(false);
   const [isSending, setIsSending]=useState(false);
   const [conversationId, setConversationId]=useState<number|null>(null);
-  const messagesEndRef=useRef<HTMLDivElement>(null);
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
   const typingTimeoutRef=useRef<Timeout|null>(null);
   const searchInputRef=useRef<HTMLInputElement>(null);
+  const messagesEndRef=useRef<HTMLDivElement>(null);
+  const messagesContainerRef=useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages or selected target changes
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      // Use smooth scroll for better UX
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, selectedTarget]);
 
   // Memoized helper function to get users by role, excluding current user by default
   const getUsersByRole=useCallback((roleName: string, excludeCurrentUser=true): User[] => {
@@ -1154,7 +1163,7 @@ const ChatWindow=() => {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 p-4 overflow-y-auto">
+            <div ref={messagesContainerRef} className="flex-1 p-4 overflow-y-auto">
               {isLoading? (
                 <div className="h-full flex items-center justify-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
@@ -1183,7 +1192,7 @@ const ChatWindow=() => {
                           />
                         );
                       })}
-                      <div ref={messagesEndRef} />
+                      <div ref={messagesEndRef} className="h-0" />
                     </div>
                   )}
                 </div>
