@@ -13,8 +13,8 @@ const FlechaCarrusel = ({ direccion, onClick }: { direccion: 'izquierda' | 'dere
         hidden md:block
         absolute top-1/2 -translate-y-1/2 z-10
         ${direccion === 'izquierda' ? 'left-2 lg:left-4' : 'right-2 lg:right-4'}
-        bg-white rounded-full p-2 lg:p-3
-        hover:bg-red-100
+        text-white rounded-full p-2 lg:p-3
+        hover:bg-red-100 hover:text-black
         transition-colors duration-200
       `}
     >
