@@ -119,7 +119,7 @@ const ChatWindow=() => {
 
   // Helper function to get user's display name
   const getUserDisplayName=(user: User): string => {
-    if (user.id === currentUser?.id) return 'Tú';
+    if (user.id===currentUser?.id) return 'Tú';
     return user.name||user.username||'Usuario';
   };
 
@@ -172,91 +172,14 @@ const ChatWindow=() => {
     }
   ];
 
-  const handleSelectRoleGroup=async (role: RoleEnum) => {
-    try {
-      setIsLoading(true);
-      console.log(`[FRONTEND GROUP] Selecting role group: ${role}`);
-
-      // Don't create conversation upfront - let backend handle it when first message is sent
-      // Just set up the UI for the role group
-      setSelectedTarget({
-        id: role, // Use role as ID temporarily
-        name: RoleLabels[role],
-        type: 'role',
-        role
-      });
-
-      // Try to load existing group conversation and messages
-      try {
-        console.log(`[FRONTEND GROUP] Checking for existing group conversation for role: ${role}`);
-
-        // Try to find existing conversation by checking if one exists
-        const existingConversation=await axios.get(`${API_URL}/chat/conversations`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        });
-
-        // Find group conversation for this role
-        const groupConversation=existingConversation.data.find((conv: any) =>
-          conv.isGroup&&conv.groupName===role
-        );
-
-        if (groupConversation) {
-          console.log(`[FRONTEND GROUP] Found existing group conversation:`, groupConversation);
-          setConversationId(groupConversation.id);
-
-          // Update selected target with real conversation ID
-          setSelectedTarget({
-            id: groupConversation.id,
-            name: groupConversation.groupName||RoleLabels[role],
-            type: 'role',
-            role
-          });
-
-          // Load existing messages if any
-          if (groupConversation.messages?.length>0) {
-            const formattedMessages=groupConversation.messages.map((msg: any) => ({
-              ...msg,
-              isOwn: msg.senderId===currentUser?.id,
-              sender: {
-                id: msg.senderId,
-                username: msg.sender?.username||'Usuario'
-              }
-            }));
-            setMessages(formattedMessages);
-          } else {
-            setMessages([]);
-          }
-        } else {
-          console.log(`[FRONTEND GROUP] No existing group conversation found for role: ${role}`);
-          setConversationId(null);
-          setMessages([]);
-        }
-      } catch (error) {
-        console.log(`[FRONTEND GROUP] Error checking for existing conversation:`, error);
-        setConversationId(null);
-        setMessages([]);
-      }
-
-    } catch (error) {
-      console.error('Error selecting group conversation:', error);
-      setSelectedTarget({
-        id: role,
-        name: RoleLabels[role],
-        type: 'role',
-        role
-      });
-      setMessages([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Get or create group conversation
   const getOrCreateGroupConversation=useCallback(async (role: RoleEnum, groupName: string) => {
     try {
       const roleUsers=getUsersByRole(role, false);
       const participantIds=roleUsers.map(user => user.id);
-
+      if (participantIds.length===0) {
+        return;
+      }
       const conversationResponse=await axios.post(
         `${API_URL}/chat/conversations/group`,
         {
@@ -525,13 +448,13 @@ const ChatWindow=() => {
   }, [updateUserOnlineStatus]);
 
   // Memoize the handleOnlineUsers function
-  const handleOnlineUsers = useCallback((userIds: number[]) => {
+  const handleOnlineUsers=useCallback((userIds: number[]) => {
     // Only update if the online users have actually changed
     setOnlineUserIds(prevIds => {
-      const newIds = new Set(userIds);
+      const newIds=new Set(userIds);
       // Check if the sets are different
-      if (prevIds.size !== newIds.size || 
-          !Array.from(prevIds).every(id => newIds.has(id))) {
+      if (prevIds.size!==newIds.size||
+        !Array.from(prevIds).every(id => newIds.has(id))) {
         // Update users' online status only if online users changed
         setUsers(prevUsers =>
           prevUsers.map(user => ({
