@@ -72,16 +72,49 @@ const ChatWindow=() => {
   const [conversationId, setConversationId]=useState<number|null>(null);
   const [typingUsers, setTypingUsers]=useState<Set<string>>(new Set());
   const [inputValue, setInputValue]=useState('');
+  const [showEmojiPicker, setShowEmojiPicker]=useState(false);
   const typingTimeoutRef=useRef<Timeout|null>(null);
   const searchInputRef=useRef<HTMLInputElement>(null);
   const messagesEndRef=useRef<HTMLDivElement>(null);
   const messagesContainerRef=useRef<HTMLDivElement>(null);
+  const emojiPickerRef=useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, selectedTarget]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside=(event: MouseEvent) => {
+      if (emojiPickerRef.current&&!emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showEmojiPicker]);
+
+  // Emoji categories and data
+  const emojiCategories={
+    'Frecuentes': ['😀', '😂', '🥰', '😍', '🤔', '😊', '👍', '❤️', '🔥', '💯', '🎉', '👏'],
+    'Emociones': ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '🥲', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥸', '🤩', '🥳'],
+    'Gestos': ['👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤲', '🤝', '🙏'],
+    'Objetos': ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '🔥', '💯', '💢', '💥', '💫', '💦', '💨'],
+    'Símbolos': ['✅', '❌', '⭐', '🌟', '💫', '🔥', '💯', '🎉', '🎊', '🎈', '🎁', '🏆', '🥇', '🥈', '🥉', '⚡', '💎', '🔔', '🔕', '📢', '📣', '💬', '💭', '🗯️', '💤']
+  };
+
+  const handleEmojiSelect=(emoji: string) => {
+    setInputValue(prev => prev+emoji);
+    setShowEmojiPicker(false);
+  };
 
   const getUsersByRole=useCallback((roleName: string, excludeCurrentUser=true): User[] => {
     if (!users) return [];
@@ -91,10 +124,10 @@ const ChatWindow=() => {
       if (excludeCurrentUser&&user.id===currentUser?.id) return false;
 
       // SUPERUSER is automatically a member of all groups
-      const isSuperUser = user.roles?.some(role =>
+      const isSuperUser=user.roles?.some(role =>
         typeof role==='string'? role===RoleEnum.SUPERUSER:role.name===RoleEnum.SUPERUSER
       );
-      
+
       if (isSuperUser) return true;
 
       return user.roles?.some(role =>
@@ -104,34 +137,34 @@ const ChatWindow=() => {
   }, [users, currentUser?.id]);
 
   // Check if current user has a specific role
-  const currentUserHasRole = useCallback((roleName: string): boolean => {
+  const currentUserHasRole=useCallback((roleName: string): boolean => {
     if (!currentUser?.roles) return false;
-    return currentUser.roles.some(role => 
-      typeof role === 'string' ? role === roleName : role.name === roleName
+    return currentUser.roles.some(role =>
+      typeof role==='string'? role===roleName:role.name===roleName
     );
   }, [currentUser?.roles]);
 
   // Check if current user is SUPERUSER
-  const isSuperUser = useCallback((): boolean => {
+  const isSuperUser=useCallback((): boolean => {
     return currentUserHasRole(RoleEnum.SUPERUSER);
   }, [currentUserHasRole]);
 
   // Filter visible groups based on requirements
-  const getVisibleGroups = useCallback((): ChatTarget[] => {
+  const getVisibleGroups=useCallback((): ChatTarget[] => {
     return roleGroups.filter(group => {
       // Get users with this role (including current user for count)
-      const roleUsers = getUsersByRole(group.role as string, false);
-      
+      const roleUsers=getUsersByRole(group.role as string, false);
+
       // Group must have at least 2 members to be visible
-      if (roleUsers.length < 2) {
+      if (roleUsers.length<2) {
         return false;
       }
-      
+
       // SUPERUSER can see all groups
       if (isSuperUser()) {
         return true;
       }
-      
+
       // Non-SUPERUSER can only see groups where they have the same role
       return currentUserHasRole(group.role as string);
     });
@@ -168,16 +201,16 @@ const ChatWindow=() => {
     try {
       const roleUsers=getUsersByRole(role, false);
       const participantIds=roleUsers.map(user => user.id);
-      
+
       // Ensure all SUPERUSER are included in the conversation
-      const superUsers = users.filter(user => 
+      const superUsers=users.filter(user =>
         user.roles?.some(userRole =>
           typeof userRole==='string'? userRole===RoleEnum.SUPERUSER:userRole.name===RoleEnum.SUPERUSER
-        ) && !participantIds.includes(user.id)
+        )&&!participantIds.includes(user.id)
       );
-      
+
       participantIds.push(...superUsers.map(user => user.id));
-      
+
       if (participantIds.length===0) {
         return null;
       }
@@ -848,7 +881,7 @@ const ChatWindow=() => {
                 onChange={handleSearchChange}
               />
               <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within:text-red-500" />
-              {searchQuery && (
+              {searchQuery&&(
                 <button
                   onClick={clearSearch}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
@@ -865,53 +898,51 @@ const ChatWindow=() => {
           {/* Enhanced tab navigation */}
           <div className="flex bg-gray-50 border-b border-gray-200">
             <button
-              className={`flex-1 py-4 px-4 font-medium text-sm transition-all duration-200 relative ${
-                showGroups 
-                  ? 'text-red-600 bg-white shadow-sm' 
-                  : 'text-gray-500 hover:bg-white hover:text-gray-700'
-              }`}
+              className={`flex-1 py-4 px-4 font-medium text-sm transition-all duration-200 relative ${showGroups
+                ? 'text-red-600 bg-white shadow-sm'
+                :'text-gray-500 hover:bg-white hover:text-gray-700'
+                }`}
               onClick={() => setShowGroups(true)}
             >
               <div className="flex items-center justify-center space-x-2">
                 <FiUsers className="w-4 h-4" />
                 <span>Grupos</span>
               </div>
-              {showGroups && (
+              {showGroups&&(
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-t-full"></div>
               )}
             </button>
             <button
-              className={`flex-1 py-4 px-4 font-medium text-sm transition-all duration-200 relative ${
-                !showGroups 
-                  ? 'text-red-600 bg-white shadow-sm' 
-                  : 'text-gray-500 hover:bg-white hover:text-gray-700'
-              }`}
+              className={`flex-1 py-4 px-4 font-medium text-sm transition-all duration-200 relative ${!showGroups
+                ? 'text-red-600 bg-white shadow-sm'
+                :'text-gray-500 hover:bg-white hover:text-gray-700'
+                }`}
               onClick={() => setShowGroups(false)}
             >
               <div className="flex items-center justify-center space-x-2">
                 <FiUser className="w-4 h-4" />
                 <span>Usuarios</span>
               </div>
-              {!showGroups && (
+              {!showGroups&&(
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-t-full"></div>
               )}
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto bg-gray-50">
-            {showGroups ? (
+            {showGroups? (
               <div className="p-2 space-y-1">
                 {getVisibleGroups().map((group) => {
-                  const isSelected = selectedTarget?.id === group.id && selectedTarget?.type === 'role';
-                  const roleUsers = getUsersByRole(group.role as string, false);
-                  const memberCount = roleUsers.length;
-                  const onlineCount = roleUsers.filter(user => onlineUserIds.has(user.id)).length;
-                  
+                  const isSelected=selectedTarget?.id===group.id&&selectedTarget?.type==='role';
+                  const roleUsers=getUsersByRole(group.role as string, false);
+                  const memberCount=roleUsers.length;
+                  const onlineCount=roleUsers.filter(user => onlineUserIds.has(user.id)).length;
+
                   return (
                     <div
                       key={group.id}
                       onClick={async () => {
-                        const target = {
+                        const target={
                           id: group.id,
                           name: group.name,
                           type: 'role' as const,
@@ -920,21 +951,19 @@ const ChatWindow=() => {
                         setSelectedTarget(target);
                         await joinConversation(target);
                       }}
-                      className={`p-4 rounded-xl cursor-pointer flex items-center space-x-4 transition-all duration-200 group ${
-                        isSelected 
-                          ? 'bg-red-50 border-2 border-red-200 shadow-md' 
-                          : 'bg-white hover:bg-gray-50 hover:shadow-md border-2 border-transparent hover:border-gray-200'
-                      }`}
+                      className={`p-4 rounded-xl cursor-pointer flex items-center space-x-4 transition-all duration-200 group ${isSelected
+                        ? 'bg-red-50 border-2 border-red-200 shadow-md'
+                        :'bg-white hover:bg-gray-50 hover:shadow-md border-2 border-transparent hover:border-gray-200'
+                        }`}
                     >
                       <div className="relative">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all duration-200 ${
-                          isSelected 
-                            ? 'bg-gradient-to-br from-red-100 to-red-200' 
-                            : 'bg-gradient-to-br from-red-100 to-red-150 group-hover:shadow-md'
-                        }`}>
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all duration-200 ${isSelected
+                          ? 'bg-gradient-to-br from-red-100 to-red-200'
+                          :'bg-gradient-to-br from-red-100 to-red-150 group-hover:shadow-md'
+                          }`}>
                           <FiUsers className="w-6 h-6 text-red-600" />
                         </div>
-                        {onlineCount > 0 && (
+                        {onlineCount>0&&(
                           <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium shadow-sm">
                             {onlineCount}
                           </div>
@@ -943,15 +972,15 @@ const ChatWindow=() => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold text-gray-900 truncate">{group.name}</p>
-                          {isSelected && (
+                          {isSelected&&(
                             <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                           )}
                         </div>
                         <div className="flex items-center space-x-2 mt-1">
                           <p className="text-xs text-gray-500">
-                            {memberCount} {memberCount === 1 ? 'miembro' : 'miembros'}
+                            {memberCount} {memberCount===1? 'miembro':'miembros'}
                           </p>
-                          {onlineCount > 0 && (
+                          {onlineCount>0&&(
                             <>
                               <span className="text-gray-300">•</span>
                               <p className="text-xs text-green-600 font-medium">
@@ -964,7 +993,7 @@ const ChatWindow=() => {
                     </div>
                   );
                 })}
-                {getVisibleGroups().length === 0 && (
+                {getVisibleGroups().length===0&&(
                   <div className="p-8 text-center">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                       <FiUsers className="w-8 h-8 text-gray-400" />
@@ -974,34 +1003,31 @@ const ChatWindow=() => {
                   </div>
                 )}
               </div>
-            ) : (
+            ):(
               <div className="p-2 space-y-1">
                 {filteredUsers.map((user: User) => (
-                  user.id !== currentUser?.id && (
+                  user.id!==currentUser?.id&&(
                     <div
                       key={user.id}
                       onClick={() => handleSelectUser(user)}
-                      className={`p-4 rounded-xl cursor-pointer flex items-center space-x-4 transition-all duration-200 group ${
-                        selectedTarget?.id === user.id && selectedTarget?.type === 'user'
-                          ? 'bg-blue-50 border-2 border-blue-200 shadow-md'
-                          : 'bg-white hover:bg-gray-50 hover:shadow-md border-2 border-transparent hover:border-gray-200'
-                      }`}
+                      className={`p-4 rounded-xl cursor-pointer flex items-center space-x-4 transition-all duration-200 group ${selectedTarget?.id===user.id&&selectedTarget?.type==='user'
+                        ? 'bg-red-50 border-2 border-red-200 shadow-md'
+                        :'bg-white hover:bg-gray-50 hover:shadow-md border-2 border-transparent hover:border-gray-200'
+                        }`}
                     >
                       <div className="relative">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all duration-200 ${
-                          selectedTarget?.id === user.id && selectedTarget?.type === 'user'
-                            ? 'bg-gradient-to-br from-blue-100 to-blue-200'
-                            : 'bg-gradient-to-br from-blue-100 to-blue-150 group-hover:shadow-md'
-                        }`}>
-                          <FiUser className="w-6 h-6 text-blue-600" />
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all duration-200 ${selectedTarget?.id===user.id&&selectedTarget?.type==='user'
+                          ? 'bg-gradient-to-br from-red-100 to-red-200'
+                          :'bg-gradient-to-br from-red-100 to-red-150 group-hover:shadow-md'
+                          }`}>
+                          <FiUser className="w-6 h-6 text-red-600" />
                         </div>
                         <div
-                          className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-3 border-white shadow-md transition-all duration-300 ${
-                            onlineUserIds.has(user.id) ? 'bg-green-500' : 'bg-gray-400'
-                          }`}
-                          title={onlineUserIds.has(user.id) ? 'En línea' : 'Desconectado'}
+                          className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-3 border-white shadow-md transition-all duration-300 ${onlineUserIds.has(user.id)? 'bg-green-500':'bg-gray-400'
+                            }`}
+                          title={onlineUserIds.has(user.id)? 'En línea':'Desconectado'}
                         >
-                          {onlineUserIds.has(user.id) && (
+                          {onlineUserIds.has(user.id)&&(
                             <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-60"></div>
                           )}
                         </div>
@@ -1009,31 +1035,29 @@ const ChatWindow=() => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-semibold text-gray-900 truncate">
-                            {user.name || user.username}
+                            {user.name||user.username}
                           </p>
-                          {selectedTarget?.id === user.id && selectedTarget?.type === 'user' && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          {selectedTarget?.id===user.id&&selectedTarget?.type==='user'&&(
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
                           )}
                         </div>
                         <div className="flex items-center space-x-2 mt-1">
-                          <div className={`w-2 h-2 rounded-full ${
-                            onlineUserIds.has(user.id) ? 'bg-green-500' : 'bg-gray-400'
-                          }`}></div>
-                          <p className={`text-xs font-medium ${
-                            onlineUserIds.has(user.id) ? 'text-green-600' : 'text-gray-500'
-                          }`}>
+                          <div className={`w-2 h-2 rounded-full ${onlineUserIds.has(user.id)? 'bg-green-500':'bg-gray-400'
+                            }`}></div>
+                          <p className={`text-xs font-medium ${onlineUserIds.has(user.id)? 'text-green-600':'text-gray-500'
+                            }`}>
                             {onlineUserIds.has(user.id)
                               ? 'En línea'
-                              : user.lastSeen
-                              ? `Visto ${new Date(user.lastSeen).toLocaleTimeString()}`
-                              : 'Desconectado'}
+                              :user.lastSeen
+                                ? `Visto ${new Date(user.lastSeen).toLocaleTimeString()}`
+                                :'Desconectado'}
                           </p>
                         </div>
                       </div>
                     </div>
                   )
                 ))}
-                {filteredUsers.length === 0 && (
+                {filteredUsers.length===0&&(
                   <div className="p-8 text-center">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                       <FiUser className="w-8 h-8 text-gray-400" />
@@ -1053,30 +1077,28 @@ const ChatWindow=() => {
                 <div className="flex items-center space-x-4">
                   {/* Avatar with enhanced styling */}
                   <div className="relative">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-all duration-200 ${
-                      selectedTarget.type === 'role' 
-                        ? 'bg-gradient-to-br from-red-100 to-red-200 hover:shadow-lg' 
-                        : 'bg-gradient-to-br from-blue-100 to-blue-200 hover:shadow-lg'
-                    }`}>
-                      {selectedTarget.type === 'role' ? (
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-all duration-200 ${selectedTarget.type==='role'
+                      ? 'bg-gradient-to-br from-red-100 to-red-200 hover:shadow-lg'
+                      :'bg-gradient-to-br from-red-100 to-red-200 hover:shadow-lg'
+                      }`}>
+                      {selectedTarget.type==='role'? (
                         <FiUsers className="w-6 h-6 text-red-600" />
-                      ) : (
-                        <FiUser className="w-6 h-6 text-blue-600" />
+                      ):(
+                        <FiUser className="w-6 h-6 text-red-600" />
                       )}
                     </div>
                     {/* Enhanced online status indicator for 1:1 chats */}
-                    {selectedTarget.type === 'user' && (
+                    {selectedTarget.type==='user'&&(
                       <div className="absolute -bottom-1 -right-1">
                         <div
-                          className={`w-4 h-4 rounded-full border-3 border-white shadow-lg transition-all duration-300 ${
-                            onlineUserIds.has(selectedTarget.id as number) 
-                              ? 'bg-green-500 shadow-green-300' 
-                              : 'bg-gray-400 shadow-gray-300'
-                          }`}
-                          title={onlineUserIds.has(selectedTarget.id as number) ? 'En línea' : 'Desconectado'}
+                          className={`w-4 h-4 rounded-full border-3 border-white shadow-lg transition-all duration-300 ${onlineUserIds.has(selectedTarget.id as number)
+                            ? 'bg-green-500 shadow-green-300'
+                            :'bg-gray-400 shadow-gray-300'
+                            }`}
+                          title={onlineUserIds.has(selectedTarget.id as number)? 'En línea':'Desconectado'}
                         >
                           {/* Enhanced pulse animation for online status */}
-                          {onlineUserIds.has(selectedTarget.id as number) && (
+                          {onlineUserIds.has(selectedTarget.id as number)&&(
                             <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-60"></div>
                           )}
                         </div>
@@ -1090,34 +1112,32 @@ const ChatWindow=() => {
                       <h2 className="text-lg font-semibold text-gray-900 truncate">
                         {selectedTarget.name}
                       </h2>
-                      
+
                       {/* Role member count badge */}
-                      {selectedTarget.type === 'role' && (
+                      {selectedTarget.type==='role'&&(
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
                           {(() => {
-                            const roleUsers = getUsersByRole(selectedTarget.role!, false);
-                            return `${roleUsers.length} ${roleUsers.length === 1 ? 'miembro' : 'miembros'}`;
+                            const roleUsers=getUsersByRole(selectedTarget.role!, false);
+                            return `${roleUsers.length} ${roleUsers.length===1? 'miembro':'miembros'}`;
                           })()}
                         </span>
                       )}
-                      
+
                       {/* Online status badge for 1:1 chats */}
-                      {selectedTarget.type === 'user' && (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors duration-200 ${
-                          onlineUserIds.has(selectedTarget.id as number) 
-                            ? 'bg-green-100 text-green-800 border border-green-200' 
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
-                        }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                            onlineUserIds.has(selectedTarget.id as number) ? 'bg-green-500' : 'bg-gray-400'
-                          }`}></div>
-                          {onlineUserIds.has(selectedTarget.id as number) ? 'En línea' : 'Desconectado'}
+                      {selectedTarget.type==='user'&&(
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors duration-200 ${onlineUserIds.has(selectedTarget.id as number)
+                          ? 'bg-green-100 text-green-800 border border-green-200'
+                          :'bg-gray-100 text-gray-600 border border-gray-200'
+                          }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${onlineUserIds.has(selectedTarget.id as number)? 'bg-green-500':'bg-gray-400'
+                            }`}></div>
+                          {onlineUserIds.has(selectedTarget.id as number)? 'En línea':'Desconectado'}
                         </span>
                       )}
                     </div>
-                    
+
                     {/* Status text */}
-                    {typingUsers.size > 0 ? (
+                    {typingUsers.size>0? (
                       <div className="flex items-center mt-1">
                         <div className="flex space-x-1">
                           <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
@@ -1126,33 +1146,33 @@ const ChatWindow=() => {
                         </div>
                         <p className="text-sm text-gray-500 ml-2 font-medium">Escribiendo...</p>
                       </div>
-                    ) : selectedTarget.type === 'role' ? (
+                    ):selectedTarget.type==='role'? (
                       <div className="mt-1">
                         <div className="text-xs text-gray-600">
                           {(() => {
-                            const roleUsers = getUsersByRole(selectedTarget.role!, false);
-                            
-                            if (roleUsers.length === 0) {
+                            const roleUsers=getUsersByRole(selectedTarget.role!, false);
+
+                            if (roleUsers.length===0) {
                               return 'No hay otros usuarios disponibles en este grupo';
                             }
-                            
+
                             return roleUsers.map((user, index) => (
                               <span key={user.id}>
                                 {getUserDisplayName(user)}
-                                {index < roleUsers.length - 1 ? ', ' : ''}
+                                {index<roleUsers.length-1? ', ':''}
                               </span>
                             ));
                           })()}
                         </div>
                       </div>
-                    ) : null}
+                    ):null}
                   </div>
                 </div>
-                
+
                 {/* Action buttons */}
                 <div className="flex items-center space-x-3">
                   {/* Call button for 1:1 chats */}
-                  {selectedTarget.type === 'user' && (
+                  {selectedTarget.type==='user'&&(
                     <button
                       className="p-2.5 rounded-full bg-green-50 hover:bg-green-100 text-green-600 hover:text-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
                       aria-label="Llamar"
@@ -1163,11 +1183,11 @@ const ChatWindow=() => {
                       </svg>
                     </button>
                   )}
-                  
+
                   {/* Video call button for 1:1 chats */}
-                  {selectedTarget.type === 'user' && (
+                  {selectedTarget.type==='user'&&(
                     <button
-                      className="p-2.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-600 hover:text-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                      className="p-2.5 rounded-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-all duration-200 shadow-sm hover:shadow-md"
                       aria-label="Videollamada"
                       title="Iniciar videollamada"
                     >
@@ -1190,50 +1210,50 @@ const ChatWindow=() => {
             </div>
 
             <div ref={messagesContainerRef} className="flex-1 p-6 overflow-y-auto bg-gradient-to-b from-gray-50 to-white">
-              {isLoading ? (
+              {isLoading? (
                 <div className="h-full flex items-center justify-center">
                   <div className="flex flex-col items-center space-y-4">
                     <div className="animate-spin rounded-full h-10 w-10 border-3 border-red-600 border-t-transparent"></div>
                     <p className="text-sm text-gray-500 font-medium">Cargando mensajes...</p>
                   </div>
                 </div>
-              ) : (
+              ):(
                 <div className="h-full flex flex-col">
-                  {messages.length === 0 ? (
+                  {messages.length===0? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
                       <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-6 shadow-sm">
                         <FiMessageSquare className="w-10 h-10 text-gray-400" />
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-700 mb-2">No hay mensajes aún</h3>
+                      <h3 className="text-xl font-semibold text-gray-700 mb-2">💬 No hay mensajes aún</h3>
                       <p className="text-gray-500 mb-6 max-w-md">
-                        {selectedTarget?.type === 'role' 
-                          ? 'Sé el primero en enviar un mensaje al grupo'
-                          : 'Inicia la conversación enviando un mensaje'
+                        {selectedTarget?.type==='role'
+                          ? '🚀 Sé el primero en enviar un mensaje al grupo'
+                          :'👋 Inicia la conversación enviando un mensaje'
                         }
                       </p>
                       <div className="flex items-center space-x-4 text-sm text-gray-400">
                         <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span>⚡</span>
                           <span>Mensajes en tiempo real</span>
                         </div>
                         <div className="flex items-center space-x-2">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span>💾</span>
                           <span>Historial guardado</span>
                         </div>
                       </div>
                     </div>
-                  ) : (
+                  ):(
                     <div className="space-y-4 pb-4">
                       {messages.map((message, index) => {
-                        const isOwn = message.sender?.id === currentUser?.id;
-                        const username = isOwn ? 'Tú' : message.sender?.username || 'Usuario';
+                        const isOwn=message.sender?.id===currentUser?.id;
+                        const username=isOwn? 'Tú':message.sender?.username||'Usuario';
 
                         return (
                           <MessageBubble
-                            key={message.id || index}
+                            key={message.id||index}
                             message={message.content}
                             isOwn={isOwn}
-                            timestamp={message.timestamp || new Date().toISOString()}
+                            timestamp={message.timestamp||new Date().toISOString()}
                             username={username}
                           />
                         );
@@ -1250,16 +1270,16 @@ const ChatWindow=() => {
                 <div className="p-4">
                   <input
                     type="text"
-                    placeholder={`Escribe un mensaje ${selectedTarget?.type === 'role' ? 'al grupo' : 'a ' + selectedTarget?.name}...`}
+                    placeholder={`Escribe un mensaje ${selectedTarget?.type==='role'? 'al grupo':'a '+selectedTarget?.name}...`}
                     className="w-full bg-transparent border-none focus:ring-0 text-gray-800 placeholder-gray-500 text-base resize-none"
                     value={inputValue}
                     onChange={handleInputChange}
                     onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key==='Enter'&&!e.shiftKey) {
                         e.preventDefault();
-                        const form = e.currentTarget.closest('form');
+                        const form=e.currentTarget.closest('form');
                         if (form) {
-                          const formEvent = {
+                          const formEvent={
                             ...e,
                             preventDefault: () => e.preventDefault(),
                             currentTarget: form as HTMLFormElement
@@ -1272,47 +1292,77 @@ const ChatWindow=() => {
                 </div>
                 <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
                   <div className="flex items-center space-x-3">
-                    {/* Emoji button */}
-                    <button
-                      type="button"
-                      className="p-2 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-all duration-200"
-                      title="Emojis"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </button>
-                    
-                    {/* Attachment button */}
-                    <button
-                      type="button"
-                      className="p-2 rounded-full hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-all duration-200"
-                      title="Adjuntar archivo"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                      </svg>
-                    </button>
+                    {/* Emoji button with picker */}
+                    <div className="relative" ref={emojiPickerRef}>
+                      <button
+                        type="button"
+                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                        className={`p-2 rounded-full transition-all duration-200 ${showEmojiPicker
+                          ? 'bg-red-100 text-red-600'
+                          :'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
+                          }`}
+                        title="Emojis"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+
+                      {/* Emoji Picker */}
+                      {showEmojiPicker&&(
+                        <div className="absolute bottom-full left-0 mb-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-4 w-80 max-h-96 overflow-y-auto z-50">
+                          <div className="space-y-4">
+                            {Object.entries(emojiCategories).map(([category, emojis]) => (
+                              <div key={category}>
+                                <h4 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                                  {category}
+                                </h4>
+                                <div className="grid grid-cols-8 gap-1">
+                                  {emojis.map((emoji, index) => (
+                                    <button
+                                      key={`${category}-${index}`}
+                                      type="button"
+                                      onClick={() => handleEmojiSelect(emoji)}
+                                      className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-lg transition-all duration-200 hover:scale-110"
+                                      title={emoji}
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Picker footer */}
+                          <div className="mt-4 pt-3 border-t border-gray-100 text-center">
+                            <p className="text-xs text-gray-500">
+                              Haz clic en un emoji para agregarlo 😊
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+
                   </div>
-                  
+
                   <div className="flex items-center space-x-3">
                     {/* Character counter for long messages */}
-                    {inputValue.length > 100 && (
-                      <span className={`text-xs font-medium ${
-                        inputValue.length > 500 ? 'text-red-500' : 'text-gray-400'
-                      }`}>
+                    {inputValue.length>100&&(
+                      <span className={`text-xs font-medium ${inputValue.length>500? 'text-red-500':'text-gray-400'
+                        }`}>
                         {inputValue.length}/1000
                       </span>
                     )}
-                    
+
                     {/* Send button */}
                     <button
                       type="submit"
-                      className={`px-6 py-2.5 rounded-full font-semibold transition-all duration-200 flex items-center space-x-2 ${
-                        inputValue.trim()
-                          ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transform hover:scale-105'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      }`}
+                      className={`px-6 py-2.5 rounded-full font-semibold transition-all duration-200 flex items-center space-x-2 ${inputValue.trim()
+                        ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transform hover:scale-105'
+                        :'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        }`}
                       disabled={!inputValue.trim()}
                     >
                       <span>Enviar</span>
@@ -1323,48 +1373,48 @@ const ChatWindow=() => {
                   </div>
                 </div>
               </div>
-              
+
               {/* Typing indicator hint */}
               <div className="mt-2 text-xs text-gray-400 text-center">
                 Presiona Enter para enviar • Shift + Enter para nueva línea
               </div>
             </form>
           </div>
-        ) : (
+        ):(
           <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-gray-50 to-white">
             <div className="text-center p-12 max-w-lg">
               {/* Enhanced icon with gradient background */}
               <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center shadow-lg">
                 <FiMessageSquare className="w-12 h-12 text-red-600" />
               </div>
-              
+
               {/* Improved typography */}
               <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                Sistema de Chat Interno
+                💬 Sistema de Chat Interno
               </h3>
               <p className="text-gray-600 mb-8 leading-relaxed">
-                Comunícate con tu equipo de forma segura y eficiente
+                🔒 Comunícate con tu equipo de forma segura y eficiente
               </p>
-              
+
               {/* Simplified feature highlights */}
               <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-blue-100 flex items-center justify-center">
-                    <FiUser className="w-4 h-4 text-blue-600" />
+                  <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-red-100 flex items-center justify-center">
+                    <span className="text-lg">👤</span>
                   </div>
                   <p className="text-xs font-medium text-gray-700">Chat Directo</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                   <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-red-100 flex items-center justify-center">
-                    <FiUsers className="w-4 h-4 text-red-600" />
+                    <span className="text-lg">👥</span>
                   </div>
                   <p className="text-xs font-medium text-gray-700">Grupos</p>
                 </div>
               </div>
-              
+
               {/* Call to action */}
               <div className="mt-8 text-sm text-gray-500">
-                Selecciona un contacto para comenzar
+                👆 Selecciona un contacto para comenzar
               </div>
             </div>
           </div>
