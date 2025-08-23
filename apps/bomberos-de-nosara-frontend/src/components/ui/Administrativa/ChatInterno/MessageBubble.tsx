@@ -18,20 +18,47 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     ? format(new Date(timestamp), 'HH:mm', { locale: es })
     : '';
 
-  // Different colors for different users (using a simple hash function)
+  // Enhanced color system with gradients for better visual appeal
   const getUserColor = (name: string) => {
-    if (isOwn) return 'bg-red-600 text-white';
+    if (isOwn) return {
+      bubble: 'bg-gradient-to-br from-red-500 to-red-600 text-white shadow-md',
+      avatar: 'bg-gradient-to-br from-red-100 to-red-200 text-red-600'
+    };
     
-    // Generate a consistent color based on username
-    const colors = [
-      'bg-green-500 text-white',
-      'bg-purple-500 text-white',
-      'bg-pink-500 text-white',
-      'bg-indigo-500 text-white',
-      'bg-teal-500 text-white',
-      'bg-amber-500 text-white',
-      'bg-rose-500 text-white',
-      'bg-cyan-500 text-white',
+    // Generate consistent colors based on username with gradients
+    const colorSchemes = [
+      {
+        bubble: 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md',
+        avatar: 'bg-gradient-to-br from-blue-100 to-blue-200 text-blue-600'
+      },
+      {
+        bubble: 'bg-gradient-to-br from-green-500 to-green-600 text-white shadow-md',
+        avatar: 'bg-gradient-to-br from-green-100 to-green-200 text-green-600'
+      },
+      {
+        bubble: 'bg-gradient-to-br from-purple-500 to-purple-600 text-white shadow-md',
+        avatar: 'bg-gradient-to-br from-purple-100 to-purple-200 text-purple-600'
+      },
+      {
+        bubble: 'bg-gradient-to-br from-pink-500 to-pink-600 text-white shadow-md',
+        avatar: 'bg-gradient-to-br from-pink-100 to-pink-200 text-pink-600'
+      },
+      {
+        bubble: 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-md',
+        avatar: 'bg-gradient-to-br from-indigo-100 to-indigo-200 text-indigo-600'
+      },
+      {
+        bubble: 'bg-gradient-to-br from-teal-500 to-teal-600 text-white shadow-md',
+        avatar: 'bg-gradient-to-br from-teal-100 to-teal-200 text-teal-600'
+      },
+      {
+        bubble: 'bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-md',
+        avatar: 'bg-gradient-to-br from-amber-100 to-amber-200 text-amber-600'
+      },
+      {
+        bubble: 'bg-gradient-to-br from-cyan-500 to-cyan-600 text-white shadow-md',
+        avatar: 'bg-gradient-to-br from-cyan-100 to-cyan-200 text-cyan-600'
+      }
     ];
     
     // Simple hash function
@@ -40,43 +67,87 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       hash = username.charCodeAt(i) + ((hash << 5) - hash);
     }
     
-    return colors[Math.abs(hash) % colors.length];
+    return colorSchemes[Math.abs(hash) % colorSchemes.length];
   };
 
-  const bubbleColor = getUserColor(username);
+  const colors = getUserColor(username);
 
   return (
-    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3 px-2`}>
-      <div className={`flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-start max-w-[90%]`}>
-        {/* Avatar */}
+    <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-4 px-1 group`}>
+      <div className={`flex ${isOwn ? 'flex-row-reverse' : 'flex-row'} items-end max-w-[85%] lg:max-w-[70%]`}>
+        {/* Enhanced Avatar */}
         <div 
-          className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isOwn ? 'ml-2' : 'mr-2'} ${isOwn ? 'bg-red-100' : 'bg-gray-200'}`}
+          className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+            isOwn ? 'ml-3' : 'mr-3'
+          } ${colors.avatar} shadow-sm transition-all duration-200 group-hover:shadow-md`}
         >
-          <span className={`text-sm font-medium ${isOwn ? 'text-red-600' : 'text-gray-600'}`}>
+          <span className="text-sm font-semibold">
             {username.charAt(0).toUpperCase()}
           </span>
         </div>
         
-        {/* Message Container */}
-        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
-          {/* Username */}
+        {/* Enhanced Message Container */}
+        <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'} max-w-full`}>
+          {/* Username with better styling */}
           {!isOwn && (
-            <span className="text-xs font-medium text-gray-600 mb-1">
+            <span className="text-xs font-semibold text-gray-600 mb-1.5 px-1">
               {username}
             </span>
           )}
           
-          {/* Message Bubble */}
-          <div 
-            className={`px-4 py-2.5 rounded-2xl ${isOwn ? 'rounded-tr-sm' : 'rounded-tl-sm'} ${isOwn ? bubbleColor : 'bg-gray-100 text-gray-800'}`}
-          >
-            <p className="text-sm break-words">{message}</p>
+          {/* Enhanced Message Bubble */}
+          <div className="relative group/bubble">
+            <div 
+              className={`px-4 py-3 rounded-2xl ${
+                isOwn ? 'rounded-br-md' : 'rounded-bl-md'
+              } ${
+                isOwn 
+                  ? colors.bubble 
+                  : 'bg-white border border-gray-200 text-gray-800 shadow-sm hover:shadow-md'
+              } transition-all duration-200 transform hover:scale-[1.02] hover:-translate-y-0.5`}
+            >
+              <p className="text-sm leading-relaxed break-words whitespace-pre-wrap">
+                {message}
+              </p>
+              
+              {/* Message status indicator for own messages */}
+              {isOwn && (
+                <div className="flex items-center justify-end mt-1 space-x-1">
+                  <svg className="w-3 h-3 text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            
+            {/* Hover timestamp tooltip */}
+            <div className={`absolute ${
+              isOwn ? 'right-0' : 'left-0'
+            } -bottom-6 opacity-0 group-hover/bubble:opacity-100 transition-opacity duration-200 pointer-events-none`}>
+              <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded-md shadow-lg whitespace-nowrap">
+                {timestamp ? format(new Date(timestamp), 'MMM d, HH:mm', { locale: es }) : ''}
+              </div>
+            </div>
           </div>
           
-          {/* Timestamp */}
-          <span className={`text-xs mt-1 ${isOwn ? 'text-gray-500' : 'text-gray-400'}`}>
-            {formattedTime}
-          </span>
+          {/* Enhanced Timestamp */}
+          <div className={`flex items-center mt-1.5 px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
+            <span className={`text-xs font-medium ${
+              isOwn ? 'text-gray-500' : 'text-gray-400'
+            } opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
+              {formattedTime}
+            </span>
+            
+            {/* Delivery status for own messages */}
+            {isOwn && (
+              <div className="flex items-center ml-2 opacity-60 group-hover:opacity-100 transition-opacity duration-200">
+                <div className="flex space-x-0.5">
+                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                  <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
