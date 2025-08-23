@@ -45,8 +45,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  // Track connected clients by their socket ID
   private connectedClients=new Map<string, ConnectedClient>();
+  private superuserIds: Set<number> = new Set();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -55,6 +55,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatService: ChatService
   ) {
     this.server=new Server();
+    this.loadSuperusers();
   }
 
   afterInit(server: Server) {
@@ -62,7 +63,60 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server=server;
   }
 
-  // Get all currently connected user IDs
+  private async loadSuperusers() {
+    try {
+      const superusers = await this.chatService.getUsersByRole(RoleEnum.SUPERUSER);
+      this.superuserIds = new Set(superusers.map(user => user.id));
+      console.log(`Loaded ${this.superuserIds.size} SUPERUSER users:`, Array.from(this.superuserIds));
+    } catch (error) {
+      console.error('Error loading SUPERUSER users:', error);
+    }
+  }
+
+  private async addSuperusersToRoom(roomName: string) {
+    try {
+      for (const [socketId, clientData] of this.connectedClients.entries()) {
+        if (this.superuserIds.has(Number(clientData.userId))) {
+          const socket = this.server.sockets.sockets.get(socketId);
+          if (socket && !socket.rooms.has(roomName)) {
+            await socket.join(roomName);
+            console.log(`[SUPERUSER] Added SUPERUSER ${clientData.userId} to room ${roomName}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error adding SUPERUSER users to room ${roomName}:`, error);
+    }
+  }
+
+  private async sendMessageToSuperusers(messageData: any, excludeSenderId?: string|number) {
+    try {
+      console.log(`[DEBUG] sendMessageToSuperusers called. SuperuserIds:`, Array.from(this.superuserIds));
+      console.log(`[DEBUG] Connected clients:`, Array.from(this.connectedClients.entries()).map(([id, data]) => ({ socketId: id, userId: data.userId, role: data.role })));
+      
+      for (const [socketId, clientData] of this.connectedClients.entries()) {
+        console.log(`[DEBUG] Checking client ${clientData.userId}, isSuperuser: ${this.superuserIds.has(Number(clientData.userId))}, excludeSender: ${String(clientData.userId) !== String(excludeSenderId)}`);
+        
+        if (this.superuserIds.has(Number(clientData.userId)) && 
+            String(clientData.userId) !== String(excludeSenderId)) {
+          const socket = this.server.sockets.sockets.get(socketId);
+          if (socket) {
+            socket.emit('newMessage', {
+              ...messageData,
+              isOwn: false,
+              isSuperuserCopy: true
+            });
+            console.log(`[SUPERUSER] Sent message to SUPERUSER ${clientData.userId}`);
+          } else {
+            console.log(`[DEBUG] Socket not found for SUPERUSER ${clientData.userId}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message to SUPERUSER users:', error);
+    }
+  }
+
   private getOnlineUserIds(): number[] {
     const uniqueUserIds = new Set<number>();
     this.connectedClients.forEach(client => {
@@ -75,15 +129,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return Array.from(uniqueUserIds);
   }
 
-  // Notify all clients about a user's status change
   private notifyUserStatus(userId: number | string, status: 'online' | 'offline') {
     const statusData = { userId, status };
-    // Notify everyone about the status change
     this.server.emit('userStatus', statusData);
     console.log(`User ${userId} is now ${status}`);
   }
 
-  // Notify a specific client about all online users
   private notifyOnlineUsers(client: Socket) {
     const onlineUserIds = this.getOnlineUserIds();
     client.emit('onlineUsers', onlineUserIds);
@@ -115,7 +166,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const userId = payload.sub;
       const userRoles = payload.roles || [];
 
-      // Store minimal client data with role
       this.connectedClients.set(client.id, {
         userId,
         lastSeen: new Date(),
@@ -124,21 +174,37 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       console.log(`Client connected: ${client.id}, User ID: ${userId}, Role: ${userRoles[0]}`);
 
-      // Join user's personal room for direct messages
       await client.join(`user_${userId}`);
       
-      // Join role-based rooms
       if (userRoles?.length) {
         for (const role of userRoles) {
           const roleRoom = `role-${role}`;
           await client.join(roleRoom);
           console.log(`[CONNECTION] User ${userId} joined role room: ${roleRoom}`);
+          
+          // Add all SUPERUSER users to this role room
+          await this.addSuperusersToRoom(roleRoom);
         }
       } else {
         console.log(`[CONNECTION] No roles found in JWT payload for user ${userId}`);
       }
+      
+      // If this user is a SUPERUSER, add them to all existing role rooms
+      console.log(`[DEBUG] Checking if user ${userId} is SUPERUSER. SuperuserIds:`, Array.from(this.superuserIds));
+      console.log(`[DEBUG] User roles:`, userRoles);
+      
+      if (this.superuserIds.has(Number(userId)) || userRoles.includes('SUPERUSER')) {
+        console.log(`[SUPERUSER] User ${userId} is a SUPERUSER, adding to all role rooms`);
+        const allRoleRooms = ['role-ADMIN', 'role-PERSONAL_BOMBERIL', 'role-VOLUNTARIO'];
+        for (const roleRoom of allRoleRooms) {
+          await client.join(roleRoom);
+          console.log(`[SUPERUSER] SUPERUSER ${userId} joined role room: ${roleRoom}`);
+        }
+        
+        // Also ensure this user is in the superuserIds set
+        this.superuserIds.add(Number(userId));
+      }
 
-      // Notify the client about their connection status
       client.emit('connected', {
         status: 'connected',
         clientId: client.id,
@@ -146,10 +212,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         role: payload.role
       });
 
-      // Notify all clients about this user coming online
       this.notifyUserStatus(userId, 'online');
       
-      // Send the list of online users to the newly connected client
       this.notifyOnlineUsers(client);
 
     } catch (error) {
@@ -180,19 +244,14 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const { userId } = clientData;
     console.log(`Client disconnected: ${client.id}, User ID: ${userId}`);
     
-    // Remove client from connected clients
     this.connectedClients.delete(client.id);
 
-    // Check if this was the last connection for this user
     const isUserStillOnline = Array.from(this.connectedClients.values())
       .some(client => client.userId === userId);
-
-    // If user has no more active connections, notify others they're offline
     if (!isUserStillOnline) {
       this.notifyUserStatus(userId, 'offline');
     }
 
-    // Leave all rooms
     client.rooms.forEach(room => client.leave(room));
   }
 
@@ -205,7 +264,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const { conversationId, isGroup=false }=data;
 
-    // If joining a group conversation, verify the user has access
     if (isGroup) {
       const hasAccess=await this.chatService.userHasAccessToConversation(
         Number(clientData.userId),
@@ -217,19 +275,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
 
-    // Leave any existing conversation rooms
     client.rooms.forEach(room => {
       if (room!==client.id&&(room.startsWith('conversation_')||room.startsWith('group_'))) {
         client.leave(room);
       }
     });
 
-    // Join the new conversation room
     const roomName=isGroup? `group_${conversationId}`:`conversation_${conversationId}`;
     await client.join(roomName);
     console.log(`User ${clientData.userId} joined ${isGroup? 'group':'conversation'} ${conversationId}`);
+    
+    // Add all SUPERUSER users to this conversation room
+    await this.addSuperusersToRoom(roomName);
 
-    // Notify the client they've successfully joined
     client.emit('conversationJoined', {
       conversationId,
       isGroup,
@@ -253,7 +311,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new Error('Message content is required');
       }
 
-      // Convert to number and validate
       const targetId=Number(to);
       console.log('Target ID:', targetId);
       if (isNaN(targetId)) {
@@ -267,25 +324,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.log('Sending group message');
         console.log('Target ID:', targetId);
         console.log('Sender ID:', senderId);
-        // For group messages
         const conversation=await this.chatService.getConversationById(targetId);
         if (!conversation) {
           throw new Error('Conversation not found');
         }
 
-        // Verify user is a participant in the group
         const isParticipant=conversation.participants.some(p => p.id===Number(senderId));
         if (!isParticipant) {
           throw new Error('You are not a participant of this group');
         }
 
-        // Save the message to the database
         const savedMessage=await this.chatService.createMessage({
           content: message,
           conversationId: conversation.id
         }, Number(senderId));
 
-        // Format the message for the client
         messageData={
           id: savedMessage.id,
           content: savedMessage.content,
@@ -299,17 +352,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           }
         };
 
-        // Set room name for group
         roomName=`group_${targetId}`;
+        
+        // Ensure SUPERUSER users are in the group room
+        await this.addSuperusersToRoom(roomName);
 
       } else {
-        // For 1:1 messages
         const conversation=await this.chatService.getConversationWithUser(
           Number(senderId),
           targetId
         );
 
-        // Save the message to the database
         const savedMessage=await this.chatService.createMessage({
           content: message,
           conversationId: conversation.id,
@@ -330,21 +383,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           conversationId: savedMessage.conversation.id
         };
 
-        // Set room name for 1:1 chat (recipient's personal room)
         roomName=`user_${targetId}`;
+        
+        // Ensure SUPERUSER users are in the conversation room
+        const conversationRoom = `conversation_${savedMessage.conversation.id}`;
+        await this.addSuperusersToRoom(conversationRoom);
       }
 
-      // Emit to the appropriate room (group or user)
       this.server.to(roomName).emit('newMessage', {
         ...messageData,
         isOwn: false
       });
 
-      // Also send to sender in their personal room
       this.server.to(`user_${senderId}`).emit('newMessage', {
         ...messageData,
         isOwn: true
       });
+      
+      // Ensure all connected SUPERUSER users receive the message
+      await this.sendMessageToSuperusers(messageData, senderId);
 
       return {
         success: true,
@@ -376,7 +433,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new Error('Role and message content are required');
       }
 
-      // Find or create group conversation for this role (only create if absolutely necessary)
       let groupConversation;
       try {
         console.log(`[GROUP CHAT] Looking for existing group conversation for role: ${role}`);
@@ -385,10 +441,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (!groupConversation) {
           console.log(`[GROUP CHAT] No existing conversation found, creating new one`);
 
-          // Double-check: try to find any group conversation with this role name
-          // This prevents race conditions where multiple users create the same group simultaneously
           try {
-            // Use a more comprehensive search to avoid duplicates
             const allConversations=await this.chatService.getConversations(Number(senderId));
             const existingGroup=allConversations.find(conv =>
               conv.isGroup&&conv.groupName===groupName
@@ -398,7 +451,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
               console.log(`[GROUP CHAT] Found existing group conversation during double-check: ${existingGroup.id}`);
               groupConversation=existingGroup;
             } else {
-              // Create group conversation if it truly doesn't exist
               const usersWithRole=await this.chatService.getUsersByRole(role);
               console.log(`[GROUP CHAT] Found ${usersWithRole.length} users with role ${role}:`, usersWithRole.map(u => u.id));
               const participantIds=usersWithRole.map((user: any) => user.id);
@@ -411,7 +463,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             }
           } catch (doubleCheckError) {
             console.error('[GROUP CHAT] Error during double-check, proceeding with creation:', doubleCheckError);
-            // Fallback to original creation logic
             const usersWithRole=await this.chatService.getUsersByRole(role);
             const participantIds=usersWithRole.map((user: any) => user.id);
             groupConversation=await this.chatService.createGroupConversation({
@@ -427,7 +478,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         throw new Error('Failed to create or find group conversation');
       }
 
-      // Save message to database
       console.log(`[GROUP CHAT] Saving message to database for conversation ${groupConversation.id}`);
       const savedMessage=await this.chatService.createMessage({
         content: message,
@@ -451,28 +501,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       console.log(`[GROUP CHAT] Prepared message data:`, JSON.stringify(messageData));
 
-      // Broadcast to all users in the role room EXCEPT the sender
       const roleRoom=`role-${role}`;
       console.log(`[GROUP CHAT] Broadcasting to role room: ${roleRoom} (excluding sender ${senderId})`);
+      
+      // Ensure SUPERUSER users are in the role room
+      await this.addSuperusersToRoom(roleRoom);
 
-      // Get all sockets in the role room
       const socketsInRoom=await this.server.in(roleRoom).fetchSockets();
       console.log(`[GROUP CHAT] Found ${socketsInRoom.length} sockets in room ${roleRoom}`);
       console.log(`[GROUP CHAT] Sockets in room:`, socketsInRoom.map(s => ({ id: s.id, userId: this.connectedClients.get(s.id)?.userId })));
 
-      // Send the message to all users in the role room except the sender
       for (const socket of socketsInRoom) {
         const socketUserId=this.connectedClients.get(socket.id)?.userId;
         if (String(socketUserId)!==String(senderId)) {
-          // Only send to other users in the room, not the sender
           this.server.to(socket.id).emit('newMessage', {
             ...messageData,
             isOwn: false
           });
         }
       }
+      
+      // Ensure all connected SUPERUSER users receive the group message
+      await this.sendMessageToSuperusers(messageData, senderId);
 
-      // The sender's message is already handled optimistically in the frontend
       console.log(`[GROUP CHAT] Message sent to all group members except sender`);
 
       return {
@@ -509,9 +560,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       const { to, isTyping, userId, username, isGroup=false, role }=data;
 
-      // Broadcast to the appropriate room
       if (isGroup&&role) {
-        // For group chats, send to everyone in the role room except the sender
         client.to(`role-${role}`).emit('typing', {
           userId,
           username,
@@ -520,8 +569,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           role,
           timestamp: new Date().toISOString()
         });
+        
+        // Send typing indicators to SUPERUSER users
+        for (const [socketId, clientData] of this.connectedClients.entries()) {
+          if (this.superuserIds.has(Number(clientData.userId)) && 
+              String(clientData.userId) !== String(userId)) {
+            const socket = this.server.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('typing', {
+                userId,
+                username,
+                isTyping,
+                isGroup: true,
+                role,
+                timestamp: new Date().toISOString(),
+                isSuperuserCopy: true
+              });
+            }
+          }
+        }
       } else if (!isGroup) {
-        // For 1:1 chats, send only to the recipient
         this.server.to(`user_${to}`).emit('typing', {
           userId,
           username,
@@ -529,6 +596,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           isGroup: false,
           timestamp: new Date().toISOString()
         });
+        
+        // Send typing indicators to SUPERUSER users for direct messages
+        for (const [socketId, clientData] of this.connectedClients.entries()) {
+          if (this.superuserIds.has(Number(clientData.userId)) && 
+              String(clientData.userId) !== String(userId) &&
+              String(clientData.userId) !== String(to)) {
+            const socket = this.server.sockets.sockets.get(socketId);
+            if (socket) {
+              socket.emit('typing', {
+                userId,
+                username,
+                isTyping,
+                isGroup: false,
+                timestamp: new Date().toISOString(),
+                isSuperuserCopy: true
+              });
+            }
+          }
+        }
       }
     } catch (error) {
       console.error('Error handling typing indicator:', error);
@@ -537,10 +623,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @OnEvent('message.created')
   handleMessageCreatedEvent(payload: any) {
-    // This event handler is for database-triggered events
-    // Since we're handling real-time messaging directly in the socket handlers,
-    // we can remove this to prevent duplicate messages
     console.log('Message created event received:', payload);
-    // Optional: Handle any additional logic like notifications, logging, etc.
   }
 }
