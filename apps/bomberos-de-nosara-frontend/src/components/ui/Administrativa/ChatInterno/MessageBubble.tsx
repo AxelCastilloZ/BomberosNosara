@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isThisWeek, isThisYear, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface MessageBubbleProps {
@@ -14,9 +14,61 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   timestamp,
   username,
 }) => {
-  const formattedTime = timestamp 
-    ? format(new Date(timestamp), 'HH:mm', { locale: es })
-    : '';
+  const formatMessageTime = (dateString: string) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    
+    // For messages from today, show time (e.g., "14:30")
+    if (isToday(date)) {
+      return format(date, 'HH:mm');
+    }
+    
+    // For messages from this week, show day and time (e.g., "Lun 14:30")
+    if (isThisWeek(date, { weekStartsOn: 1 })) {
+      return format(date, 'EEE HH:mm', { locale: es });
+    }
+    
+    // For messages from this year, show month, day and time (e.g., "15 Ago 14:30")
+    if (isThisYear(date)) {
+      return format(date, 'd MMM HH:mm', { locale: es });
+    }
+    
+    // For older messages, show full date and time (e.g., "15/08/2023 14:30")
+    return format(date, 'dd/MM/yyyy HH:mm');
+  };
+  
+  const formatRelativeTime = (dateString: string) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInDays = differenceInDays(now, date);
+    
+    // For messages less than 1 hour old, show "hace X minutos"
+    if (diffInDays === 0) {
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      if (diffInMinutes < 60) {
+        return `hace ${diffInMinutes} min`;
+      }
+      // For messages less than 24 hours old, show "hace X horas"
+      const diffInHours = Math.floor(diffInMinutes / 60);
+      return `hace ${diffInHours} h`;
+    }
+    
+    // For messages from yesterday, show "Ayer"
+    if (diffInDays === 1) return 'Ayer';
+    
+    // For messages within a week, show day name
+    if (diffInDays < 7) return format(date, 'EEEE', { locale: es });
+    
+    // For older messages, show date
+    return format(date, 'dd/MM/yyyy');
+  };
+  
+  const formattedTime = timestamp ? formatMessageTime(timestamp) : '';
+  const relativeTime = timestamp ? formatRelativeTime(timestamp) : '';
 
   // Enhanced color system with gradients for better visual appeal
   const getUserColor = (name: string) => {
@@ -125,7 +177,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
               isOwn ? 'right-0' : 'left-0'
             } -bottom-6 opacity-0 group-hover/bubble:opacity-100 transition-opacity duration-200 pointer-events-none`}>
               <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded-md shadow-lg whitespace-nowrap">
-                {timestamp ? format(new Date(timestamp), 'MMM d, HH:mm', { locale: es }) : ''}
+                {timestamp ? format(new Date(timestamp), "EEEE d 'de' MMMM 'de' yyyy, HH:mm", { locale: es }) : ''}
               </div>
             </div>
           </div>
@@ -134,7 +186,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           <div className={`flex items-center mt-1.5 px-1 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
             <span className={`text-xs font-medium ${
               isOwn ? 'text-gray-500' : 'text-gray-400'
-            } opacity-0 group-hover:opacity-100 transition-opacity duration-200`}>
+            }`}>
               {formattedTime}
             </span>
             
