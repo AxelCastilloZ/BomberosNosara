@@ -21,9 +21,9 @@ export default function DonantesPage() {
   return (
     <>
       <DonantesGrid donantes={donantes} onLeerMas={(donante) => setSelected(donante)} />
-      <DonarAhoraSection />
+     
       <DonanteModal donante={selected} onClose={() => setSelected(null)} />
-      <DonationDetails />
+    
     </>
   );
 }
