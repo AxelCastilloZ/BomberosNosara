@@ -15,6 +15,7 @@ import { SeederModule } from './seeder/seeder.module';
 import { NoticiaModule } from './noticias/noticia.module';
 import { SugerenciaModule } from './suggestion/suggestion.module';
 import { EquipoBomberilModule } from './equipo-bomberil/equipo-bomberil.module';
+import { MaterialEducativoModule } from './material-educativo/material-educativo.module';
 import { UploadModule } from './upload/upload.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
@@ -37,7 +38,7 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
         NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
         PORT: Joi.number().default(3000),
 
-        // --- DB (todo requerido) ---
+        // --- DB (requeridos) ---
         DATABASE_HOST: Joi.string().required(),
         DATABASE_PORT: Joi.number().required(),
         DATABASE_USER: Joi.string().required(),
@@ -49,26 +50,26 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
         APP_BASE_URL: Joi.string().uri().default('http://localhost:5173'),
         FRONTEND_URL: Joi.string().uri().default('http://localhost:5173'),
 
-        // --- Mail (opcionales; si faltan, usaremos jsonTransport en AuthModule) ---
+        // --- Mail (opcionales) ---
         SMTP_HOST: Joi.string().optional(),
         SMTP_PORT: Joi.number().optional(),
         SMTP_USER: Joi.string().optional(),
         SMTP_PASS: Joi.string().optional(),
         MAIL_FROM: Joi.string().optional(),
 
-        // --- Seeder (todo requerido; nada hardcodeado) ---
+        // --- Seeder (requeridos) ---
         ADMIN_USERNAME: Joi.string().required(),
         ADMIN_EMAIL: Joi.string().email().required(),
         ADMIN_PASSWORD: Joi.string().min(8).required(),
         BCRYPT_ROUNDS: Joi.number().default(10),
 
-        // --- Flags de TypeORM (no sensibles) ---
+        // --- Flags TypeORM (no sensibles) ---
         DB_SYNC: Joi.boolean().default(true),
-        DB_DROP_SCHEMA: Joi.boolean().default(false), // en prod SIEMPRE false
+        DB_DROP_SCHEMA: Joi.boolean().default(false), // en prod siempre false
       }),
     }),
 
-    // Rate limiting global (v5: ttl en milisegundos)
+    // Rate limiting global
     ThrottlerModule.forRoot([
       { ttl: 60_000, limit: 100 },
     ]),
@@ -79,7 +80,6 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
       serveRoot: '/uploads',
     }),
 
-    
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -92,25 +92,26 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
         database: cfg.getOrThrow<string>('DATABASE_NAME'),
         autoLoadEntities: true,
         synchronize: cfg.get<boolean>('DB_SYNC', true),
-        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', true),
+        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', false), // default seguro
         retryAttempts: 10,
         retryDelay: 3000,
       }),
     }),
 
-  
+    // --- Módulos de la app (se conservan TODOS) ---
     DonantesModule,
     NoticiaModule,
-    AuthModule,   
+    AuthModule,
     UsersModule,
     RolesModule,
     SeederModule,
     SugerenciaModule,
     EquipoBomberilModule,
     UploadModule,
-    VehiculosModule,
-    WebSocketsModule,
-    AppMobileModule,
+    MaterialEducativoModule, // <- de feature/melu/sprint3
+    VehiculosModule,         // <- de sprint3
+    WebSocketsModule,        // <- de sprint3
+    AppMobileModule,         // <- de sprint3
   ],
 })
 export class AppModule {}

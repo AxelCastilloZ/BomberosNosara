@@ -18,7 +18,7 @@ export default function ContactSection() {
           <img
             src="/logo.png"
             alt="Bomberos de Nosara"
-            className="h-20 w-auto"
+            className="h-20 w-auto "
             onError={(e) => {
               const img = e.currentTarget;
               img.onerror = null;
