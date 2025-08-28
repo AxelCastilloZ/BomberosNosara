@@ -1,6 +1,6 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { useRegistrarReposicion } from '../../../../service/equipoBomberilService';
+import { useRegistrarReposicion } from '../../../../hooks/useEquiposBomberiles';
 import { ReposicionData } from '../../../../interfaces/EquipoBomberil/reposicionData';
 
 interface Props {

@@ -20,6 +20,8 @@
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["shared/*"]
-    }
+    },
+
+    "types": ["react","react-dom"]
   }
 }
