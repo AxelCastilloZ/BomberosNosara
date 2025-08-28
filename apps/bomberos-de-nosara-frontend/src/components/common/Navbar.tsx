@@ -3,91 +3,103 @@ import { useState, useEffect } from 'react';
 import UserButton from '../ui/ProfileButton/UserButton.js';
 
 export default function Navbar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = window.scrollY > 10;
-      if (isScrolled !== scrolled) {
-        setScrolled(isScrolled);
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [scrolled]);
+  }, []);
+
+  const link =
+    "relative px-2 py-2 text-[15px] font-medium text-slate-800 whitespace-nowrap transition-colors duration-200 " +
+    "after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-red-600 " +
+    "after:transition-all after:duration-300 hover:after:w-full hover:text-red-600";
 
   return (
     <nav
-      className={`
-        w-full z-50 transition-all duration-300 fixed top-0 
-        ${scrolled
-          ? 'bg-white/30 backdrop-blur-lg shadow-md'
-          : 'bg-white'}
-      `}
+      className={`fixed top-0 w-full z-50 bg-white/95 backdrop-blur border-b border-slate-200 transition-all duration-300 ${
+        scrolled ? 'h-16' : 'h-24'
+      }`}
+      role="navigation"
+      aria-label="Main"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex-shrink-0 flex items-center">
-            <Link to="/" className="flex items-center">
+      {/* menos padding a la izquierda para acercar todo al borde */}
+      <div className="mx-auto max-w-7xl pl-0 pr-4 sm:pl-1 sm:pr-6 lg:pl-2 lg:pr-8 h-full">
+        <div className="flex items-center justify-between h-full">
+          {/* IZQUIERDA: logo (más a la izquierda, sin cortar) */}
+          <div className="flex items-center -ml-6 pr-4 lg:pr-8">
+            <Link to="/" aria-label="Inicio" className="flex items-center">
               <img
                 src="/logo.png"
                 alt="Bomberos de Nosara"
-                className="h-12 w-auto"
+                className={`block w-auto object-contain shrink-0 select-none transition-all duration-300 ${
+                  scrolled ? 'h-12' : 'h-16 md:h-20 lg:h-20 xl:h-20'
+                } -ml-2`}  /* <- leve empuje extra a la izquierda, sin recorte */
+                draggable={false}
+                decoding="async"
                 onError={(e) => {
-                  const img = e.currentTarget;
+                  const img = e.currentTarget as HTMLImageElement;
                   img.onerror = null;
-                  img.src = "https://i.ibb.co/1J8rYnhR/bomberos-de-nosara-firefighters-logo-x2.webp";
+                  img.src = 'https://i.ibb.co/1J8rYnhR/bomberos-de-nosara-firefighters-logo-x2.webp';
                 }}
               />
             </Link>
           </div>
 
-          <div className="hidden md:flex items-center space-x-8 ml-10">
-            <Link to="/sobre-nosotros" className="text-gray-700 hover:text-red-600 px-2 py-1 text-sm font-medium border-b-2 border-transparent hover:border-red-600 transition-all">
-              SOBRE NOSOTROS
-            </Link>
-            <Link to="/nuestro-trabajo" className="text-gray-700 hover:text-red-600 px-2 py-1 text-sm font-medium border-b-2 border-transparent hover:border-red-600 transition-all">
-              NUESTRO TRABAJO
-            </Link>
-            <Link to="/donantes" className="text-gray-700 hover:text-red-600 px-2 py-1 text-sm font-medium border-b-2 border-transparent hover:border-red-600 transition-all">
-              DONANTES
-            </Link>
-            <Link to="/fotos" className="text-gray-700 hover:text-red-600 px-2 py-1 text-sm font-medium border-b-2 border-transparent hover:border-red-600 transition-all">
-              FOTOS
-            </Link>
-            <Link to="/sugerencias" className="text-gray-700 hover:text-red-600 px-2 py-1 text-sm font-medium border-b-2 border-transparent hover:border-red-600 transition-all">
-              SUGERENCIAS
-              </Link>
-            <Link to="/noticias" className="text-gray-700 hover:text-red-600 px-2 py-1 text-sm font-medium border-b-2 border-transparent hover:border-red-600 transition-all">
-              NOTICIAS
-            </Link>
-            <a
-              href="#contact"
-              className="text-gray-700 hover:text-red-600 px-2 py-1 text-sm font-medium border-b-2 border-transparent hover:border-red-600 transition-all">
-              CONTACTO
-            </a>
-
-            <Link to="/donar" className="text-gray-700 hover:text-red-600 px-2 py-1 text-sm font-medium border-b-2 border-transparent hover:border-red-600 transition-all">
-              DONAR
-            </Link>
-
-            <UserButton />
-
+          {/* CENTRO: links */}
+          <div className="hidden lg:flex items-center justify-center flex-1">
+            <ul className="flex items-center gap-10 xl:gap-14">
+              <li><Link to="/sobre-nosotros" className={link}>SOBRE NOSOTROS</Link></li>
+              <li><Link to="/nuestro-trabajo" className={link}>NUESTRO TRABAJO</Link></li>
+              <li><Link to="/donantes" className={link}>DONANTES</Link></li>
+              <li><Link to="/noticias" className={link}>NOTICIAS</Link></li>
+              <li><a href="#contact" className={link}>CONTACTO</a></li>
+              <li><Link to="/donar" className={link}>DONAR</Link></li>
+            </ul>
           </div>
 
-          <div className="md:hidden flex items-center">
+          {/* DERECHA: user + hamburguesa */}
+          <div className="flex items-center -mr-3 pl-8 lg:pl-12">
+            <UserButton />
             <button
               type="button"
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:text-red-600 focus:outline-none"
-              aria-expanded="false"
+              className="lg:hidden ml-2 inline-flex items-center justify-center p-2 rounded-md text-slate-800 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+              aria-controls="mobile-menu"
+              aria-expanded={mobileOpen}
+              onClick={() => setMobileOpen(v => !v)}
             >
-              <span className="sr-only">Abrir menú principal</span>
-              <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none"
-                viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <span className="sr-only">Abrir menú</span>
+              {mobileOpen ? (
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
             </button>
+          </div>
+        </div>
+
+        {/* MENÚ MÓVIL */}
+        <div
+          id="mobile-menu"
+          className={`lg:hidden overflow-hidden transition-[max-height,opacity] duration-300 ${
+            mobileOpen ? 'max-h-[520px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="border-t border-slate-200 py-2 bg-white">
+            <nav className="flex flex-col">
+              <Link to="/sobre-nosotros" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>SOBRE NOSOTROS</Link>
+              <Link to="/nuestro-trabajo" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NUESTRO TRABAJO</Link>
+              <Link to="/donantes" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONANTES</Link>
+              <Link to="/noticias" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NOTICIAS</Link>
+              <a href="#contact" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>CONTACTO</a>
+              <Link to="/donar" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONAR</Link>
+            </nav>
           </div>
         </div>
       </div>
