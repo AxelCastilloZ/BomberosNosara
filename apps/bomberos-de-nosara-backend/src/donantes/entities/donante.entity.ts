@@ -1,9 +1,9 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('donantes')
 export class Donante {
-  @PrimaryColumn()
-  id!: string;
+  @PrimaryGeneratedColumn("increment")
+  id!: number;
 
   @Column()
   nombre!: string;
@@ -11,10 +11,10 @@ export class Donante {
   @Column({ type: 'text' })
   descripcion!: string;
 
- @Column({ length: 1000 })
+ @Column({ length: 1000, nullable: true  })
   logo!: string;
 
-@Column({ length: 1000 })
+@Column({ length: 1000})
 url!: string;
 
 }
