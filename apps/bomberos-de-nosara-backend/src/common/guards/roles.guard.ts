@@ -1,8 +1,5 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-} from '@nestjs/common';
+// src/common/guards/roles.guard.ts
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { RoleEnum } from '../../roles/role.enum';
@@ -10,21 +7,28 @@ import { JwtPayload } from '../../auth/interfaces/jwt-payload.interface';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<RoleEnum[]>(
-      ROLES_KEY,
-      [context.getHandler(), context.getClass()]
-    );
+    const requiredRoles =
+      this.reflector.getAllAndOverride<RoleEnum[]>(ROLES_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? [];
 
-    if (!requiredRoles || requiredRoles.length === 0) {
-      return true; 
-    }
+    // si no exige roles → permitir
+    if (requiredRoles.length === 0) return true;
 
-    const request = context.switchToHttp().getRequest();
-    const user: JwtPayload = request.user;
+    const req = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
+    const user = req.user;
 
-    return user?.roles?.some((role) => requiredRoles.includes(role));
+    // Normaliza: siempre termina en RoleEnum[]
+    const userRoles: RoleEnum[] = Array.isArray(user?.roles)
+      ? (user!.roles as RoleEnum[])
+      : [];
+
+    if (userRoles.length === 0) return false;
+
+    return requiredRoles.some((r) => userRoles.includes(r));
   }
 }

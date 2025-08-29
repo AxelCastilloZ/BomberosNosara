@@ -1,27 +1,34 @@
-// src/auth/entities/password-reset-token.entity.ts
 import {
-  Entity, PrimaryGeneratedColumn, Column, Index, CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index,
 } from 'typeorm';
 
 @Entity('password_reset_tokens')
+@Index('IDX_user_consumed', ['userId', 'consumedAt'])
+@Index('IDX_token_unique', ['token'], { unique: true })
 export class PasswordResetToken {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Index()
-  @Column({ type: 'int' })
+  @Column({ type: 'int', unsigned: true })
   userId!: number;
 
-  @Index({ unique: true })
-  @Column({ type: 'varchar', length: 128 })
-  token!: string;
+  @Column({ type: 'varchar', length: 128, unique: true })
+  token!: string; // (futuro recomendado: usar tokenHash)
 
   @Column({ type: 'datetime' })
   expiresAt!: Date;
 
-  @Column({ type: 'datetime', nullable: true, default: null })
-  consumedAt!: Date | null;
+  @Column({ type: 'datetime', nullable: true })
+  consumedAt: Date | null = null;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'datetime' })
   createdAt!: Date;
+
+  @UpdateDateColumn({ type: 'datetime' })
+  updatedAt!: Date;
 }

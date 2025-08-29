@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { requestPasswordReset } from '../../src/service/auth';
 
 type Props = {
-  /** Mensaje neutro al terminar (éxito/fracaso) */
+
   onSent?: (message: string) => void;
   className?: string;
 };
