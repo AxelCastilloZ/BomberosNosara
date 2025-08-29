@@ -9,10 +9,12 @@ import { TypeOrmExceptionFilter } from './common/filters/typeorm-exception.filte
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
   const uploadDir = join(process.cwd(), 'uploads');
-  if (!existsSync(uploadDir)) {
-    mkdirSync(uploadDir);
-  }
+  const donorsDir = join(uploadDir, 'donantes');
+
+ if (!existsSync(uploadDir)) mkdirSync(uploadDir);
+if (!existsSync(donorsDir)) mkdirSync(donorsDir);
 
   app.enableCors({
     origin: ['http://localhost:5174', 'http://localhost:5173'],
