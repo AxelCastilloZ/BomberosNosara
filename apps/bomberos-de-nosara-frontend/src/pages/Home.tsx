@@ -23,7 +23,7 @@ export default function Home() {
             apoyar nuestra labor.
           </p>
         </section>
-        
+
         {/* Secciones (todas full width) */}
         <section className="w-full px-8">
           <AboutUsPage />
@@ -41,12 +41,18 @@ export default function Home() {
           <NoticiasPage />
         </section>
 
+        {/* Conservamos Sugerencias de feature/footer/sprint3 */}
         <section className="w-full px-8 mt-16">
           <SuggestionsPage />
         </section>
 
         <section className="w-full px-8 mt-16">
           <DonarPage />
+        </section>
+
+        {/* Usamos ContactoPage para no dejar import sin uso */}
+        <section className="w-full px-8 mt-16">
+          <ContactoPage />
         </section>
 
         {/* Footer full width también */}
