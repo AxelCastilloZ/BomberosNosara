@@ -1,21 +1,22 @@
-
+// src/auth/auth.ts
 import { jwtDecode } from 'jwt-decode';
 
-export type JwtPayload = {
-  sub: number;
-  username: string;
-  roles: string[];
+export type AuthUser = {
+  id?: string;
   email?: string;
-  iat?: number;
-  exp?: number;
+  name?: string;
+  roles?: string[];
+  [k: string]: any;
 };
-
-export function getToken() {
-  return localStorage.getItem('token');
-}
 
 export function setToken(token: string) {
   localStorage.setItem('token', token);
+  const user = getUserFromToken(token);
+  if (user) localStorage.setItem('authUser', JSON.stringify(user));
+}
+
+export function getToken(): string | null {
+  return localStorage.getItem('token');
 }
 
 export function clearAuth() {
@@ -24,37 +25,53 @@ export function clearAuth() {
 }
 
 export function isAuthenticated(): boolean {
-  const t = getToken();
-  if (!t) return false;
-  try {
-    const dec = jwtDecode<JwtPayload>(t);
-    return !!dec?.sub && (!dec.exp || dec.exp * 1000 > Date.now());
-  } catch {
-    return false;
-  }
+  return !!localStorage.getItem('token');
 }
 
-export function getUserFromToken(): { username: string; roles: string[]; email?: string } | null {
-  const t = getToken();
+export function getUserFromToken(token?: string): AuthUser | null {
+  const t = token ?? localStorage.getItem('token');
   if (!t) return null;
+
   try {
-    const dec = jwtDecode<JwtPayload>(t);
-    return { username: dec.username, roles: dec.roles || [], email: dec.email };
+    const decoded: any = jwtDecode(t);
+    const roles: string[] | undefined =
+      decoded?.roles ??
+      (decoded?.role ? [decoded.role] : undefined);
+
+    const user: AuthUser = {
+      id: decoded?.sub ?? decoded?.id,
+      email: decoded?.email,
+      name: decoded?.name ?? decoded?.username,
+      roles,
+      ...decoded, // por si quieres acceder a más claims
+    };
+    return user;
   } catch {
     return null;
   }
 }
 
-export function hasRole(role: string): boolean {
-  const u = getUserFromToken();
-  return !!u?.roles?.includes(role);
+export function getUserRoles(): string[] {
+  const t = localStorage.getItem('token');
+  if (!t) return [];
+  try {
+    const decoded: any = jwtDecode(t);
+    return decoded?.roles ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function isAdmin(): boolean {
+  const roles = getUserRoles();
+  return roles.includes('ADMIN') || roles.includes('SUPERUSER');
 }
 
 export function isSuperUser(): boolean {
-  return hasRole('SUPERUSER');
+  const roles = getUserRoles();
+  return roles.includes('SUPERUSER');
 }
 
-export function getUserRoles(): string[] {
-  const u = getUserFromToken();
-  return u?.roles ?? [];
+export function logout() {
+  clearAuth();
 }
