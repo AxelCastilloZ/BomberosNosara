@@ -92,13 +92,13 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
         database: cfg.getOrThrow<string>('DATABASE_NAME'),
         autoLoadEntities: true,
         synchronize: cfg.get<boolean>('DB_SYNC', true),
-        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', true), // default seguro
+        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', false), // default seguro
         retryAttempts: 10,
         retryDelay: 3000,
       }),
     }),
 
-    
+    // --- Módulos de la app (se conservan TODOS) ---
     DonantesModule,
     NoticiaModule,
     AuthModule,

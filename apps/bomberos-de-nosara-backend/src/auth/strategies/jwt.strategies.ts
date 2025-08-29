@@ -3,30 +3,26 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 
-import { RoleEnum } from '../../roles/role.enum';
-import { JwtPayload } from '../interfaces/jwt-payload.interface';
-
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(cfg: ConfigService) {
+  constructor(configService: ConfigService) {
+    const secret = configService.get<string>('JWT_SECRET');
+    if (!secret) {
+      throw new Error('JWT_SECRET is not defined in environment variables');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: cfg.getOrThrow<string>('JWT_SECRET'),
+      secretOrKey: secret,
     });
   }
 
-  async validate(p: JwtPayload) {
-    // Normaliza roles a RoleEnum[] por si vinieran valores raros
-    const validRoles: RoleEnum[] = (p.roles ?? []).filter((r): r is RoleEnum =>
-      (Object.values(RoleEnum) as string[]).includes(r as unknown as string),
-    );
-
-    // Lo que quedará en req.user
+  async validate(payload: any) {
     return {
-      userId: p.sub,
-      email: p.email,
-      roles: validRoles,
+      id: payload.sub,
+      username: payload.username,
+      roles: payload.roles,
     };
   }
 }

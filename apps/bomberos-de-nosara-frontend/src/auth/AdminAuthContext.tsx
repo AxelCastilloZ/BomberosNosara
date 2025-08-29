@@ -1,4 +1,4 @@
-
+// src/auth/AdminAuthContext.tsx
 import { createContext, useContext, useEffect, useState } from 'react';
 import { clearAuth, getUserFromToken, isAuthenticated, setToken } from './auth';
 
