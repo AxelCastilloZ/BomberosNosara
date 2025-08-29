@@ -55,7 +55,6 @@ export default function Navbar() {
               <li><Link to="/nuestro-trabajo" className={link}>NUESTRO TRABAJO</Link></li>
               <li><Link to="/donantes" className={link}>DONANTES</Link></li>
               <li><Link to="/noticias" className={link}>NOTICIAS</Link></li>
-              <li><a href="#contact" className={link}>CONTACTO</a></li>
               <li><Link to="/donar" className={link}>DONAR</Link></li>
             </ul>
           </div>
@@ -97,7 +96,6 @@ export default function Navbar() {
               <Link to="/nuestro-trabajo" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NUESTRO TRABAJO</Link>
               <Link to="/donantes" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONANTES</Link>
               <Link to="/noticias" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NOTICIAS</Link>
-              <a href="#contact" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>CONTACTO</a>
               <Link to="/donar" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONAR</Link>
             </nav>
           </div>
