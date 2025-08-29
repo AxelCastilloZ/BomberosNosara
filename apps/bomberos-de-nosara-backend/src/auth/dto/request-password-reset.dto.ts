@@ -1,8 +1,11 @@
-// src/auth/dto/request-password-reset.dto.ts
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class RequestPasswordResetDto {
+  @IsEmail({}, { message: 'Email no válido' })
+  email!: string;
+
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  email!: string; 
+  @IsUrl({ require_tld: false }, { message: 'URL base no válida' })
+  appBaseUrl?: string;
 }

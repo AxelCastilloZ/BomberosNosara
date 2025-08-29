@@ -56,6 +56,17 @@ export class UsersService {
     return this.userRepo.save(user);
   }
 
+
+
+  
+async findByEmailOrUsername(value: string): Promise<User | null> {
+  return this.userRepo.findOne({
+    where: [{ email: value }, { username: value }],
+    relations: ['roles'],
+  });
+}
+
+
   async updatePassword(userId: number, newPlain: string) {
     const rounds = Number(this.cfg.get('BCRYPT_ROUNDS') ?? 10);
     const hash = await bcrypt.hash(newPlain, rounds);

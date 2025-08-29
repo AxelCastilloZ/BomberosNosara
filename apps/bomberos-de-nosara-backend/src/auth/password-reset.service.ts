@@ -1,7 +1,4 @@
-// src/auth/password-reset.service.ts
-import {
-  Injectable, BadRequestException, Logger,
-} from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, MoreThan } from 'typeorm';
 import * as crypto from 'crypto';
@@ -23,9 +20,6 @@ export class PasswordResetService {
     private readonly cfg: ConfigService,
   ) {}
 
-  /**
-   * Genera token + envía correo (o imprime JSON si estás con jsonTransport)
-   */
   async sendResetEmail(
     email: string,
     appBaseUrl: string,
@@ -37,15 +31,12 @@ export class PasswordResetService {
 
     const user = await this.users.findByEmail(email);
     if (!user) {
-      // No revelamos existencia de la cuenta
       this.logger.warn(`Email NO encontrado en DB: ${email} (respondemos 200 igual)`);
       return;
     }
 
-    // Invalida tokens anteriores no consumidos del usuario
     await this.tokenRepo.delete({ userId: user.id, consumedAt: IsNull() });
 
-    // Crea token
     const token = crypto.randomBytes(32).toString('hex');
     const minutes = Number(this.cfg.get('RESET_TTL_MINUTES') ?? 30);
     const expiresAt = new Date(Date.now() + minutes * 60 * 1000);
@@ -54,48 +45,55 @@ export class PasswordResetService {
     await this.tokenRepo.save(entity);
     this.logger.log(`Token generado para ${email}, expira en ${expiresAt.toISOString()}`);
 
-    // Armar link
     const base = (appBaseUrl || '').replace(/\/+$/, '');
-    const link = `${base}/reset-password?token=${token}`;
-    this.logger.debug(`Reset link: ${link}`);
+    const resetLink = `${base}/reset-password?token=${token}`;
+    this.logger.debug(`Reset link: ${resetLink}`);
 
-    // Enviar correo
-    const useTemplate = true; // si tienes templates hbs
+    const name =
+      (user as any)?.name ??
+      (user as any)?.fullName ??
+      (user as any)?.username ??
+      email.split('@')[0];
+
+    const context = {
+      name,
+      username: (user as any).username ?? name,
+      resetLink,
+      link: resetLink,
+      expiresIn: `${minutes} minutos`,
+      minutes,
+    };
+
     try {
-      const info = await this.mailer.sendMail(
-        useTemplate
-          ? {
-              to: email,
-              subject: 'Restablecer contraseña',
-              template: 'password-reset', // src/auth/templates/password-reset.hbs
-              context: {
-                username: user.username,
-                link,
-                minutes,
-              },
-            }
-          : {
-              to: email,
-              subject: 'Restablecer contraseña',
-              text: `Usa este enlace para restablecer tu contraseña: ${link} (expira en ${minutes} minutos).`,
-            },
-      );
-
+      const info = await this.mailer.sendMail({
+        to: email,
+        subject: 'Restablecer contraseña',
+        template: 'password-reset',
+        context,
+      });
       const messageId = (info as any)?.messageId ?? 'n/a';
       this.logger.log(`Email de reset enviado a ${email} messageId=${messageId}`);
       this.logger.debug(`Mailer info: ${JSON.stringify(info)}`);
     } catch (err) {
-      // No interrumpimos la respuesta para no revelar nada, pero dejamos log
-      this.logger.error(`Fallo al enviar email de reset a ${email}: ${String(err)}`);
+      this.logger.error(`Render/Envio HBS falló: ${String(err)}`);
+      try {
+        const nodemailer = await import('nodemailer');
+        const transporter = nodemailer.createTransport({ jsonTransport: true });
+        await transporter.sendMail({
+          from: this.cfg.get('MAIL_FROM') ?? '"Bomberos Nosara" <no-reply@nosara.local>',
+          to: email,
+          subject: 'Restablecer contraseña',
+          text: `Hola ${name},\n\nUsa este enlace para restablecer tu contraseña: ${resetLink}\n\nEl enlace expira en ${minutes} minutos.\n`,
+        });
+        this.logger.log(`Fallback en texto (jsonTransport) generado OK`);
+      } catch (err2) {
+        this.logger.error(`Fallo también el fallback: ${String(err2)}`);
+      }
     }
   }
 
-  /**
-   * Consume token y cambia contraseña
-   */
   async consumeResetToken(token: string, newPassword: string): Promise<void> {
     const now = new Date();
-
     const row = await this.tokenRepo.findOne({
       where: { token, consumedAt: IsNull(), expiresAt: MoreThan(now) },
     });
