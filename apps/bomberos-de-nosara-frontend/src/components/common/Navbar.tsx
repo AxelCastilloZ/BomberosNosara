@@ -28,7 +28,7 @@ export default function Navbar() {
       {/* menos padding a la izquierda para acercar todo al borde */}
       <div className="mx-auto max-w-7xl pl-0 pr-4 sm:pl-1 sm:pr-6 lg:pl-2 lg:pr-8 h-full">
         <div className="flex items-center justify-between h-full">
-          {/* IZQUIERDA: logo (más a la izquierda, sin cortar) */}
+          {/* IZQUIERDA: logo */}
           <div className="flex items-center -ml-6 pr-4 lg:pr-8">
             <Link to="/" aria-label="Inicio" className="flex items-center">
               <img
@@ -36,7 +36,7 @@ export default function Navbar() {
                 alt="Bomberos de Nosara"
                 className={`block w-auto object-contain shrink-0 select-none transition-all duration-300 ${
                   scrolled ? 'h-12' : 'h-16 md:h-20 lg:h-20 xl:h-20'
-                } -ml-2`}  /* <- leve empuje extra a la izquierda, sin recorte */
+                } -ml-2`}
                 draggable={false}
                 decoding="async"
                 onError={(e) => {
@@ -48,14 +48,17 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* CENTRO: links */}
-          <div className="hidden lg:flex items-center justify-center flex-1">
-            <ul className="flex items-center gap-10 xl:gap-14">
-              <li><Link to="/sobre-nosotros" className={link}>SOBRE NOSOTROS</Link></li>
+          {/* CENTRO: links (mantiene tu estilo + agrega rutas nuevas de tu compañera) */}
+          <div className="hidden md:flex items-center justify-center flex-1">
+            <ul className="flex items-center gap-8 xl:gap-12">
+              <li><Link to="/sobre-nosotros"  className={link}>SOBRE NOSOTROS</Link></li>
               <li><Link to="/nuestro-trabajo" className={link}>NUESTRO TRABAJO</Link></li>
-              <li><Link to="/donantes" className={link}>DONANTES</Link></li>
-              <li><Link to="/noticias" className={link}>NOTICIAS</Link></li>
-              <li><Link to="/donar" className={link}>DONAR</Link></li>
+              <li><Link to="/donantes"        className={link}>DONANTES</Link></li>
+              <li><Link to="/fotos"           className={link}>FOTOS</Link></li>
+              <li><Link to="/sugerencias"     className={link}>SUGERENCIAS</Link></li>
+              <li><Link to="/noticias"        className={link}>NOTICIAS</Link></li>
+              <li><Link to="/contacto"        className={link}>CONTACTO</Link></li>
+              <li><Link to="/donar"           className={link}>DONAR</Link></li>
             </ul>
           </div>
 
@@ -83,20 +86,23 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* MENÚ MÓVIL */}
+        {/* MENÚ MÓVIL (incluye también las rutas nuevas) */}
         <div
           id="mobile-menu"
           className={`lg:hidden overflow-hidden transition-[max-height,opacity] duration-300 ${
-            mobileOpen ? 'max-h-[520px] opacity-100' : 'max-h-0 opacity-0'
+            mobileOpen ? 'max-h-[680px] opacity-100' : 'max-h-0 opacity-0'
           }`}
         >
           <div className="border-t border-slate-200 py-2 bg-white">
             <nav className="flex flex-col">
-              <Link to="/sobre-nosotros" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>SOBRE NOSOTROS</Link>
+              <Link to="/sobre-nosotros"  className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>SOBRE NOSOTROS</Link>
               <Link to="/nuestro-trabajo" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NUESTRO TRABAJO</Link>
-              <Link to="/donantes" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONANTES</Link>
-              <Link to="/noticias" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NOTICIAS</Link>
-              <Link to="/donar" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONAR</Link>
+              <Link to="/donantes"        className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONANTES</Link>
+              <Link to="/fotos"           className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>FOTOS</Link>
+              <Link to="/sugerencias"     className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>SUGERENCIAS</Link>
+              <Link to="/noticias"        className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NOTICIAS</Link>
+              <Link to="/contacto"        className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>CONTACTO</Link>
+              <Link to="/donar"           className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONAR</Link>
             </nav>
           </div>
         </div>
