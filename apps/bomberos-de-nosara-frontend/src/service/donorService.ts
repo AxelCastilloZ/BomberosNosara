@@ -34,20 +34,42 @@ export const useAddDonante = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (newDonante: {
-      id: string;
       nombre: string;
       descripcion: string;
       url: string;
-      logoFile: File; //  Nuevo campo que pasaremos desde el formulario
+      logoFile: File;
     }) => {
       const formData = new FormData();
-      formData.append('id', String (newDonante.id));
-      formData.append('nombre', String (newDonante.nombre));
-      formData.append('descripcion', String (newDonante.descripcion));
-      formData.append('url', String (newDonante.url));
-      formData.append('logo', newDonante.logoFile); //  Aquí subimos el archivo
+      formData.append('nombre', newDonante.nombre);
+      formData.append('descripcion', newDonante.descripcion);
+      formData.append('url', newDonante.url);
+      formData.append('logo', newDonante.logoFile);
 
       await axios.post(API_URL, formData, {
+        headers: { ...getAuthHeader(), 'Content-Type': 'multipart/form-data' },
+      });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['donantes'] }),
+  });
+};
+
+
+
+// PUT
+
+export const useUpdateDonante = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: Donante & { logoFile?: File }) => {
+      const formData = new FormData();
+      formData.append('nombre', String(payload.nombre));
+      formData.append('descripcion', String(payload.descripcion));
+      formData.append('url', String(payload.url));
+      if (payload.logoFile) {
+        formData.append('logo', payload.logoFile);  // opcional
+      }
+
+      await axios.put(`${API_URL}/${payload.id}`, formData, {
         headers: {
           ...getAuthHeader(),
           'Content-Type': 'multipart/form-data',
@@ -61,26 +83,11 @@ export const useAddDonante = () => {
 };
 
 
-// PUT
-export const useUpdateDonante = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (donante: Donante) => {
-      await axios.put(`${API_URL}/${donante.id}`, donante, {
-        headers: getAuthHeader(),
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['donantes'] });
-    },
-  });
-};
-
-// DELETE
+//DELETE
 export const useDeleteDonante = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: number) => {            // ← number
       await axios.delete(`${API_URL}/${id}`, {
         headers: getAuthHeader(),
       });

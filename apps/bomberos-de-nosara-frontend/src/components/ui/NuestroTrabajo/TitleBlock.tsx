@@ -1,7 +1,11 @@
+import { ourWorkTitle } from "../../../data/ourWorkData";
+
 export default function TitleBlock() {
   return (
-    <p className="uppercase text-sm font-semibold text-red-600 tracking-widest mb-2">
-      Nuestro trabajo
-    </p>
+    <header>
+      <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900">
+        {ourWorkTitle}
+      </h1>
+    </header>
   );
 }
