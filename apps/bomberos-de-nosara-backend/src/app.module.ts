@@ -20,6 +20,7 @@ import { UploadModule } from './upload/upload.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
 import { AppMobileModule } from './app-mobile/app-mobile.module';
+import { ChatModule } from './chat/chat.module'; // <-- agregado
 
 @Module({
   imports: [
@@ -65,14 +66,12 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
 
         // --- Flags TypeORM (no sensibles) ---
         DB_SYNC: Joi.boolean().default(true),
-        DB_DROP_SCHEMA: Joi.boolean().default(false), // en prod siempre false
+        DB_DROP_SCHEMA: Joi.boolean().default(false),
       }),
     }),
 
     // Rate limiting global
-    ThrottlerModule.forRoot([
-      { ttl: 60_000, limit: 100 },
-    ]),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
 
     // Archivos estáticos (uploads)
     ServeStaticModule.forRoot({
@@ -92,7 +91,7 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
         database: cfg.getOrThrow<string>('DATABASE_NAME'),
         autoLoadEntities: true,
         synchronize: cfg.get<boolean>('DB_SYNC', true),
-        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', false), // default seguro
+        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', false),
         retryAttempts: 10,
         retryDelay: 3000,
       }),
@@ -108,10 +107,13 @@ import { AppMobileModule } from './app-mobile/app-mobile.module';
     SugerenciaModule,
     EquipoBomberilModule,
     UploadModule,
-    MaterialEducativoModule, // <- de feature/melu/sprint3
-    VehiculosModule,         // <- de sprint3
-    WebSocketsModule,        // <- de sprint3
-    AppMobileModule,         // <- de sprint3
+    MaterialEducativoModule,
+    VehiculosModule,
+    WebSocketsModule,
+    AppMobileModule,
+
+    // --- Cambios de la compañera ---
+    ChatModule, // <-- agregado
   ],
 })
 export class AppModule {}
