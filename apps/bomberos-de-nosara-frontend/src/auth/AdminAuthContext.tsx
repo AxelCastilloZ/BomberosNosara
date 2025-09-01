@@ -1,57 +1,47 @@
+// src/auth/AdminAuthContext.tsx
 import { createContext, useContext, useEffect, useState } from 'react';
+import { clearAuth, getUserFromToken, isAuthenticated, setToken } from './auth';
 
 interface AdminAuthContextType {
   user: string | null;
-  setUser: (user: string | null) => void;
+  setUserAndToken: (username: string, token: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
 
 export const AdminAuthContext = createContext<AdminAuthContextType>({
   user: null,
-  setUser: () => {},
+  setUserAndToken: () => {},
   logout: () => {},
   isAuthenticated: false,
 });
 
 export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUserState] = useState<string | null>(null);
+  const [user, setUser] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('authUser');
-    if (token && storedUser) {
-      setUserState(storedUser);
+    if (isAuthenticated()) {
+      const u = getUserFromToken();
+      setUser(u?.username ?? localStorage.getItem('authUser'));
     } else {
-      setUserState(null);
+      setUser(null);
     }
   }, []);
 
-  const setUser = (user: string | null) => {
-    if (user) {
-      setUserState(user);
-      localStorage.setItem('authUser', user);
-    } else {
-      setUserState(null);
-      localStorage.removeItem('authUser');
-      localStorage.removeItem('token');
-    }
+  const setUserAndToken = (username: string, token: string) => {
+    setToken(token);
+    setUser(username);
+    localStorage.setItem('authUser', username);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('authUser');
-    setUserState(null);
+    clearAuth();
+    setUser(null);
   };
 
   return (
     <AdminAuthContext.Provider
-      value={{
-        user,
-        setUser,
-        logout,
-        isAuthenticated: !!user && !!localStorage.getItem('token'),
-      }}
+      value={{ user, setUserAndToken, logout, isAuthenticated: isAuthenticated() }}
     >
       {children}
     </AdminAuthContext.Provider>
@@ -59,16 +49,3 @@ export const AdminAuthProvider = ({ children }: { children: React.ReactNode }) =
 };
 
 export const useAdminAuth = () => useContext(AdminAuthContext);
-
-export function logout() {
-  localStorage.removeItem('token');
-  localStorage.removeItem('authUser');
-}
-
-export function isAuthenticated(): boolean {
-  return !!localStorage.getItem('token');
-}
-
-export function isAdmin(): boolean {
-  return !!localStorage.getItem('token');
-}

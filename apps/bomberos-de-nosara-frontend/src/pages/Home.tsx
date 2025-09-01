@@ -5,43 +5,55 @@ import SuggestionsPage from "./SuggestionsPage";
 import NuestroTrabajoPage from "./NuestroTrabajoPage";
 import ContactoPage from "./ContactoPage";
 import DonarPage from "./DonarPage";
+import FooterPage from "./FooterPage";
 
 export default function Home() {
   return (
     <>
-      <div className="min-h-screen bg-white px-4 text-center pt-28 flex flex-col items-center">
-        <h1 className="text-5xl font-serif font-light text-gray-900 mb-6">
-          Bienvenido a Bomberos Nosara
-        </h1>
+      <div className="min-h-screen bg-white pt-28">
+        {/* Hero / Encabezado */}
+        <section className="w-full px-8 text-center">
+          <h1 className="text-5xl font-serif font-light text-gray-900 mb-6">
+            Bienvenido a Bomberos Nosara
+          </h1>
 
-        <p className="text-lg text-gray-700 max-w-xl mb-8 leading-relaxed">
-          Nos dedicamos a servir a la comunidad de Nosara con compromiso, integridad y acción.
-          Conocé más sobre nuestros aliados y cómo podés apoyar nuestra labor.
-        </p>
+          <p className="text-lg text-gray-700 max-w-3xl mx-auto mb-8 leading-relaxed">
+            Nos dedicamos a servir a la comunidad de Nosara con compromiso,
+            integridad y acción. Conocé más sobre nuestros aliados y cómo podés
+            apoyar nuestra labor.
+          </p>
+        </section>
 
-        <AboutUsPage />
+        {/* Secciones (todas full width) */}
+        <section className="w-full px-8">
+          <AboutUsPage />
+        </section>
 
-        <div>
+        <section className="w-full px-8 mt-16">
           <NuestroTrabajoPage />
-        </div>
+        </section>
 
-        <div className="mt-16 w-full">
+        <section className="w-full px-8 mt-16">
           <DonantesPage />
-        </div>
+        </section>
 
-        <div className="mt-16 w-full">
+        <section className="w-full px-8 mt-16">
           <NoticiasPage />
-        </div>
+        </section>
 
-        <SuggestionsPage />
+      
 
-        <div className="mt-16 w-full">
+        <section className="w-full px-8 mt-16">
           <DonarPage />
-        </div>
+        </section>
 
-        <div className="mt-16 w-full">
-          <ContactoPage />
-        </div>
+        {/* Usamos ContactoPage para no dejar import sin uso */}
+       
+
+        {/* Footer full width también */}
+        <section className="w-full mt-16">
+          <FooterPage />
+        </section>
       </div>
     </>
   );

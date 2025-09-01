@@ -18,6 +18,9 @@ export class User {
   @Column({ unique: true })
   username!: string;
 
+  @Column({ unique: true })     
+  email!: string;                  
+
   @Column()
   password!: string;
 
@@ -25,13 +28,14 @@ export class User {
   @JoinTable()
   roles!: Role[];
 
+
   @ManyToMany(() => Conversation, conversation => conversation.participants)
   conversations!: Conversation[];
 
   @OneToMany(() => Message, message => message.sender)
   messages!: Message[];
 
-  // Helper method to check if user is a participant in a conversation
+ 
   isParticipant(conversationId: number): boolean {
     if (!this.conversations) return false;
     return this.conversations.some(conv => conv.id === conversationId);

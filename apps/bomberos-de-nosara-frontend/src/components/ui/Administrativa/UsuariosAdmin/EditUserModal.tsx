@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { updateUser } from '../../../../service/userService';
+import { updateUser } from '../../../../service/user';
 
 
 
