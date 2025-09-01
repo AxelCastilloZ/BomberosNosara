@@ -12,13 +12,24 @@ import { uploadImage } from "../service/uploadService";
 import { Noticia } from "../types/news";
 import NoticiasForm from "../components/ui/Administrativa/Noticias/NoticiasForm";
 import NoticiasTable from "../components/ui/Administrativa/Noticias/NoticiasTable";
+import { NoticiasFilters } from "../components/ui/Noticias/NoticiasFilters";
 
 
 
 export default function AdminNoticiasPage() {
   const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState<{
+    search: string;
+    fechaDesde: string;
+    fechaHasta: string;
+  }>({
+    search: '',
+    fechaDesde: '',
+    fechaHasta: '',
+  });
+  
   const limit = 10;
-  const { data, isLoading } = useNoticias(page, limit);
+  const { data, isLoading } = useNoticias(page, limit, filters.search, filters.fechaDesde, filters.fechaHasta);
   const noticias = data?.data || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
@@ -34,6 +45,17 @@ export default function AdminNoticiasPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [toDeleteId, setToDeleteId] = useState<number | null>(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+
+const handleFilter = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+    setPage(1); // Resetear a la primera página al filtrar
+  };
+
+  const handleClearFilters = () => {
+    setFilters({ search: '', fechaDesde: '', fechaHasta: '' });
+    setPage(1);
+  };
+
 
   const handleSave = async (values: any, file?: File | null) => {
     try {
@@ -114,25 +136,39 @@ export default function AdminNoticiasPage() {
   };
 
   return (
-    <div className="min-h-screen pt-28 bg-gradient-to-b from-white px-4">
+    <div className="min-h-screen pt-28 bg-gradient-to-b from-white px-4 mt-4">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className=" mb-6">
+          <div className="flex items-center">
           <h1 className="text-4xl font-bold text-black">
-            Administrar Noticias
+            Gestión de Noticias
           </h1>
+          </div>
+          <div className="flex justify-end">
           <button
             onClick={() => {
               setEditingNoticia(null);
               setIsFormOpen(true);
             }}
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-5"
           >
             + Agregar Noticia
           </button>
+          </div>
         </div>
+
+<NoticiasFilters onFilter={handleFilter} onClear={handleClearFilters} />
 
         {isLoading ? (
           <p className="text-center text-gray-500">Cargando noticias...</p>
+        ) : noticias.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 text-lg">
+              {filters.search || filters.fechaDesde || filters.fechaHasta
+                ? "No se encontraron noticias con los filtros aplicados"
+                : "No hay noticias registradas"}
+            </p>
+          </div>
         ) : (
           <>
             <NoticiasTable

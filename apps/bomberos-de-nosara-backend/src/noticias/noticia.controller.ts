@@ -24,7 +24,13 @@ export class NoticiaController {
 
   @Get()
   findAll(@Query() query: PaginationQueryDto) {
-    return this.noticiaService.findAll(query.page, query.limit);
+    return this.noticiaService.findAll(
+      query.page,
+      query.limit,
+      query.search,
+      query.fechaDesde,
+      query.fechaHasta,
+    );
   }
 
   @Get(':id')

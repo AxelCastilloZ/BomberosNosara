@@ -30,12 +30,32 @@ export class NoticiaService {
   async findAll(
     page = 1,
     limit = 10,
+    search?: string,
+    fechaDesde?: string,
+    fechaHasta?: string,
   ): Promise<{ data: Noticia[]; total: number; page: number; limit: number }> {
-    const [data, total] = await this.noticiaRepository.findAndCount({
-      order: { fecha: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const query = this.noticiaRepository.createQueryBuilder('noticia');
+
+    if (search) {
+      query.andWhere(
+        '(noticia.titulo LIKE :search OR noticia.descripcion LIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    if (fechaDesde) {
+      query.andWhere('noticia.fecha >= :fechaDesde', { fechaDesde });
+    }
+
+    if (fechaHasta) {
+      query.andWhere('noticia.fecha <= :fechaHasta', { fechaHasta });
+    }
+
+    const [data, total] = await query
+      .orderBy('noticia.fecha', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
     return { data, total, page, limit };
   }
 
