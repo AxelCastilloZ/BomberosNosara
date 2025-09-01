@@ -1,8 +1,16 @@
-
-import { Entity, PrimaryGeneratedColumn, Column, ManyToMany, JoinTable } from 'typeorm';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  ManyToMany, 
+  JoinTable, 
+  OneToMany 
+} from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
+import { Conversation } from '../../chat/entities/conversation.entity';
+import { Message } from '../../chat/entities/message.entity';
 
-@Entity()
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -10,8 +18,8 @@ export class User {
   @Column({ unique: true })
   username!: string;
 
-  @Column({ unique: true })          // <— nuevo
-  email!: string;                    // <— nuevo
+  @Column({ unique: true })     
+  email!: string;                  
 
   @Column()
   password!: string;
@@ -19,4 +27,17 @@ export class User {
   @ManyToMany(() => Role, { eager: true })
   @JoinTable()
   roles!: Role[];
+
+
+  @ManyToMany(() => Conversation, conversation => conversation.participants)
+  conversations!: Conversation[];
+
+  @OneToMany(() => Message, message => message.sender)
+  messages!: Message[];
+
+ 
+  isParticipant(conversationId: number): boolean {
+    if (!this.conversations) return false;
+    return this.conversations.some(conv => conv.id === conversationId);
+  }
 }

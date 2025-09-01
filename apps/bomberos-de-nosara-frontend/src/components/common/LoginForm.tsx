@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { useAdminAuth } from '../../auth/AdminAuthContext';
 
 export default function AdminLoginPage() {
-  const [identifier, setIdentifier] = useState(''); // username o email
+  const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { setUserAndToken } = useAdminAuth(); // ← nombre correcto
+  const { setUserAndToken } = useAdminAuth(); 
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
