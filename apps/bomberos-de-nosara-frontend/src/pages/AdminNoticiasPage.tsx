@@ -2,12 +2,7 @@ import { useState } from "react";
 import { ConfirmModal } from "../components/ui/Modals/Donantes/ConfirmModal";
 import { LoadingModal } from "../components/ui/Modals/Donantes/LoadingModal";
 import { SuccessModal } from "../components/ui/Modals/Donantes/SuccessModal";
-import {
-  useAddNoticia,
-  useDeleteNoticia,
-  useNoticias,
-  useUpdateNoticia,
-} from "../service/noticiasService";
+import { useAddNoticia, useDeleteNoticia, useNoticias, useUpdateNoticia } from "../hooks/useNoticias";
 import { uploadImage } from "../service/uploadService";
 import { Noticia } from "../types/news";
 import NoticiasForm from "../components/ui/Administrativa/Noticias/NoticiasForm";
@@ -48,7 +43,7 @@ export default function AdminNoticiasPage() {
 
 const handleFilter = (newFilters: typeof filters) => {
     setFilters(newFilters);
-    setPage(1); // Resetear a la primera página al filtrar
+    setPage(1); 
   };
 
   const handleClearFilters = () => {

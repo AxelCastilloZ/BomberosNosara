@@ -1,57 +1,41 @@
-import axios from 'axios';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Noticia } from '../types/news';
+import api from "../api/apiConfig";
+import { Noticia } from "../types/news";
 
-const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/noticias`;
 
-//GET 
-export const useNoticias = (page = 1, limit = 10, search?: string, fechaDesde?: string, fechaHasta?: string) => {
-  return useQuery({
-    queryKey: ['noticias', page, limit, search, fechaDesde, fechaHasta],
-    queryFn: async (): Promise<{ data: Noticia[]; total: number; page: number; limit: number }> => {
-      const params: any = { page, limit
-    };
 
-if (search) params.search = search;
-      if (fechaDesde) params.fechaDesde = fechaDesde;
-      if (fechaHasta) params.fechaHasta = fechaHasta;
+export const noticiaService = {
+  // Obtener todas las noticias con filtros
+  getAll: async (page = 1, limit = 10, search?: string, fechaDesde?: string, fechaHasta?: string) => {
+    const params: any = { page, limit };
+    if (search) params.search = search;
+    if (fechaDesde) params.fechaDesde = fechaDesde;
+    if (fechaHasta) params.fechaHasta = fechaHasta;
 
-    const res = await axios.get(API_URL, { params });
-      return res.data;
-    },
-    staleTime: 1000 * 60 * 10,
-  });
+    const response = await api.get('/noticias', { params });
+    return response.data;
+  },
+
+  // Obtener una noticia por ID
+  getById: async (id: number) => {
+    const response = await api.get(`${'/noticias'}/${id}`);
+    return response.data;
+  },
+
+  // Crear nueva noticia
+  create: async (newNoticia: Omit<Noticia, 'id'>) => {
+    const response = await api.post('/noticias', newNoticia);
+    return response.data;
+  },
+
+  // Actualizar noticia existente
+  update: async (id: number, updatedNoticia: Omit<Noticia, 'id'>) => {
+    const response = await api.put(`${'/noticias'}/${id}`, updatedNoticia);
+    return response.data;
+  },
+
+  // Eliminar noticia
+  delete: async (id: number) => {
+    const response = await api.delete(`${'/noticias'}/${id}`);
+    return response.data;
+  },
 };
-
-//POST 
-export const useAddNoticia = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (newNoticia: Omit<Noticia, 'id'>) => {
-      await axios.post(API_URL, newNoticia);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['noticias'] }),
-  });
-};
-
-//PUT
-export const useUpdateNoticia = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ noticia, id }: { noticia: Omit<Noticia, 'id'>; id: number }) => {
-      await axios.put(`${API_URL}/${id}`, noticia);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['noticias'] }),
-  });
-};
-
-export const useDeleteNoticia = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: number) => {
-      await axios.delete(`${API_URL}/${id}`);
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['noticias'] }),
-  });
-};
-
