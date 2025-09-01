@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import ResetPasswordForm from '../../auth/ResetPasswordForm';
+import ResetPasswordForm from '../../auth/components/ResetPasswordForm';
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();

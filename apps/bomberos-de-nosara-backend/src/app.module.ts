@@ -1,3 +1,4 @@
+// src/app.module.ts
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { Module } from '@nestjs/common';
@@ -6,6 +7,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as Joi from 'joi';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { EventEmitterModule } from '@nestjs/event-emitter';
+import { JwtModule } from '@nestjs/jwt';
 
 import { DonantesModule } from './donantes/donantes.module';
 import { AuthModule } from './auth/auth.module';
@@ -20,7 +23,7 @@ import { UploadModule } from './upload/upload.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
 import { AppMobileModule } from './app-mobile/app-mobile.module';
-import { ChatModule } from './chat/chat.module'; // <-- agregado
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -39,32 +42,27 @@ import { ChatModule } from './chat/chat.module'; // <-- agregado
         NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
         PORT: Joi.number().default(3000),
 
-        // --- DB (requeridos) ---
         DATABASE_HOST: Joi.string().required(),
         DATABASE_PORT: Joi.number().required(),
         DATABASE_USER: Joi.string().required(),
         DATABASE_PASSWORD: Joi.string().required(),
         DATABASE_NAME: Joi.string().required(),
 
-        // --- Auth / App ---
         JWT_SECRET: Joi.string().min(32).required(),
         APP_BASE_URL: Joi.string().uri().default('http://localhost:5173'),
         FRONTEND_URL: Joi.string().uri().default('http://localhost:5173'),
 
-        // --- Mail (opcionales) ---
         SMTP_HOST: Joi.string().optional(),
         SMTP_PORT: Joi.number().optional(),
         SMTP_USER: Joi.string().optional(),
         SMTP_PASS: Joi.string().optional(),
         MAIL_FROM: Joi.string().optional(),
 
-        // --- Seeder (requeridos) ---
         ADMIN_USERNAME: Joi.string().required(),
         ADMIN_EMAIL: Joi.string().email().required(),
         ADMIN_PASSWORD: Joi.string().min(8).required(),
         BCRYPT_ROUNDS: Joi.number().default(10),
 
-        // --- Flags TypeORM (no sensibles) ---
         DB_SYNC: Joi.boolean().default(true),
         DB_DROP_SCHEMA: Joi.boolean().default(false),
       }),
@@ -73,7 +71,21 @@ import { ChatModule } from './chat/chat.module'; // <-- agregado
     // Rate limiting global
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
 
-    // Archivos estáticos (uploads)
+    // Event Emitter (necesario si publicas eventos en el gateway o en servicios)
+    EventEmitterModule.forRoot(),
+
+    // JWT global (el gateway/guards pueden inyectar JwtService)
+    JwtModule.registerAsync({
+      global: true,
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => ({
+        secret: cfg.getOrThrow<string>('JWT_SECRET'),
+        signOptions: { expiresIn: '7d' }, // opcional
+      }),
+    }),
+
+    // Archivos estáticos
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
@@ -97,7 +109,7 @@ import { ChatModule } from './chat/chat.module'; // <-- agregado
       }),
     }),
 
-    // --- Módulos de la app (se conservan TODOS) ---
+    // --- Módulos de la app ---
     DonantesModule,
     NoticiaModule,
     AuthModule,
@@ -112,8 +124,8 @@ import { ChatModule } from './chat/chat.module'; // <-- agregado
     WebSocketsModule,
     AppMobileModule,
 
-    // --- Cambios de la compañera ---
-    ChatModule, // <-- agregado
+    // Chat (nuevo)
+    ChatModule,
   ],
 })
 export class AppModule {}

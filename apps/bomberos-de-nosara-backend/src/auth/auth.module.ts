@@ -1,5 +1,6 @@
 // src/auth/auth.module.ts
 import { join } from 'path';
+import { existsSync } from 'fs';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
@@ -17,10 +18,7 @@ import { GuardsModule } from '../guards/guards.module';
 
 @Module({
   imports: [
-    // ConfigModule no es estrictamente necesario si lo tienes global,
-    // pero incluirlo aquí evita problemas si cambias eso en el futuro.
     ConfigModule,
-
     UsersModule,
     GuardsModule,
     TypeOrmModule.forFeature([PasswordResetToken]),
@@ -36,51 +34,62 @@ import { GuardsModule } from '../guards/guards.module';
     MailerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const from = cfg.get<string>('MAIL_FROM') ?? '"Bomberos Nosara" <no-reply@nosara.local>';
-        const templateDir = join(__dirname, 'templates');
+        const from =
+          cfg.get<string>('MAIL_FROM') ??
+          '"Bomberos Nosara" <no-reply@nosara.local>';
+
+        // Plantillas: usa dist en runtime; si no existe, cae a src (dev)
+        const distDir = join(__dirname, 'templates'); // dist/auth/templates
+        const srcDir = join(
+          process.cwd(),
+          'apps',
+          'bomberos-de-nosara-backend',
+          'src',
+          'auth',
+          'templates',
+        );
+        const templateDir = existsSync(distDir) ? distDir : srcDir;
 
         const host = cfg.get<string>('SMTP_HOST');
         const port = Number(cfg.get('SMTP_PORT') ?? 587);
         const user = cfg.get<string>('SMTP_USER');
         const pass = cfg.get<string>('SMTP_PASS');
 
-        const hasSmtp = !!host && !!user && !!pass;
+        const useSmtp = !!host && !!user && !!pass;
 
-        if (hasSmtp) {
-          // Logs útiles en arranque para confirmar transporte SMTP real
-          // (No imprime contraseñas ni secretos)
-          console.log(`[Mailer] SMTP habilitado host=${host} port=${port} user=${user}`);
-        } else {
-          console.log('[Mailer] jsonTransport habilitado (no hay SMTP_* en .env): no se enviarán correos reales.');
+        const common = {
+          defaults: { from },
+          template: {
+            dir: templateDir,
+            adapter: new HandlebarsAdapter(),
+            options: { strict: true },
+          },
+        } as const;
+
+        if (!useSmtp) {
+          console.log(
+            '[Mailer] jsonTransport habilitado (faltan variables SMTP_*). No se enviarán correos reales.',
+          );
+          return {
+            transport: { jsonTransport: true, logger: true, debug: true },
+            ...common,
+          };
         }
 
-        return hasSmtp
-          ? {
-              transport: {
-                host,
-                port,
-                secure: port === 465,     // TLS implícito
-                auth: { user, pass },
-                logger: true,             // logs de nodemailer
-                debug: true,
-              },
-              defaults: { from },
-              template: {
-                dir: templateDir,
-                adapter: new HandlebarsAdapter(),
-                options: { strict: true },
-              },
-            }
-          : {
-              // Modo “simulado”: el mensaje aparece en logs (no sale por SMTP)
-              transport: { jsonTransport: true, logger: true, debug: true },
-              defaults: { from },
-              template: {
-                dir: templateDir,
-                adapter: new HandlebarsAdapter(),
-                options: { strict: true },
-              },
-            };
+        console.log(
+          `[Mailer] SMTP habilitado host=${host} port=${port} user=${user}`,
+        );
+        return {
+          transport: {
+            host,
+            port,
+            secure: port === 465, 
+            auth: { user, pass },
+            logger: true,
+            debug: true,
+          },
+          ...common,
+        };
       },
     }),
   ],

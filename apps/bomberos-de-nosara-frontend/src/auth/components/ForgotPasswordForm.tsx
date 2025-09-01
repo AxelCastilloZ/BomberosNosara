@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { requestPasswordReset } from '../../src/service/auth';
+import { requestPasswordReset } from '../../service/auth';
 
 type Props = {
-  /** Mensaje neutro al terminar (éxito/fracaso) */
+ 
   onSent?: (message: string) => void;
   className?: string;
 };
@@ -29,7 +29,7 @@ export default function ForgotPasswordForm({ onSent, className }: Props) {
       await requestPasswordReset(email.trim());
       onSent?.('Si la cuenta existe, te enviamos un correo con instrucciones.');
     } catch {
-      // Mensaje neutro de todos modos (no exponemos si existe o no)
+      
       onSent?.('Si la cuenta existe, te enviamos un correo con instrucciones.');
     } finally {
       setLoading(false);
