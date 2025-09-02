@@ -25,10 +25,10 @@ export default function Navbar() {
       role="navigation"
       aria-label="Main"
     >
-      {/* menos padding a la izquierda para acercar todo al borde */}
+      {}
       <div className="mx-auto max-w-7xl pl-0 pr-4 sm:pl-1 sm:pr-6 lg:pl-2 lg:pr-8 h-full">
         <div className="flex items-center justify-between h-full">
-          {/* IZQUIERDA: logo (más a la izquierda, sin cortar) */}
+          {}
           <div className="flex items-center -ml-6 pr-4 lg:pr-8">
             <Link to="/" aria-label="Inicio" className="flex items-center">
               <img
@@ -36,7 +36,7 @@ export default function Navbar() {
                 alt="Bomberos de Nosara"
                 className={`block w-auto object-contain shrink-0 select-none transition-all duration-300 ${
                   scrolled ? 'h-12' : 'h-16 md:h-20 lg:h-20 xl:h-20'
-                } -ml-2`}  /* <- leve empuje extra a la izquierda, sin recorte */
+                } -ml-2`}  
                 draggable={false}
                 decoding="async"
                 onError={(e) => {
@@ -48,7 +48,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* CENTRO: links */}
+          {}
           <div className="hidden lg:flex items-center justify-center flex-1">
             <ul className="flex items-center gap-10 xl:gap-14">
               <li><Link to="/sobre-nosotros" className={link}>SOBRE NOSOTROS</Link></li>
@@ -59,7 +59,7 @@ export default function Navbar() {
             </ul>
           </div>
 
-          {/* DERECHA: user + hamburguesa */}
+          {}
           <div className="flex items-center -mr-3 pl-8 lg:pl-12">
             <UserButton />
             <button
@@ -83,7 +83,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* MENÚ MÓVIL */}
+        {}
         <div
           id="mobile-menu"
           className={`lg:hidden overflow-hidden transition-[max-height,opacity] duration-300 ${

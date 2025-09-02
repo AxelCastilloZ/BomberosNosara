@@ -1,49 +1,80 @@
-import { useState, useEffect } from 'react';
 
-interface AuthState {
-  token: string|null;
+import { useEffect, useMemo, useState } from 'react';
+import {
+  getToken,
+  setToken,
+  clearAuth,
+  getUserFromToken,
+  getUserRoles,
+  isAdmin as _isAdmin,
+  isSuperUser as _isSuperUser,
+  loginAndStore,
+  type AuthUser,
+} from '../service/auth';
+
+type AuthState = {
+  token: string | null;
   isAuthenticated: boolean;
-  user: any|null;
-}
+  user: AuthUser | null;
+  roles: string[];
+};
 
-export const useAuth=() => {
-  const [authState, setAuthState]=useState<AuthState>({
-    token: localStorage.getItem('token'),
-    isAuthenticated: !!localStorage.getItem('token'),
-    user: null,
+export function useAuth() {
+  const [state, setState] = useState<AuthState>(() => {
+    const token = getToken();
+    const user = getUserFromToken();        
+    const roles = getUserRoles();
+    return { token, isAuthenticated: !!token, user, roles };
   });
 
+  const refresh = () => {
+    const token = getToken();
+    setState({
+      token,
+      isAuthenticated: !!token,
+      user: getUserFromToken(),             
+      roles: getUserRoles(),
+    });
+  };
+
   useEffect(() => {
-    const token=localStorage.getItem('token');
-    if (token) {
-      setAuthState(prev => ({
-        ...prev,
-        isAuthenticated: true,
-      }));
-    }
+    const onAuthChange = () => refresh();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'access_token' || e.key === 'token' || e.key === 'authUser') refresh();
+    };
+    window.addEventListener('auth:token-changed', onAuthChange);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener('auth:token-changed', onAuthChange);
+      window.removeEventListener('storage', onStorage);
+    };
   }, []);
 
-  const login=(token: string) => {
-    localStorage.setItem('token', token);
-    setAuthState({
-      token,
-      isAuthenticated: true,
-      user: null,
-    });
+  const loginWithToken = (token: string) => {
+    setToken(token);
+    refresh();
   };
 
-  const logout=() => {
-    localStorage.removeItem('token');
-    setAuthState({
-      token: null,
-      isAuthenticated: false,
-      user: null,
-    });
+  const login = async (username: string, password: string) => {
+    await loginAndStore(username, password);
+    refresh();
   };
+
+  const logout = () => {
+    clearAuth();
+    refresh();
+  };
+
+  const isAdmin = useMemo(() => _isAdmin(), [state.roles.join('|')]);
+  const isSuperUser = useMemo(() => _isSuperUser(), [state.roles.join('|')]);
 
   return {
-    ...authState,
+    ...state,
+    isAdmin,
+    isSuperUser,
+    refresh,
     login,
+    loginWithToken,
     logout,
   };
-};
+}

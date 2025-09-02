@@ -1,91 +1,81 @@
-import { createContext, useContext, useEffect, useRef, useState, useMemo } from 'react';
+
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../hooks/useAuth';
 
-interface SocketContextType {
-    socket: Socket|null;
-    isConnected: boolean;
-}
+type SocketCtx = { socket: Socket | null; isConnected: boolean };
+const SocketContext = createContext<SocketCtx>({ socket: null, isConnected: false });
 
-const SocketContext=createContext<SocketContextType>({
-    socket: null,
-    isConnected: false,
-});
+export const useSocket = () => useContext(SocketContext);
 
-const SOCKET_URL='http://localhost:3000';
+const SOCKET_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
-export const useSocket=() => {
-    return useContext(SocketContext);
-};
 
-interface SocketContextType {
-    socket: Socket | null;
-    isConnected: boolean;
-}
+export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { token } = useAuth();
+  const socketRef = useRef<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
-export const SocketProvider: React.FC<{ children: React.ReactNode }>=({ children }) => {
-    const socketRef=useRef<Socket | null>(null);
-    const [isConnected, setIsConnected] = useState<boolean>(false);
+  useEffect(() => {
+    
+    if (socketRef.current) {
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
 
-    const { token } = useAuth(); // Get the JWT token from your auth context
+    if (!token) {
+      setIsConnected(false);
+      return;
+    }
 
-    useEffect(() => {
-        if (!token) {
-            console.log('No auth token available, not connecting socket');
-            return;
-        }
+    
+    const s = io(SOCKET_URL, {
+      auth: {
+        
+        token: `Bearer ${token}`,
+      },
+      
+      reconnection: true,
+      reconnectionAttempts: 5,
+      timeout: 10000,
+      withCredentials: true,
+    });
 
-        // Initialize socket connection with auth token
-        socketRef.current = io(SOCKET_URL, {
-            withCredentials: true,
-            autoConnect: true,
-            auth: {
-                token: `Bearer ${token}`
-            },
-            extraHeaders: {
-                Authorization: `Bearer ${token}`
-            }
-        });
+    s.on('connect', () => {
+      setIsConnected(true);
+      console.info('[socket] ✅ conectado:', s.id);
+      s.emit('getOnlineUsers'); 
+    });
 
-        // Connection event handlers
-        const onConnect=() => {
-            setIsConnected(true);
-            console.log('Connected to WebSocket server IO');
-        };
+    s.on('disconnect', (reason) => {
+      setIsConnected(false);
+      console.warn('[socket] 🔌 desconectado:', reason);
+    });
 
-        const onDisconnect=() => {
-            setIsConnected(false);
-            console.log('Disconnected from WebSocket server IO');
-        };
+    s.on('connect_error', (err: any) => {
+      setIsConnected(false);
+      console.error('[socket] ❌ error de conexión:', err?.message || err);
+    });
 
-        // Set up event listeners
-        socketRef.current.on('connect', onConnect);
-        socketRef.current.on('disconnect', onDisconnect);
-        socketRef.current.on('connected', (data) => {
-            console.log('Server connection confirmed:', data);
-        });
+    socketRef.current = s;
 
-        // Clean up on unmount
-        return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
-                setIsConnected(false);
-            }
-        };
-    }, [token]); // Reconnect when token changes
+    return () => {
+      s.removeAllListeners();
+      s.disconnect();
+      socketRef.current = null;
+    };
+  }, [token]);
 
-    // Memoize the context value to prevent unnecessary re-renders
-    const contextValue = useMemo(() => ({
-        socket: socketRef.current,
-        isConnected: isConnected
-    }), [isConnected]);
+  const value = useMemo(
+    () => ({ socket: socketRef.current, isConnected }),
+    [isConnected]
+  );
 
-    return (
-        <SocketContext.Provider value={contextValue}>
-            {children}
-        </SocketContext.Provider>
-    );
+  return (
+    <SocketContext.Provider value={value}>
+      {children}
+    </SocketContext.Provider>
+  );
 };
 
 export default SocketContext;

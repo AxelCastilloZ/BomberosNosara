@@ -43,7 +43,7 @@ export default function VehiculoList({
       'en mantenimiento': 'Mantenimiento',
       'dado de baja': 'Dado de baja',
     };
-    return labels[status as keyof typeof labels] || status;
+    return (labels as any)[status] || status;
   };
 
   const getTypeLabel = (type: string) => {
@@ -55,7 +55,7 @@ export default function VehiculoList({
       'vehículo utilitario': 'Vehículo utilitario',
       otro: 'Otro',
     };
-    return labels[type as keyof typeof labels] || type;
+    return (labels as any)[type] || type;
   };
 
   return (
@@ -67,7 +67,7 @@ export default function VehiculoList({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
             <input
               type="text"
-              placeholder="Buscar por matrícula..."
+              placeholder="Buscar por placa..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 w-full border border-slate-300 rounded p-2"
@@ -152,6 +152,12 @@ export default function VehiculoList({
                   <Calendar className="h-3 w-3 inline-block mr-1" />
                   Programar
                 </button>
+                <button
+                  className="text-xs flex-1 border rounded py-1 px-2 bg-white hover:bg-slate-50"
+                  onClick={() => onRegistrar(vehicle)}
+                >
+                  Registrar
+                </button>
               </div>
             </div>
           </div>
@@ -186,7 +192,7 @@ export default function VehiculoList({
           <span className="text-slate-600">
             Dados de baja:{' '}
             <span className="font-medium text-red-600">
-              {filteredVehicles.filter((v) => v.estadoActual.toLowerCase() === 'en reparación').length}
+              {filteredVehicles.filter((v) => v.estadoActual.toLowerCase() === 'dado de baja').length}
             </span>
           </span>
         </div>

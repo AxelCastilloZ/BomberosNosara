@@ -7,7 +7,8 @@ import VehiculoList from './vehiculoList';
 import { Vehicle } from '../../../../interfaces/Vehiculos/vehicle';
 import { useVehiculos, useUpdateVehiculo } from '../../../../hooks/useVehiculos';
 import { Truck, Ambulance, Car, Bike, Wrench } from 'lucide-react';
-import { VehiculoView } from 'apps/bomberos-de-nosara-frontend/src/types/vehiculos/vehiculoTypes';
+// Usa ruta relativa o alias configurado en tu app:
+import type { VehiculoView } from '../../../../types/vehiculos/vehiculoTypes';
 
 interface DashboardVehiculoProps {
   overrideModal?: (modalKey: VehiculoView, vehiculo?: Vehicle) => void;
