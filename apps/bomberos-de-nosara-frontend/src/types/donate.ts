@@ -1,5 +1,5 @@
 export interface Donante {
-  id: string;
+  id: number;
   nombre: string;
   logo: string; 
   url: string;

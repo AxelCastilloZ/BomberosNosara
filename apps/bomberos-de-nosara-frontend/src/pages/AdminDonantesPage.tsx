@@ -28,85 +28,108 @@ export default function AdminDonantesPage() {
   const [showLoading, setShowLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
-  const [toDeleteId, setToDeleteId] = useState<string | null>(null);
+  const [toDeleteId, setToDeleteId] = useState<number | null>(null);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
 
 
-  const form = useForm({
-    defaultValues: {
-      id: '',
-      nombre: '',
-      descripcion: '',
-      logo: '',
-      url: '',
-    },
-    onSubmit: async ({ value }) => {
-      setShowLoading(true);
+// defaultValues
+const form = useForm({
+  defaultValues: {
+    nombre: '',
+    descripcion: '',
+    logo: '',
+    url: '',
+  },
+  onSubmit: async ({ value }) => {
+    setShowLoading(true);
 
-       const camposInvalidos = Object.entries(value).filter(
-          ([k, v]) => k !== 'logo' && (!v || v.trim() === '')
-        );
+    const camposInvalidos = Object.entries(value).filter(
+      ([k, v]) => k !== 'logo' && (!v || String(v).trim() === '')
+    );
+    if (camposInvalidos.length > 0 || (!editingDonante && !logoFile)) {
+      alert('Todos los campos son obligatorios');
+      setShowLoading(false);
+      return;
+    }
 
-        if (camposInvalidos.length > 0 || !logoFile) {
-          alert('Todos los campos son obligatorios');
-          setShowLoading(false);
-          return;
-        }
-
-        if (!logoFile && !editingDonante) {
-          alert('Debes seleccionar un logo');
-          setShowLoading(false);
-          return;
-        }
-
-
-        if (!logoFile) {
-          alert('Debes seleccionar un archivo de imagen.');
-          setShowLoading(false);
-          return;
-        }
-
-
-      if (!editingDonante && donantes.some(d => d.id === value.id)) {
-        alert('Ya existe un donante con ese ID');
-        setShowLoading(false);
-        return;
+    try {
+      if (editingDonante) {
+        updateDonante({
+          id: editingDonante.id,
+          ...value,
+          logoFile: logoFile ?? undefined, 
+        });
+        setSuccessMsg(`Donante actualizado: ${value.nombre}`);
+      } else {
+        if (!logoFile) throw new Error('Debes seleccionar un logo');
+        addDonante({ ...value, logoFile });
+        setSuccessMsg(`Donante agregado: ${value.nombre}`);
       }
+    } catch {
+      alert('Error al guardar el donante');
+    }
 
-      try {
-        if (editingDonante) {
-          updateDonante(value);
-          setSuccessMsg(`Donante actualizado: ${value.nombre}`);
-        } else {
-          addDonante({ ...value, logoFile});
-          setSuccessMsg(`Donante agregado: ${value.nombre}`);
-        }
-      } catch (err) {
-        alert('Error al guardar el donante');
-      } finally {
-        setShowLoading(false);
-        setShowSuccess(true);
-        setIsFormOpen(false);
-        setEditingDonante(null);
-        form.reset();
-        setLogoFile(null);
+    
+    finally {
+      setShowLoading(false);
+      setShowSuccess(true);
+      handleCloseForm();
+      setIsFormOpen(false);
+      setEditingDonante(null);
+      form.reset();
+      setLogoFile(null);
+    }
+  },
+});
 
-      }
-    },
-  });
 
-  const handleEdit = (donante: Donante) => {
-    setEditingDonante(donante);
-    Object.entries(donante).forEach(([key, value]) => {
-      form.setFieldValue(key as keyof Donante, value);
-    });
-    setIsFormOpen(true);
-  };
+const handleEdit = (donante: Donante) => {
+  setEditingDonante(donante);
+  form.setFieldValue('nombre', donante.nombre);
+  form.setFieldValue('descripcion', donante.descripcion);
+  form.setFieldValue('logo', donante.logo ?? '');
+  form.setFieldValue('url', donante.url);
+
+  setLogoFile(null);
+
+  const absoluteLogo =
+    donante.logo?.startsWith('http')
+      ? donante.logo
+      : `${import.meta.env.VITE_API_URL}${donante.logo}`;
+
+  setPreview(absoluteLogo);       
+  setIsFormOpen(true);
+};
+
+
+
+
+  // --- helpers de limpieza ---
+const clearDonanteForm = () => {
+  form.reset();
+  setLogoFile(null);
+  if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
+  setPreview('');
+  setEditingDonante(null);
+};
+
+
+const handleOpenCreate = () => {
+  clearDonanteForm();
+  setIsFormOpen(true);
+};
+
+const handleCloseForm = () => {
+  clearDonanteForm();
+  setIsFormOpen(false);
+};
+
+
 
   const handleDelete = () => {
-    if (toDeleteId) deleteDonante(toDeleteId);
+    if (toDeleteId != null) deleteDonante(toDeleteId);
     setShowConfirmDelete(false);
     setSuccessMsg('Donante eliminado correctamente');
     setShowSuccess(true);
@@ -179,15 +202,12 @@ export default function AdminDonantesPage() {
             Administrar Donantes
           </h1>
           <button
-            onClick={() => {
-              setEditingDonante(null);
-              form.reset();
-              setIsFormOpen(true);
-            }}
+            onClick={handleOpenCreate}
             className="bg-red-600 text-white text-sm px-4 py-2 rounded hover:bg-red-700 sm:text-base sm:px-6 sm:py-2 w-full sm:w-auto"
           >
             + Agregar Donante
           </button>
+
         </div>
 
         {isLoading ? (
@@ -284,17 +304,7 @@ export default function AdminDonantesPage() {
               }}
               className="space-y-4"
             >
-              <form.Field name="id">
-                {(field) => (
-                  <input
-                    placeholder="ID"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    className="w-full border p-2 rounded"
-                    disabled={!!editingDonante}
-                  />
-                )}
-              </form.Field>
+            
               <form.Field name="nombre">
                 {(field) => (
                   <input
@@ -321,20 +331,22 @@ export default function AdminDonantesPage() {
                 type="file"
                 accept="image/*"
                 onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    setLogoFile(e.target.files[0]);
+                  const f = e.target.files?.[0];
+                  if (f) {
+                    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
+                    setLogoFile(f);
+                    setPreview(URL.createObjectURL(f));
                   }
                 }}
                 className="w-full border p-2 rounded"
               />
-              {logoFile && (
-                <img
-                  src={URL.createObjectURL(logoFile)}
-                  alt="Vista previa"
-                  className="mt-2 h-20 object-contain"
-                />
+
+              {preview && (
+                <img src={preview} alt="Vista previa" className="mt-2 h-20 object-contain" />
               )}
+
             </div>
+
 
 
               <form.Field name="url">
@@ -348,13 +360,14 @@ export default function AdminDonantesPage() {
                 )}
               </form.Field>
               <div className="flex justify-between pt-4">
-                <button
+               <button
                   type="button"
-                  onClick={() => setIsFormOpen(false)}
+                  onClick={handleCloseForm}
                   className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
                 >
                   Cancelar
                 </button>
+
                 <button
                   type="submit"
                   className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"

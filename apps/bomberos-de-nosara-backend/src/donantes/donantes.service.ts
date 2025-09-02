@@ -13,21 +13,18 @@ export class DonantesService {
   ) {}
 
   async create(dto: CreateDonanteDto, file?: Express.Multer.File): Promise<Donante> {
-  const nuevo = this.donanteRepository.create(dto);
-
-  if (file) {
-    nuevo.logo = `/uploads/donantes/${file.filename}`;
+    const nuevo = this.donanteRepository.create(dto);
+    if (file) {
+      nuevo.logo = `/uploads/donantes/${file.filename}`;
+    }
+    return this.donanteRepository.save(nuevo);
   }
-
-  return this.donanteRepository.save(nuevo);
-}
-
 
   async findAll(): Promise<Donante[]> {
     return this.donanteRepository.find();
   }
 
-  async findOne(id: string): Promise<Donante> {
+  async findOne(id: number): Promise<Donante> {
     const donante = await this.donanteRepository.findOneBy({ id });
     if (!donante) {
       throw new NotFoundException(`Donante con ID "${id}" no encontrado`);
@@ -35,13 +32,23 @@ export class DonantesService {
     return donante;
   }
 
-  async update(id: string, dto: UpdateDonanteDto): Promise<Donante> {
+  async update(
+    id: number,
+    dto: UpdateDonanteDto,
+    file?: Express.Multer.File, // ← archivo opcional
+  ): Promise<Donante> {
     const donante = await this.findOne(id);
-    const actualizado = Object.assign(donante, dto);
-    return this.donanteRepository.save(actualizado);
+
+    // si llega archivo, actualiza el logo
+    if (file) {
+      donante.logo = `/uploads/donantes/${file.filename}`;
+    }
+
+    Object.assign(donante, dto);
+    return this.donanteRepository.save(donante);
   }
 
-  async remove(id: string): Promise<Donante> {
+  async remove(id: number): Promise<Donante> {
     const donante = await this.findOne(id);
     await this.donanteRepository.remove(donante);
     return donante;

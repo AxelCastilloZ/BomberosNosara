@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // src/users/entities/user.entity.ts
 import {
   Entity,
@@ -5,10 +6,21 @@ import {
   Column,
   ManyToMany,
   JoinTable,
+=======
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  ManyToMany, 
+  JoinTable, 
+  OneToMany 
+>>>>>>> 5c7910d9a0d3e55e6f217389948b91cc839509f5
 } from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
+import { Conversation } from '../../chat/entities/conversation.entity';
+import { Message } from '../../chat/entities/message.entity';
 
-@Entity()
+@Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -16,8 +28,13 @@ export class User {
   @Column({ unique: true })
   username!: string;
 
+<<<<<<< HEAD
   @Column({ unique: true }) // <— nuevo
   email!: string; // <— nuevo
+=======
+  @Column({ unique: true })     
+  email!: string;                  
+>>>>>>> 5c7910d9a0d3e55e6f217389948b91cc839509f5
 
   @Column()
   password!: string;
@@ -25,4 +42,17 @@ export class User {
   @ManyToMany(() => Role, { eager: true })
   @JoinTable()
   roles!: Role[];
+
+
+  @ManyToMany(() => Conversation, conversation => conversation.participants)
+  conversations!: Conversation[];
+
+  @OneToMany(() => Message, message => message.sender)
+  messages!: Message[];
+
+ 
+  isParticipant(conversationId: number): boolean {
+    if (!this.conversations) return false;
+    return this.conversations.some(conv => conv.id === conversationId);
+  }
 }
