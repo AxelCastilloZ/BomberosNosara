@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { resetPassword } from '../../src/service/auth';
+import { resetPassword } from '../../service/auth';
 
 type Props = {
   token: string;

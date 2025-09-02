@@ -12,7 +12,7 @@ type FormValues = Omit<Vehicle, 'id'>;
 const tipos: TipoVehiculo[] = ['camión', 'ambulancia', 'pickup', 'moto', 'vehículo utilitario', 'otro'];
 const estados: EstadoVehiculo[] = ['activo', 'en mantenimiento', 'dado de baja'];
 
-// "Hoy" en YYYY-MM-DD para el atributo max del input date
+
 const todayISO = new Date().toISOString().slice(0, 10);
 
 export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
@@ -27,7 +27,7 @@ export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
   const addVehiculo = useAddVehiculo();
 
   const onSubmit = (data: FormValues) => {
-    // (Opcional) normaliza placa (trim)
+   
     const payload: FormValues = { ...data, placa: data.placa?.trim() };
 
     addVehiculo.mutate(payload, {
@@ -37,13 +37,13 @@ export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
         onSuccess?.();
       },
       onError: (e: any) => {
-        // Espera errores normalizados desde vehiculoService / backend
+       
         const code = e?.code || e?.response?.data?.code;
         const field = e?.field || e?.response?.data?.field;
         const message = e?.message || e?.response?.data?.message || 'Error al registrar vehículo';
 
         if (code === 'PLATE_EXISTS') {
-          // Muestra el error debajo del campo placa
+        
           setError('placa', { type: 'server', message: message || 'La placa ya está registrada' });
           return;
         }
@@ -74,8 +74,7 @@ export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
           {...register('placa', {
             required: 'La placa es requerida',
             minLength: { value: 3, message: 'La placa debe tener al menos 3 caracteres' },
-            // (Opcional) patrón simple, ajusta según tu formato real
-            // pattern: { value: /^[A-Za-z0-9-]{3,10}$/, message: 'Formato de placa inválido' },
+          
           })}
           className="input w-full"
         />

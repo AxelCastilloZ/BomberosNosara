@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import ForgotPasswordForm from '../../auth/ForgotPasswordForm';
+import ForgotPasswordForm from '../../auth/components/ForgotPasswordForm';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();

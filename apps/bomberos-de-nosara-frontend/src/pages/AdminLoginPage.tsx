@@ -1,30 +1,26 @@
 
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
-import { useAdminAuth } from '../../src/auth/AdminAuthContext';
+
+import { useAdminAuth } from '../auth/AdminAuthContext';
+
 
 export default function AdminLoginPage() {
-  const [username, setUsername] = useState('');  
+  const navigate = useNavigate();
+  const { login } = useAdminAuth(); 
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
-  const { setUserAndToken } = useAdminAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) throw new Error('Credenciales inválidas');
-      const data = await res.json();
-      setUserAndToken(username, data.access_token);
+     
+      await login(username.trim(), password);
       navigate({ to: '/admin' });
     } catch (err: any) {
-      setError(err?.message ?? 'Error desconocido al iniciar sesión');
+      setError(err?.message ?? 'Credenciales inválidas');
     }
   };
 
