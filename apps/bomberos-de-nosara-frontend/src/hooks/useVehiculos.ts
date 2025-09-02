@@ -1,4 +1,3 @@
-// hooks/useVehiculos.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vehiculoService } from '../service/vehiculoService';
 import type {
@@ -9,17 +8,16 @@ import type {
 } from '../interfaces/Vehiculos/vehicle';
 
 const VEHICULOS_KEY = ['vehiculos'] as const;
+const HISTORIAL_KEY = (id: string) => ['vehiculos', id, 'historial'] as const;
 
-// Obtener todos los vehículos
 export const useVehiculos = () => {
   return useQuery<Vehicle[]>({
     queryKey: VEHICULOS_KEY,
     queryFn: vehiculoService.getAll,
-    staleTime: 1000 * 60 * 10, // 10 minutos
+    staleTime: 1000 * 60 * 10, 
   });
 };
 
-// Agregar vehículo
 export const useAddVehiculo = () => {
   const qc = useQueryClient();
   return useMutation<Vehicle, Error, Omit<Vehicle, 'id'>>({
@@ -28,7 +26,6 @@ export const useAddVehiculo = () => {
   });
 };
 
-// Actualizar vehículo (parcial)
 export const useUpdateVehiculo = () => {
   const qc = useQueryClient();
   return useMutation<Vehicle, Error, Partial<Vehicle> & { id: string }>({
@@ -37,7 +34,6 @@ export const useUpdateVehiculo = () => {
   });
 };
 
-// Cambiar estado actual
 export const useActualizarEstadoVehiculo = () => {
   const qc = useQueryClient();
   return useMutation<Vehicle, Error, { id: string; estadoActual: Vehicle['estadoActual'] }>({
@@ -46,7 +42,6 @@ export const useActualizarEstadoVehiculo = () => {
   });
 };
 
-// Dar de baja
 export const useDarDeBajaVehiculo = () => {
   const qc = useQueryClient();
   return useMutation<Vehicle, Error, { id: string; motivo: string }>({
@@ -55,7 +50,6 @@ export const useDarDeBajaVehiculo = () => {
   });
 };
 
-// Solicitar reposición
 export const useRegistrarReposicionVehiculo = () => {
   const qc = useQueryClient();
   return useMutation<Vehicle, Error, { id: string; data: ReposicionData }>({
@@ -64,7 +58,6 @@ export const useRegistrarReposicionVehiculo = () => {
   });
 };
 
-// Registrar mantenimiento (historial)
 export const useRegistrarMantenimiento = () => {
   const qc = useQueryClient();
   return useMutation<any, Error, { id: string; data: MantenimientoData }>({
@@ -73,11 +66,20 @@ export const useRegistrarMantenimiento = () => {
   });
 };
 
-// Programar mantenimiento
 export const useProgramarMantenimiento = () => {
   const qc = useQueryClient();
   return useMutation<any, Error, { id: string; data: MantenimientoProgramadoData }>({
     mutationFn: ({ id, data }) => vehiculoService.programarMantenimiento(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
+  });
+};
+
+
+export const useHistorialVehiculo = (id?: string) => {
+  return useQuery<any[]>({
+    queryKey: id ? HISTORIAL_KEY(id) : ['vehiculos', 'historial', 'disabled'],
+    queryFn: () => vehiculoService.getHistorial(id as string),
+    enabled: !!id,            
+    staleTime: 1000 * 60 * 5, 
   });
 };

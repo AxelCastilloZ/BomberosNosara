@@ -1,4 +1,3 @@
-// services/vehiculoService.ts
 import api from '../api/apiConfig';
 import type {
   MantenimientoProgramadoData,
@@ -8,11 +7,10 @@ import type {
 } from '../interfaces/Vehiculos/vehicle';
 import type { AxiosError } from 'axios';
 
-// Estructura recomendada de error desde el backend
 export type ApiErrorPayload = {
-  code?: string;      // p.ej. 'PLATE_EXISTS'
-  field?: string;     // p.ej. 'placa'
-  message?: string;   // p.ej. 'La placa ya está registrada'
+  code?: string;
+  field?: string;
+  message?: string;
   details?: any;
   statusCode?: number;
 };
@@ -21,7 +19,6 @@ function normalizeApiError(err: unknown): never {
   const axErr = err as AxiosError<ApiErrorPayload>;
   const payload = axErr?.response?.data;
 
-  // Si el backend envía un shape claro, lo propagamos tal cual
   if (payload?.message || payload?.code) {
     const e = new Error(payload.message || 'Error de servidor');
     (e as any).code = payload.code;
@@ -31,7 +28,6 @@ function normalizeApiError(err: unknown): never {
     throw e;
   }
 
-  // Fallback genérico
   const e = new Error(axErr?.message || 'Error de red o del servidor');
   (e as any).status = axErr?.response?.status;
   throw e;
@@ -53,7 +49,6 @@ export const vehiculoService = {
       const res = await api.post('/vehiculos', vehiculo);
       return res.data;
     } catch (err) {
-      // Aquí atrapamos 409 (placa duplicada) u otros y los convertimos
       normalizeApiError(err);
     }
   },
@@ -133,13 +128,12 @@ export const vehiculoService = {
     }
   },
 
-  // ---- (Opcional) Verificación de placa para validación async de formularios ----
+  // ---- Validación de placa ----
   checkPlacaExists: async (placa: string): Promise<boolean> => {
     try {
       const res = await api.get(`/vehiculos/existe-placa/${encodeURIComponent(placa)}`);
       return Boolean(res.data?.exists);
-    } catch (err) {
-      // No bloquees la UX por esto; considera false en errores de red
+    } catch {
       return false;
     }
   },

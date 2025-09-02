@@ -1,4 +1,4 @@
-// src/app.module.ts
+
 import { join } from 'path';
 import { existsSync } from 'fs';
 import { Module } from '@nestjs/common';
@@ -68,24 +68,24 @@ import { ChatModule } from './chat/chat.module';
       }),
     }),
 
-    // Rate limiting global
+   
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
 
-    // Event Emitter (necesario si publicas eventos en el gateway o en servicios)
+
     EventEmitterModule.forRoot(),
 
-    // JWT global (el gateway/guards pueden inyectar JwtService)
+    
     JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
         secret: cfg.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '7d' }, // opcional
+        signOptions: { expiresIn: '7d' },
       }),
     }),
 
-    // Archivos estáticos
+    
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
@@ -109,7 +109,7 @@ import { ChatModule } from './chat/chat.module';
       }),
     }),
 
-    // --- Módulos de la app ---
+    
     DonantesModule,
     NoticiaModule,
     AuthModule,
@@ -124,7 +124,7 @@ import { ChatModule } from './chat/chat.module';
     WebSocketsModule,
     AppMobileModule,
 
-    // Chat (nuevo)
+  
     ChatModule,
   ],
 })

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useVehiculos, useProgramarMantenimiento } from '../../../../hooks/useVehiculos';
 import type { Vehicle } from '../../../../interfaces/Vehiculos/vehicle';
 
@@ -12,9 +12,14 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
   const { data: vehicles = [] } = useVehiculos();
   const programarMantenimiento = useProgramarMantenimiento();
 
-  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehicle | undefined>(
-    vehicles.find((v) => v.id === vehiculoId)
-  );
+  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehicle | undefined>(undefined);
+
+  useEffect(() => {
+    if (!vehiculoSeleccionado && vehiculoId && vehicles.length) {
+      const found = vehicles.find((v) => v.id === vehiculoId);
+      if (found) setVehiculoSeleccionado(found);
+    }
+  }, [vehiculoId, vehicles, vehiculoSeleccionado]);
 
   const [fecha, setFecha] = useState<string>(fechaActual ?? '');
   const [tecnico, setTecnico] = useState<string>('');
@@ -22,26 +27,29 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
   const [prioridad, setPrioridad] = useState<string>('media');
   const [observaciones, setObservaciones] = useState<string>('');
 
+  const isDisabled = !vehiculoSeleccionado || !fecha || !tecnico;
+
   const handleSubmit = () => {
-    if (!vehiculoSeleccionado || !fecha || !tecnico || !tipo || !prioridad) return;
+    if (isDisabled) return;
 
-    programarMantenimiento.mutate({
-      id: vehiculoSeleccionado.id,
-      data: {
-        fechaProximoMantenimiento: fecha,
-        tecnico,
-        tipo,
-        prioridad,
-        observaciones,
+    programarMantenimiento.mutate(
+      {
+        id: vehiculoSeleccionado!.id,
+        data: {
+          fechaProximoMantenimiento: fecha,
+          tecnico,
+          tipo,
+          prioridad,
+          observaciones,
+        },
       },
-    });
-
-    onClose();
+      { onSuccess: () => onClose() }
+    );
   };
 
   return (
     <div className="max-w-4xl mx-auto bg-white border rounded-xl shadow p-6">
-      <h2 className="text-xl font-bold mb-1 text-gray-800">Programar Mantenimiento</h2>
+      <h2 className="text-xl font-bold mb-1 text-gray-800">Programar mantenimiento</h2>
       <p className="text-sm text-gray-500 mb-6">
         Completa los detalles para agendar un próximo mantenimiento
       </p>
@@ -100,6 +108,7 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
             <label className="block text-sm font-semibold text-gray-700 mb-1">Fecha de mantenimiento</label>
             <input
               type="date"
+              min={new Date().toISOString().slice(0,10)}
               className="w-full border rounded px-3 py-2"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
@@ -142,10 +151,10 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!vehiculoSeleccionado || !fecha || !tecnico}
+          disabled={isDisabled || programarMantenimiento.isPending}
           className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
         >
-          Guardar
+          {programarMantenimiento.isPending ? 'Guardando…' : 'Guardar'}
         </button>
       </div>
     </div>
