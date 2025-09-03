@@ -20,8 +20,13 @@ export class DonantesService {
     return this.donanteRepository.save(nuevo);
   }
 
-  async findAll(): Promise<Donante[]> {
-    return this.donanteRepository.find();
+  async findAll(page = 1, limit = 10): Promise<{ data: Donante[]; total: number; page: number; limit: number }> {
+    const [data, total] = await this.donanteRepository.findAndCount({
+      take: limit,
+      skip: (page - 1) * limit,
+      order: { id: 'DESC' }
+    });
+    return { data, total, page, limit };
   }
 
   async findOne(id: number): Promise<Donante> {
