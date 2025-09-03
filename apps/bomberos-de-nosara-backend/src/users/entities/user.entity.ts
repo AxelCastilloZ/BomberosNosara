@@ -1,20 +1,12 @@
-<<<<<<< HEAD
 // src/users/entities/user.entity.ts
+
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   ManyToMany,
   JoinTable,
-=======
-import { 
-  Entity, 
-  PrimaryGeneratedColumn, 
-  Column, 
-  ManyToMany, 
-  JoinTable, 
-  OneToMany 
->>>>>>> 5c7910d9a0d3e55e6f217389948b91cc839509f5
+  OneToMany,
 } from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
 import { Conversation } from '../../chat/entities/conversation.entity';
@@ -28,13 +20,8 @@ export class User {
   @Column({ unique: true })
   username!: string;
 
-<<<<<<< HEAD
   @Column({ unique: true }) // <— nuevo
   email!: string; // <— nuevo
-=======
-  @Column({ unique: true })     
-  email!: string;                  
->>>>>>> 5c7910d9a0d3e55e6f217389948b91cc839509f5
 
   @Column()
   password!: string;
@@ -43,16 +30,14 @@ export class User {
   @JoinTable()
   roles!: Role[];
 
-
-  @ManyToMany(() => Conversation, conversation => conversation.participants)
+  @ManyToMany(() => Conversation, (conversation) => conversation.participants)
   conversations!: Conversation[];
 
-  @OneToMany(() => Message, message => message.sender)
+  @OneToMany(() => Message, (message) => message.sender)
   messages!: Message[];
 
- 
   isParticipant(conversationId: number): boolean {
     if (!this.conversations) return false;
-    return this.conversations.some(conv => conv.id === conversationId);
+    return this.conversations.some((conv) => conv.id === conversationId);
   }
 }

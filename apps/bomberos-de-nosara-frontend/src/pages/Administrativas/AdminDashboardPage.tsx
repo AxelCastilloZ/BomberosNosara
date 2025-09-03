@@ -25,6 +25,7 @@ const ALL_ITEMS: DashboardItem[] = [
   { icon: <FaComments size={24} />, label: 'Chat Interno', href: '/admin/chat', roles: ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] },
   { icon: <FaNewspaper size={24} />, label: 'Administrar Noticias', href: '/admin/noticias', roles: ['SUPERUSER', 'ADMIN'] },
   { icon: <FaComments size={24} />, label: 'Sugerencias', href: '/admin/sugerencias', roles: ['SUPERUSER', 'ADMIN'] },
+  { icon: <FaUsers size={24} />, label: 'Gestión de Voluntarios', href: '/admin/voluntarios', roles: ['SUPERUSER', 'ADMIN', 'VOLUNTARIO'] },
 ];
 
 export default function AdminDashboardPage() {
