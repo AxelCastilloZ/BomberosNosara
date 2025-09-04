@@ -7,7 +7,7 @@ import { uploadImage } from "../service/uploadService";
 import { Noticia } from "../types/news";
 import NoticiasForm from "../components/ui/Administrativa/Noticias/NoticiasForm";
 import NoticiasTable from "../components/ui/Administrativa/Noticias/NoticiasTable";
-import { NoticiasFilters } from "../components/ui/Noticias/NoticiasFilters";
+import { NoticiasFilters } from "../components/ui/Administrativa/Noticias/NoticiasFilters";
 
 
 
@@ -134,8 +134,8 @@ const handleFilter = (newFilters: typeof filters) => {
     <div className="min-h-screen pt-28 bg-gradient-to-b from-white px-4 mt-4">
       <div className="max-w-6xl mx-auto">
         <div className=" mb-6">
-          <div className="flex items-center">
-          <h1 className="text-4xl font-bold text-black">
+          <div className="flex items-end bg-black p-6 rounded-2xl">
+          <h1 className="text-4xl font-bold text-white ">
             Gestión de Noticias
           </h1>
           </div>

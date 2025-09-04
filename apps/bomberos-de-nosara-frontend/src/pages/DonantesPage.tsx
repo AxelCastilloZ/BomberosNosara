@@ -3,8 +3,6 @@ import { useDonantes } from '../service/donorService';
 import { DonantesGrid } from '../components/ui/Donante/DonantesGrid';
 import { DonanteModal } from '../components/ui/Modals/Donantes/DonanteModal';
 import { Donante } from '../types/donate';
-import { DonarAhoraSection } from '../components/ui/Donar/DonarAhoraSection';
-import { DonationDetails } from '../components/ui/Donante/DonationDetails';
 
 export default function DonantesPage() {
   const { data: donantes = [], isLoading, isError } = useDonantes();

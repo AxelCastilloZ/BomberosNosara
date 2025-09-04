@@ -1,31 +1,22 @@
 import AboutUsPage from "./AboutUsPage";
 import DonantesPage from "./DonantesPage";
 import NoticiasPage from "./NoticiasPage";
-import SuggestionsPage from "./SuggestionsPage";
 import NuestroTrabajoPage from "./NuestroTrabajoPage";
-import ContactoPage from "./ContactoPage";
 import DonarPage from "./DonarPage";
 import FooterPage from "./FooterPage";
+import WelcomeSection from "../components/ui/AboutUs/WelcomeSection";
 
 export default function Home() {
   return (
     <>
-      <div className="min-h-screen bg-white pt-28">
+      <div className="min-h-screen bg-white pt-24">
         {/* Hero / Encabezado */}
-        <section className="w-full px-8 text-center">
-          <h1 className="text-5xl font-serif font-light text-gray-900 mb-6">
-            Bienvenido a Bomberos Nosara
-          </h1>
-
-          <p className="text-lg text-gray-700 max-w-3xl mx-auto mb-8 leading-relaxed">
-            Nos dedicamos a servir a la comunidad de Nosara con compromiso,
-            integridad y acción. Conocé más sobre nuestros aliados y cómo podés
-            apoyar nuestra labor.
-          </p>
+        <section className="w-full py-0">
+          <WelcomeSection />
         </section>
 
         {/* Secciones (todas full width) */}
-        <section className="w-full px-8">
+        <section id="about-us" className="w-full px-8">
           <AboutUsPage />
         </section>
 
@@ -33,7 +24,7 @@ export default function Home() {
           <NuestroTrabajoPage />
         </section>
 
-        <section className="w-full px-8 mt-16">
+        <section className="w-full px-8 mt-10">
           <DonantesPage />
         </section>
 
@@ -41,9 +32,7 @@ export default function Home() {
           <NoticiasPage />
         </section>
 
-      
-
-        <section className="w-full px-8 mt-16">
+        <section id="donar" className="w-full mt-16">
           <DonarPage />
         </section>
 

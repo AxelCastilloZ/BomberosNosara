@@ -82,7 +82,7 @@ export default function NoticiasTable({ noticias, onEdit, onDelete }: Props) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
       <table className="min-w-full bg-white border border-gray-300">
-        <thead className="bg-red-600 text-white">
+        <thead className="bg-red-100 text-red-800">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
