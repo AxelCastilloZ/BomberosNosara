@@ -15,12 +15,13 @@ const getAuthHeader = () => {
   }
 };
 
-// GET all
-export const useDonantes = () => {
+// GET all with pagination
+export const useDonantes = (page = 1, limit = 10) => {
   return useQuery({
-    queryKey: ['donantes'],
-    queryFn: async (): Promise<Donante[]> => {
+    queryKey: ['donantes', page, limit],
+    queryFn: async (): Promise<{ data: Donante[]; total: number; page: number; limit: number }> => {
       const res = await axios.get(API_URL, {
+        params: { page, limit },
         headers: getAuthHeader(),
       });
       return res.data;

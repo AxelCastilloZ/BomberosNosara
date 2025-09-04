@@ -1,6 +1,6 @@
 // donantes.controller.ts
 import {
-  Controller, Get, Post, Body, Param, Delete, Put,
+  Controller, Get, Post, Body, Param, Delete, Put, Query,
   UseGuards, UploadedFile, UseInterceptors, ParseIntPipe
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -34,8 +34,11 @@ export class DonantesController {
   constructor(private readonly donantesService: DonantesService) {}
 
   @Get()
-  findAll() {
-    return this.donantesService.findAll();
+  findAll(
+    @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10
+  ) {
+    return this.donantesService.findAll(page, limit);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

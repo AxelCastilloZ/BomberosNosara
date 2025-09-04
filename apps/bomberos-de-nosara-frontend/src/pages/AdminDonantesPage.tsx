@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   useDonantes,
   useAddDonante,
@@ -18,7 +18,14 @@ import { SuccessModal } from '../components/ui/Modals/Donantes/SuccessModal';
 import { ConfirmModal } from '../components/ui/Modals/Donantes/ConfirmModal';
 
 export default function AdminDonantesPage() {
-  const { data: donantes = [], isLoading } = useDonantes();
+  const [page, setPage] = useState(1);
+  const limit = 10;
+  
+  const { data: donantesData, isLoading } = useDonantes(page, limit);
+  const donantes = donantesData?.data || [];
+  const total = donantesData?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+
   const { mutate: addDonante } = useAddDonante();
   const { mutate: updateDonante } = useUpdateDonante();
   const { mutate: deleteDonante } = useDeleteDonante();
@@ -32,7 +39,6 @@ export default function AdminDonantesPage() {
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string>("");
-
 
 // defaultValues
 const form = useForm({
@@ -84,7 +90,6 @@ const form = useForm({
   },
 });
 
-
 const handleEdit = (donante: Donante) => {
   setEditingDonante(donante);
   form.setFieldValue('nombre', donante.nombre);
@@ -103,18 +108,76 @@ const handleEdit = (donante: Donante) => {
   setIsFormOpen(true);
 };
 
+const columns = useMemo<ColumnDef<Donante>[]>(() => [
+  {
+    header: 'Logo',
+    accessorKey: 'logo',
+    cell: ({ row }) => (
+      <div className="flex justify-center items-center">
+        <img
+          src={`${import.meta.env.VITE_API_URL}${row.original.logo}`}
+          alt={row.original.nombre}
+          className="h-20 w-20 object-contain mx-auto"
+        />
+      </div>
+    ),
+  },
+  {
+    header: 'Nombre',
+    accessorKey: 'nombre',
+  },
+  {
+    header: 'Descripción',
+    accessorKey: 'descripcion',
+    cell: ({ row }) => (
+      <div className="max-w-lg whitespace-pre-line break-words text-sm ">
+        {row.original.descripcion}
+      </div>
+    ),
+  },
+  {
+    header: 'Acciones',
+    cell: ({ row }) => (
+      <div className="flex gap-2 justify-center items-center">
+        <button
+          onClick={() => handleEdit(row.original)}
+          className="text-amber-600 hover:text-amber-700 text-sm"
+        >
+          Editar
+        </button>
+        <button
+          onClick={() => {
+            setToDeleteId(row.original.id);
+            setShowConfirmDelete(true);
+          }}
+          className="text-red-600 hover:text-red-700 text-sm"
+        >
+          Eliminar
+        </button>
+      </div>
+    ),
+  },
+], []);
 
-
-
-  // --- helpers de limpieza ---
-const clearDonanteForm = () => {
-  form.reset();
-  setLogoFile(null);
-  if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
-  setPreview('');
-  setEditingDonante(null);
-};
-
+const table = useReactTable({
+  data: donantes,
+  columns,
+  getCoreRowModel: getCoreRowModel(),
+  pageCount: totalPages,
+  manualPagination: true,
+  state: {
+    pagination: {
+      pageIndex: page - 1,
+      pageSize: limit,
+    },
+  },
+  onPaginationChange: (updater) => {
+    const newPagination = typeof updater === 'function' 
+      ? updater({ pageIndex: page - 1, pageSize: limit })
+      : updater;
+    setPage(newPagination.pageIndex + 1);
+  },
+});
 
 const handleOpenCreate = () => {
   clearDonanteForm();
@@ -126,207 +189,142 @@ const handleCloseForm = () => {
   setIsFormOpen(false);
 };
 
+const handleDelete = () => {
+  if (toDeleteId != null) deleteDonante(toDeleteId);
+  setShowConfirmDelete(false);
+  setSuccessMsg('Donante eliminado correctamente');
+  setShowSuccess(true);
+};
 
+const clearDonanteForm = () => {
+  form.reset();
+  setLogoFile(null);
+  if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
+  setPreview('');
+  setEditingDonante(null);
+};
 
-  const handleDelete = () => {
-    if (toDeleteId != null) deleteDonante(toDeleteId);
-    setShowConfirmDelete(false);
-    setSuccessMsg('Donante eliminado correctamente');
-    setShowSuccess(true);
-  };
-
-  const columns = useMemo<ColumnDef<Donante>[]>(() => [
-    {
-      header: 'Logo',
-      accessorKey: 'logo',
-      cell: ({ row }) => (
-        
-        <div className="flex justify-center items-center">
-      
-        <img
-          src={`${import.meta.env.VITE_API_URL}${row.original.logo}`}
-          alt={row.original.nombre}
-          className="h-20 w-20 object-contain mx-auto"
-        />
-        </div>
-      ),
-    },
-    {
-      header: 'Nombre',
-      accessorKey: 'nombre',
-    },
-    {
-      header: 'Descripción',
-      accessorKey: 'descripcion',
-      cell: ({ row }) => (
-        <div className="max-w-lg whitespace-pre-line break-words text-sm ">
-          {row.original.descripcion}
-        </div>
-      ),
-    },
-    {
-      header: 'Acciones',
-      cell: ({ row }) => (
-        <div className="flex gap-2 justify-center items-center">
-          <button
-            onClick={() => handleEdit(row.original)}
-            className="text-amber-600 hover:text-amber-700 text-sm"
-          >
-            Editar
-          </button>
-          <button
-            onClick={() => {
-              setToDeleteId(row.original.id);
-              setShowConfirmDelete(true);
-            }}
-            className="text-red-600 hover:text-red-700 text-sm"
-          >
-            Eliminar
-          </button>
-        </div>
-      ),
-    },
-  ], []);
-
-  const table = useReactTable({
-    data: donantes,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-  });
-
-  return (
-    <div className="min-h-screen pt-28 bg-gradient-to-b from-white to-blue-50 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4 sm:gap-0 text-center sm:text-left">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-red-700">
-            Administrar Donantes
-          </h1>
-          <button
-            onClick={handleOpenCreate}
-            className="bg-red-600 text-white text-sm px-4 py-2 rounded hover:bg-red-700 sm:text-base sm:px-6 sm:py-2 w-full sm:w-auto"
-          >
-            + Agregar Donante
-          </button>
-
-        </div>
-
-        {isLoading ? (
-          <p className="text-center text-gray-500">Cargando donantes...</p>
-        ) : (
-          <>
-            {/* Tabla para escritorio */}
-            <div className="hidden md:block overflow-x-auto rounded-lg border border-gray-300 shadow-md">
-              <table className="min-w-full bg-white border border-gray-300 text-sm">
-                <thead className="bg-red-100 text-red-800">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className="px-4 md:px-6 py-2 md:py-3 border border-gray-300 text-center text-xs md:text-sm font-bold uppercase tracking-wide"
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody className="divide-y divide-gray-300">
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-blue-50 transition">
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="px-6 py-4 border border-gray-200 text-gray-700 align-top h-full"
-                        >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Cards para móviles */}
-            <div className="block md:hidden space-y-4">
-              {donantes.map((d) => (
-                <div
-                  key={d.id}
-                  className="bg-white border border-gray-300 rounded-lg p-4 shadow-sm"
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <img
-                      src={`${import.meta.env.VITE_API_URL}${d.logo}`}
-                      alt={d.nombre}
-                      className="w-12 h-12 object-contain border rounded"
-                    />
-                    <h2 className="text-lg font-bold text-red-700">{d.nombre}</h2>
-                  </div>
-                  <p className="text-sm text-gray-700 whitespace-pre-line break-words mb-2">
-                    {d.descripcion}
-                  </p>
-                  <div className="flex justify-end gap-4 text-sm">
-                    <button
-                      onClick={() => handleEdit(d)}
-                      className="text-amber-600 hover:text-amber-700"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => {
-                        setToDeleteId(d.id);
-                        setShowConfirmDelete(true);
-                      }}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
+return (
+  <div className="min-h-screen pt-28 bg-gradient-to-b from-white px-4">
+    <div className="max-w-6xl mx-auto">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-4xl font-bold text-red-800">Administrar Donantes</h1>
+        <button
+          onClick={() => {
+            setEditingDonante(null);
+            form.reset();
+            setLogoFile(null);
+            setPreview("");
+            setIsFormOpen(true);
+          }}
+          className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+        >
+          + Agregar Donante
+        </button>
       </div>
 
-      {/* Formulario de creacion de edicion */}
-      {isFormOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
-          <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-xl">
-            <h2 className="text-xl font-bold text-red-700 mb-4 text-center">
-              {editingDonante ? 'Editar Donante' : 'Agregar Donante'}
-            </h2>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                form.handleSubmit();
-              }}
-              className="space-y-4"
-            >
+      {isLoading ? (
+        <p className="text-center text-gray-500">Cargando donantes...</p>
+      ) : (
+        <>
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white border border-gray-300 text-sm">
+              <thead className="bg-red-100 text-red-800">
+                {table.getHeaderGroups().map(headerGroup => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map(header => (
+                      <th 
+                        key={header.id} 
+                        className="px-4 md:px-6 py-2 md:py-3 border border-gray-300 text-center text-xs md:text-sm font-bold uppercase tracking-wide"
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody className="divide-y divide-gray-300">
+                {table.getRowModel().rows.map(row => (
+                  <tr key={row.id} className="hover:bg-blue-50 transition">
+                    {row.getVisibleCells().map(cell => (
+                      <td
+                        key={cell.id}
+                        className="px-6 py-4 border border-gray-200 text-gray-700 align-top h-full"
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
             
-              <form.Field name="nombre">
-                {(field) => (
-                  <input
-                    placeholder="Nombre"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    className="w-full border p-2 rounded"
-                  />
-                )}
-              </form.Field>
-              <form.Field name="descripcion">
-                {(field) => (
-                  <textarea
-                    placeholder="Descripción"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    className="w-full border p-2 rounded"
-                  />
-                )}
-              </form.Field>
-          
-             <div>
+          {/* Pagination Controls */}
+          <div className="flex justify-end gap-2 mt-12 mb-12">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <span className="px-2 py-1">
+              Página {page} de {totalPages}
+            </span>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Siguiente
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+
+    {/* Formulario de creación/edición */}
+    {isFormOpen && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+        <div className="bg-white p-6 rounded-xl shadow-xl w-full max-w-2xl">
+          <h2 className="text-2xl font-bold text-red-700 mb-6 text-center">
+            {editingDonante ? 'Editar Donante' : 'Agregar Donante'}
+          </h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              form.handleSubmit();
+            }}
+            className="space-y-4"
+          >
+            <form.Field name="nombre">
+              {(field) => (
+                <input
+                  placeholder="Nombre"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  className="w-full border p-2 rounded"
+                />
+              )}
+            </form.Field>
+            <form.Field name="descripcion">
+              {(field) => (
+                <textarea
+                  placeholder="Descripción"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  className="w-full border p-2 rounded h-24"
+                />
+              )}
+            </form.Field>
+            
+            <div>
               <input
                 type="file"
                 accept="image/*"
@@ -344,37 +342,35 @@ const handleCloseForm = () => {
               {preview && (
                 <img src={preview} alt="Vista previa" className="mt-2 h-20 object-contain" />
               )}
-
             </div>
 
+            <form.Field name="url">
+              {(field) => (
+                <input
+                  placeholder="URL del Sitio"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  className="w-full border p-2 rounded"
+                />
+              )}
+            </form.Field>
+            
+            <div className="flex justify-between pt-4">
+              <button
+                type="button"
+                onClick={handleCloseForm}
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400"
+              >
+                Cancelar
+              </button>
 
-
-              <form.Field name="url">
-                {(field) => (
-                  <input
-                    placeholder="URL del Sitio"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    className="w-full border p-2 rounded"
-                  />
-                )}
-              </form.Field>
-              <div className="flex justify-between pt-4">
-               <button
-                  type="button"
-                  onClick={handleCloseForm}
-                  className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="submit"
-                  className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-                >
-                  {editingDonante ? 'Actualizar' : 'Agregar'}
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+              >
+                {editingDonante ? 'Actualizar' : 'Agregar'}
+              </button>
+            </div>
             </form>
           </div>
         </div>
