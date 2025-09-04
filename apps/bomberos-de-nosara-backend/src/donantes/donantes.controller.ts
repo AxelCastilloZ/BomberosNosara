@@ -36,9 +36,10 @@ export class DonantesController {
   @Get()
   findAll(
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
-    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10
+    @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 10,
+    @Query('search') search?: string
   ) {
-    return this.donantesService.findAll(page, limit);
+    return this.donantesService.findAll(page, limit, search);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

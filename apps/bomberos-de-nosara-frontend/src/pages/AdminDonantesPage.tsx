@@ -1,10 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
-import {
-  useDonantes,
-  useAddDonante,
-  useUpdateDonante,
-  useDeleteDonante,
-} from '../service/donorService';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useDonantes, useAddDonante, useUpdateDonante, useDeleteDonante, type DonantesResponse, } from '../service/donorService';
 import { Donante } from '../types/donate';
 import { useForm } from '@tanstack/react-form';
 import {
@@ -20,8 +15,22 @@ import { ConfirmModal } from '../components/ui/Modals/Donantes/ConfirmModal';
 export default function AdminDonantesPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   
-  const { data: donantesData, isLoading } = useDonantes(page, limit);
+  // Debounce the search term
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+      setPage(1); // Reset to first page when search term changes
+    }, 300); // 300ms delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
+  
+  const { data: donantesData, isLoading } = useDonantes(page, limit, debouncedSearchTerm);
   const donantes = donantesData?.data || [];
   const total = donantesData?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
@@ -209,6 +218,34 @@ return (
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-4xl font-bold text-red-800">Administrar Donantes</h1>
+      </div>
+      <div className="flex flex-col md:flex-row gap-4 mb-6 w-full">
+        <div className="relative flex-grow">
+          <input
+            type="text"
+            placeholder="Buscar por nombre o descripción..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPage(1); // Reset to first page when searching
+            }}
+            className="w-full p-2 pl-10 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          />
+          <svg
+            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+            />
+          </svg>
+        </div>
         <button
           onClick={() => {
             setEditingDonante(null);
