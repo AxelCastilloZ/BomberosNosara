@@ -11,18 +11,16 @@ export class CreateEquipoBomberilDto {
   @IsEnum(EstadoInicial)
   estadoInicial!: EstadoInicial;
 
+ 
   @IsEnum(EstadoActual)
   estadoActual!: EstadoActual;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   numeroSerie?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptional() @IsString()
   fotoUrl?: string;
 
-  @IsInt()
-  @Min(1)
+  @IsInt() @Min(1)
   cantidad!: number;
 }
