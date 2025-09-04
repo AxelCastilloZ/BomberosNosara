@@ -1,5 +1,5 @@
 export interface CatalogoEquipo {
   id: string;
-  nombre: string; 
-  tipo: 'terrestre' | 'marítimo';
+  nombre: string;
+  tipo: 'terrestre' | 'marítimo' | string;
 }

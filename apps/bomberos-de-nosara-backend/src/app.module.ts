@@ -103,7 +103,7 @@ import { ChatModule } from './chat/chat.module';
         database: cfg.getOrThrow<string>('DATABASE_NAME'),
         autoLoadEntities: true,
         synchronize: cfg.get<boolean>('DB_SYNC', true),
-        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', false),
+        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', true),
         retryAttempts: 10,
         retryDelay: 3000,
       }),

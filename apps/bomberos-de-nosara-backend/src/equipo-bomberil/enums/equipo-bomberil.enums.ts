@@ -1,5 +1,3 @@
-
-
 export enum TipoEquipo {
   TERRESTRE = 'terrestre',
   MARITIMO = 'marítimo',
@@ -11,7 +9,7 @@ export enum EstadoInicial {
 }
 
 export enum EstadoActual {
-  ACTIVO = 'activo',
+  DISPONIBLE = 'disponible',
+  EN_MANTENIMIENTO = 'en mantenimiento',
   DADO_DE_BAJA = 'dado de baja',
-  
 }
