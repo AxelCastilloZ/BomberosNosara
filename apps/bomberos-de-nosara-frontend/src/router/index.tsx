@@ -8,9 +8,10 @@ import {
 
 import App from '../App';
 
-// ⬇️ Trae helpers del servicio unificado
+// Auth helpers
 import { isAuthenticated, getUserRoles } from '../service/auth';
 
+// Públicas
 import Home from '../pages/Home';
 import DonantesPage from '../pages/DonantesPage';
 import SuggestionsPage from '../pages/SuggestionsPage';
@@ -20,22 +21,27 @@ import AboutSection from '../components/ui/AboutUs/AboutSection';
 import NuestroTrabajoPage from '../pages/NuestroTrabajoPage';
 import ContactoPage from '../pages/ContactoPage';
 
+// Auth pages
 import AdminLoginPage from '../pages/AdminLoginPage';
+import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
+
+// Admin pages
 import AdminDashboardPage from '../pages/Administrativas/AdminDashboardPage';
 import AdminDonantesPage from '../pages/AdminDonantesPage';
 import AdminSuggestionsPage from '../pages/AdminSuggestionsPage';
-import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
+import AdminChatPage from '../pages/Administrativas/AdminChatPage';
 import AdminEstadisticasPage from '../pages/Administrativas/AdminEstadisticasPage';
 import AdminMaterialEducativoPage from '../pages/Administrativas/AdminMaterialEducativoPage';
 import AdminUsuariosPage from '../pages/Administrativas/AdminUsuariosPage';
 import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
-import AdminNoticiasPage from '../pages/AdminNoticiasPage';
-import AdminChatPage from '../pages/Administrativas/AdminChatPage';
+// ⚠️ No tocar estos por ahora
+// import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
+// import AdminNoticiasPage from '../pages/AdminNoticiasPage';
 
-import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
-import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
+// Layout con sidebar
+import AdminLayout from '../components/ui/Layout/AdiminLayout';
 
-// Opcional: tu página 403
 const Forbidden = () => <div className="p-6">No tenés permisos para ver esta sección.</div>;
 
 /* =========================
@@ -45,16 +51,14 @@ type Role = 'SUPERUSER' | 'ADMIN' | 'PERSONAL_BOMBERIL' | 'VOLUNTARIO';
 
 const CAN = {
   donantes:     ['SUPERUSER', 'ADMIN'] as Role[],
-  usuarios:     ['SUPERUSER'] as Role[], 
-  equipo:       ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[],
+  usuarios:     ['SUPERUSER'] as Role[],
+  // equipo:    ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[], // (sin tocar)
   vehiculos:    ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[],
   estadisticas: ['SUPERUSER', 'ADMIN'] as Role[],
   material:     ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] as Role[],
   chat:         ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] as Role[],
-  noticias:     ['SUPERUSER', 'ADMIN'] as Role[],
+  // noticias:  ['SUPERUSER', 'ADMIN'] as Role[], // (sin tocar)
   sugerencias:  ['SUPERUSER', 'ADMIN'] as Role[],
-  // si tenés módulo de voluntarios:
-  // voluntarios:  ['VOLUNTARIO', 'ADMIN', 'SUPERUSER'] as Role[],
 };
 
 function hasAnyRole(userRoles: string[], allowed: Role[]) {
@@ -82,8 +86,8 @@ function requireRoles(allowed: Role[]) {
    ========================= */
 const rootRoute = createRootRoute({ component: App });
 
-const routeTree = rootRoute.addChildren([
-  // Públicas
+// --- Rutas públicas ---
+const publicRoutes = [
   createRoute({ path: '/', component: Home, getParentRoute: () => rootRoute }),
   createRoute({ path: '/donantes', component: DonantesPage, getParentRoute: () => rootRoute }),
   createRoute({ path: '/sugerencias', component: SuggestionsPage, getParentRoute: () => rootRoute }),
@@ -92,76 +96,88 @@ const routeTree = rootRoute.addChildren([
   createRoute({ path: '/contacto', component: ContactoPage, getParentRoute: () => rootRoute }),
   createRoute({ path: '/noticias', component: NoticiasPage, getParentRoute: () => rootRoute }),
   createRoute({ path: '/donar', component: DonarPage, getParentRoute: () => rootRoute }),
+];
 
-  // Auth
+// --- Auth / estado ---
+const authRoutes = [
   createRoute({ path: '/login', component: AdminLoginPage, getParentRoute: () => rootRoute }),
   createRoute({ path: '/forgot-password', component: ForgotPasswordPage, getParentRoute: () => rootRoute }),
   createRoute({ path: '/reset-password', component: ResetPasswordPage, getParentRoute: () => rootRoute }),
   createRoute({ path: '/forbidden', component: Forbidden, getParentRoute: () => rootRoute }),
+];
 
-  // Panel: cualquier autenticado entra
+// --- Layout /admin con sidebar ---
+const adminLayoutRoute = createRoute({
+  path: '/admin',
+  component: AdminLayout,
+  getParentRoute: () => rootRoute,
+  beforeLoad: requireAuth,
+});
+
+// --- Hijos del layout /admin (rutas relativas) ---
+const adminChildren = [
+  // index de /admin
   createRoute({
-    path: '/admin',
+    path: '/', // index
     component: AdminDashboardPage,
-    getParentRoute: () => rootRoute,
-    beforeLoad: requireAuth,
+    getParentRoute: () => adminLayoutRoute,
   }),
 
-  // Submódulos protegidos por roles
   createRoute({
-    path: '/admin/donantes',
+    path: 'donantes',
     component: AdminDonantesPage,
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.donantes),
   }),
   createRoute({
-    path: '/admin/sugerencias',
+    path: 'sugerencias',
     component: AdminSuggestionsPage,
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.sugerencias),
   }),
   createRoute({
-    path: '/admin/noticias',
-    component: AdminNoticiasPage,
-    getParentRoute: () => rootRoute,
-    beforeLoad: requireRoles(CAN.noticias),
-  }),
-  createRoute({
-    path: '/admin/chat',
+    path: 'chat',
     component: AdminChatPage,
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.chat),
   }),
   createRoute({
-    path: '/admin/equipo',
-    component: AdminEquipoPage,
-    getParentRoute: () => rootRoute,
-    beforeLoad: requireRoles(CAN.equipo),
+    path: 'vehiculos',
+    component: AdminVehiculosPage,
+    getParentRoute: () => adminLayoutRoute,
+    beforeLoad: requireRoles(CAN.vehiculos),
   }),
   createRoute({
-    path: '/admin/estadisticas',
+    path: 'estadisticas',
     component: AdminEstadisticasPage,
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.estadisticas),
   }),
   createRoute({
-    path: '/admin/material-interno',
+    path: 'material-interno',
     component: AdminMaterialEducativoPage,
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.material),
   }),
   createRoute({
-    path: '/admin/usuarios',
+    path: 'usuarios',
     component: AdminUsuariosPage,
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.usuarios),
   }),
-  createRoute({
-    path: '/admin/vehiculos',
-    component: AdminVehiculosPage,
-    getParentRoute: () => rootRoute,
-    beforeLoad: requireRoles(CAN.vehiculos),
-  }),
+
+  // ⚠️ Pendientes (no tocar por ahora):
+  // createRoute({ path: 'equipo', component: AdminEquipoPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.equipo) }),
+  // createRoute({ path: 'noticias', component: AdminNoticiasPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.noticias) }),
+];
+
+// Construcción del árbol
+adminLayoutRoute.addChildren(adminChildren);
+
+const routeTree = rootRoute.addChildren([
+  ...publicRoutes,
+  ...authRoutes,
+  adminLayoutRoute,
 ]);
 
 export const router = createRouter({ routeTree });
