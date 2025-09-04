@@ -208,7 +208,7 @@ return (
   <div className="min-h-screen pt-28 bg-gradient-to-b from-white px-4">
     <div className="max-w-6xl mx-auto">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-4xl font-bold text-black">Administrar Donantes</h1>
+        <h1 className="text-4xl font-bold text-red-800">Administrar Donantes</h1>
         <button
           onClick={() => {
             setEditingDonante(null);
