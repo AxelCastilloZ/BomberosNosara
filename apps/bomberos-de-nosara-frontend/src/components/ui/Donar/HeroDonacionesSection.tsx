@@ -1,6 +1,5 @@
-// components/ui/Donar/HeroDonationSection.tsx
 export const HeroDonationSection = () => (
-  <section className="bg-gradient-to-b from-black to-gray-900 text-white">
+  <section className="bg-black text-white">
     <div className="max-w-4xl mx-auto px-4 py-20 sm:py-28 lg:py-32 text-center">
       <h1 className="text-5xl sm:text-6xl lg:text-7xl font-serif font-extrabold tracking-tight">
         <span className="block ">Salva</span>
