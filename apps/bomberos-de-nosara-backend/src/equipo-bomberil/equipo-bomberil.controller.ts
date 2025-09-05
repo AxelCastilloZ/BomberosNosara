@@ -8,12 +8,14 @@ import { CreateCatalogoDto } from './dto/create-catalogo.dto';
 import { DarDeBajaDto } from './dto/dar-de-baja.dto';
 import { CreateMantenimientoDto } from './dto/create-mantenimiento.dto';
 import { ProgramarMantenimientoDto } from './dto/programar-mantenimiento.dto';
+import { EstadoParcialDto } from './dto/estado-parcial.dto';
+import { UpdateEstadoActualDto } from './dto/update-estado-actual.dto';
 
 @Controller('equipos-bomberiles')
 export class EquipoBomberilController {
   constructor(private readonly service: EquipoBomberilService) {}
 
-
+  /* --------- Catálogo --------- */
   @Get('catalogo')
   getCatalogos() {
     return this.service.findCatalogos();
@@ -29,6 +31,7 @@ export class EquipoBomberilController {
     return this.service.findByCatalogo(catalogoId);
   }
 
+  /* ----- Mantenimiento / Historial ----- */
   @Post(':id/historial')
   registrarMantenimiento(@Param('id') id: string, @Body() dto: CreateMantenimientoDto) {
     return this.service.registrarMantenimiento(id, dto);
@@ -44,10 +47,33 @@ export class EquipoBomberilController {
     return this.service.programarMantenimiento(id, dto);
   }
 
- 
+  /* --------- Bajas / Reposición / Estado parcial --------- */
   @Patch(':id/dar-de-baja')
   darDeBaja(@Param('id') id: string, @Body() dto: DarDeBajaDto) {
     return this.service.darDeBaja(id, dto.cantidad);
+  }
+
+  @Patch(':id/estado-parcial')
+  moverEstadoParcial(@Param('id') id: string, @Body() dto: EstadoParcialDto) {
+    return this.service.moverEstadoParcial(id, dto.cantidad, dto.estadoActual);
+  }
+
+  /** Alias opcional para frontends que llamen /estado-parcial */
+  @Patch(':id/estado')
+  moverEstadoParcialAlias(@Param('id') id: string, @Body() dto: EstadoParcialDto) {
+    return this.service.moverEstadoParcial(id, dto.cantidad, dto.estadoActual);
+  }
+
+  /* --------- Cambio total de estado (no crea filas) --------- */
+  @Patch(':id/estado-actual')
+  actualizarEstadoActual(@Param('id') id: string, @Body() dto: UpdateEstadoActualDto) {
+    return this.service.actualizarEstadoActual(id, dto.estadoActual);
+  }
+
+  /** Alias compatible */
+  @Patch(':id/estado-actual/alias')
+  actualizarEstadoActualAlias(@Param('id') id: string, @Body() dto: UpdateEstadoActualDto) {
+    return this.service.actualizarEstadoActual(id, dto.estadoActual);
   }
 
   @Post(':id/reposicion')
@@ -55,7 +81,7 @@ export class EquipoBomberilController {
     return this.service.solicitarReposicion(id, dto);
   }
 
- 
+  /* -------------- CRUD -------------- */
   @Post()
   create(@Body() dto: CreateEquipoBomberilDto) {
     return this.service.create(dto);
@@ -66,7 +92,7 @@ export class EquipoBomberilController {
     return this.service.findAll();
   }
 
-
+  // IMPORTANTE: dinámicas al final
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
