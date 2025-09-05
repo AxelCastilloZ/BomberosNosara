@@ -9,8 +9,8 @@ export default function DonarPage() {
       <div id="tipos-de-donacion">
         <TiposDonacionesSection />
       </div>
-       <DonarAhoraSection />
-      
+      <DonarAhoraSection />
+
     </main>
   );
 }

@@ -1,106 +1,236 @@
-import { Link } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+import { Link, useRouterState, useNavigate } from '@tanstack/react-router';
+import { useLayout } from '../../context/LayoutContext';
+import { useState, useEffect, useRef } from 'react';
 import UserButton from '../ui/ProfileButton/UserButton.js';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FaTimes, FaBars, FaChevronLeft } from 'react-icons/fa';
+import { useAuth } from '../../hooks/useAuth';
+
+// Navigation links data
+const navLinks=[
+  { to: "/sobre-nosotros", label: "SOBRE NOSOTROS" },
+  { to: "/nuestro-trabajo", label: "NUESTRO TRABAJO" },
+  { to: "/donantes", label: "DONANTES" },
+  { to: "/noticias", label: "NOTICIAS" },
+  { to: "/donar", label: "DONAR" },
+];
 
 export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [mobileOpen, setMobileOpen]=useState(false);
+  const [scrolled, setScrolled]=useState(false);
+  const [isClient, setIsClient]=useState(false);
+  const navRef=useRef<HTMLElement>(null);
+  const { location }=useRouterState();
+  const navigate=useNavigate();
+  const { isAuthenticated, logout }=useAuth();
+  const { isSidebarCollapsed }=useLayout();
 
+  // Get the current route name for the header title
+  const getHeaderTitle=() => {
+    const path=location.pathname.toLowerCase();
+
+    // Define route to title mappings
+    const routeTitles: Record<string, string>={
+      '/admin': 'Panel Administrativo',
+      '/admin/usuarios': 'Gestión de Usuarios',
+      '/admin/chat': 'Chat Interno',
+      '/admin/noticias': 'Gestión de Noticias',
+      '/admin/donaciones': 'Donaciones',
+      '/admin/estadisticas': 'Estadísticas',
+      '/admin/ajustes': 'Ajustes'
+    };
+
+    // Find a matching route or return a default
+    return Object.entries(routeTitles).find(([route]) =>
+      path.startsWith(route)
+    )?.[1]||'Panel de Administración';
+  };
+
+  // Set isClient to true after component mounts (for SSR compatibility)
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
+    setIsClient(true);
+    const handleScroll=() => setScrolled(window.scrollY>10);
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const link =
-    "relative px-2 py-2 text-[15px] font-medium text-slate-800 whitespace-nowrap transition-colors duration-200 " +
-    "after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-red-600 " +
-    "after:transition-all after:duration-300 hover:after:w-full hover:text-red-600";
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside=(event: MouseEvent) => {
+      if (navRef.current&&!navRef.current.contains(event.target as Node)) {
+        setMobileOpen(false);
+      }
+    };
+
+    if (mobileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [mobileOpen]);
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (isClient) {
+      if (mobileOpen) {
+        document.body.style.overflow='hidden';
+      } else {
+        document.body.style.overflow='auto';
+      }
+    }
+  }, [mobileOpen, isClient]);
+
+  // Base styles
+  const navItemBase="relative px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors duration-200";
+  const mobileNavItem="block px-6 py-3 text-base font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900";
+  const ctaButton="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md font-medium transition-colors duration-200";
+
+  // For authenticated users, show header with title and actions
+  if (isAuthenticated) {
+    const isAdminRoot=location.pathname==='/admin';
+    // On admin root, take full width, otherwise respect sidebar state
+    const widthClass=isAdminRoot
+      ? 'w-full'
+      :isSidebarCollapsed
+        ? 'w-[calc(100%-4rem)] ml-16'
+        :'w-[calc(100%-16rem)] ml-64';
+
+    return (
+      <nav
+        className={`fixed top-0 right-0 z-40 bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 transition-all duration-300 ${widthClass}`}
+      >
+        <div className="flex items-center">
+          {!isAdminRoot&&(
+            <button
+              onClick={() => navigate({ to: '/admin' })}
+              className="flex items-center text-gray-700 hover:text-gray-900 mr-4"
+              aria-label="Volver al panel"
+            >
+              <FaChevronLeft className="mr-2" />
+            </button>
+          )}
+          <h1 className={`text-lg font-semibold text-gray-800 ${isAdminRoot? 'ml-4':''}`}>
+            {getHeaderTitle()}
+          </h1>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => {
+              logout();
+              navigate({ to: '/' });
+            }}
+            className="text-sm font-medium text-gray-700 hover:text-red-600 px-3 py-1.5 rounded-md hover:bg-gray-50 transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </nav>
+    );
+  }
+
+  // For non-authenticated users, show the full navigation
   return (
     <nav
-      className={`fixed top-0 w-full z-50 bg-white/95 backdrop-blur border-b border-slate-200 transition-all duration-300 ${
-        scrolled ? 'h-16' : 'h-24'
-      }`}
+      ref={navRef}
+      className={`fixed top-0 w-full z-50 bg-white shadow-sm transition-all duration-300 ${scrolled? 'h-16':'h-20'
+        }`}
       role="navigation"
-      aria-label="Main"
+      aria-label="Main navigation"
     >
-      {}
-      <div className="mx-auto max-w-7xl pl-0 pr-4 sm:pl-1 sm:pr-6 lg:pl-2 lg:pr-8 h-full">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-full">
         <div className="flex items-center justify-between h-full">
-          {}
-          <div className="flex items-center -ml-6 pr-4 lg:pr-8">
+          {/* Logo */}
+          <div className="flex-shrink-0">
             <Link to="/" aria-label="Inicio" className="flex items-center">
               <img
                 src="/logo.png"
                 alt="Bomberos de Nosara"
-                className={`block w-auto object-contain shrink-0 select-none transition-all duration-300 ${
-                  scrolled ? 'h-12' : 'h-16 md:h-20 lg:h-20 xl:h-20'
-                } -ml-2`}  
+                className={`block h-12 w-auto transition-all duration-300 ${scrolled? 'h-10':'h-12'
+                  }`}
                 draggable={false}
                 decoding="async"
                 onError={(e) => {
-                  const img = e.currentTarget as HTMLImageElement;
-                  img.onerror = null;
-                  img.src = 'https://i.ibb.co/1J8rYnhR/bomberos-de-nosara-firefighters-logo-x2.webp';
+                  const img=e.currentTarget as HTMLImageElement;
+                  img.onerror=null;
+                  img.src='https://i.ibb.co/1J8rYnhR/bomberos-de-nosara-firefighters-logo-x2.webp';
                 }}
               />
             </Link>
           </div>
 
-          {}
-          <div className="hidden lg:flex items-center justify-center flex-1">
-            <ul className="flex items-center gap-10 xl:gap-14">
-              <li><Link to="/sobre-nosotros" className={link}>SOBRE NOSOTROS</Link></li>
-              <li><Link to="/nuestro-trabajo" className={link}>NUESTRO TRABAJO</Link></li>
-              <li><Link to="/donantes" className={link}>DONANTES</Link></li>
-              <li><Link to="/noticias" className={link}>NOTICIAS</Link></li>
-              <li><Link to="/donar" className={link}>DONAR</Link></li>
-            </ul>
+          {/* Desktop Navigation */}
+          <div className="hidden lg:flex items-center space-x-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
+                className={`${navItemBase} ${link.isCta? ctaButton:''} ${location.pathname===link.to? 'text-red-600':''
+                  }`}
+                activeOptions={{ exact: link.to==='/' }}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="ml-4">
+              <UserButton />
+            </div>
           </div>
 
-          {}
-          <div className="flex items-center -mr-3 pl-8 lg:pl-12">
+          {/* Mobile menu button */}
+          <div className="flex items-center lg:hidden">
             <UserButton />
             <button
               type="button"
-              className="lg:hidden ml-2 inline-flex items-center justify-center p-2 rounded-md text-slate-800 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-600"
+              className="ml-2 inline-flex items-center justify-center p-2 rounded-md text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-red-500"
               aria-controls="mobile-menu"
               aria-expanded={mobileOpen}
-              onClick={() => setMobileOpen(v => !v)}
+              onClick={() => setMobileOpen(!mobileOpen)}
             >
-              <span className="sr-only">Abrir menú</span>
-              {mobileOpen ? (
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+              <span className="sr-only">{mobileOpen? 'Cerrar menú':'Abrir menú'}</span>
+              {mobileOpen? (
+                <FaTimes className="block h-6 w-6" aria-hidden="true" />
+              ):(
+                <FaBars className="block h-6 w-6" aria-hidden="true" />
               )}
             </button>
           </div>
         </div>
-
-        {}
-        <div
-          id="mobile-menu"
-          className={`lg:hidden overflow-hidden transition-[max-height,opacity] duration-300 ${
-            mobileOpen ? 'max-h-[520px] opacity-100' : 'max-h-0 opacity-0'
-          }`}
-        >
-          <div className="border-t border-slate-200 py-2 bg-white">
-            <nav className="flex flex-col">
-              <Link to="/sobre-nosotros" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>SOBRE NOSOTROS</Link>
-              <Link to="/nuestro-trabajo" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NUESTRO TRABAJO</Link>
-              <Link to="/donantes" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONANTES</Link>
-              <Link to="/noticias" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NOTICIAS</Link>
-              <Link to="/donar" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONAR</Link>
-            </nav>
-          </div>
-        </div>
       </div>
+
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {mobileOpen&&(
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="lg:hidden bg-white border-t border-gray-200 overflow-hidden"
+            id="mobile-menu"
+          >
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className={`${mobileNavItem} ${location.pathname===link.to? 'bg-gray-50 text-red-600':''
+                    }`}
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

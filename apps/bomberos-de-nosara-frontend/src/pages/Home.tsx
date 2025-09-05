@@ -8,42 +8,42 @@ import WelcomeSection from "../components/ui/AboutUs/WelcomeSection";
 
 export default function Home() {
   return (
-    <>
-      <div className="min-h-screen bg-white pt-24">
+    <div>
+      <div className="w-full bg-white">
         {/* Hero / Encabezado */}
-        <section className="w-full py-0">
+        <section className="w-full max-w-none">
           <WelcomeSection />
         </section>
 
         {/* Secciones (todas full width) */}
-        <section id="about-us" className="w-full px-8">
+        <section id="about-us" className="w-full max-w-none">
           <AboutUsPage />
         </section>
 
-        <section className="w-full px-8 mt-16">
+        <section className="w-full max-w-none">
           <NuestroTrabajoPage />
         </section>
 
-        <section className="w-full px-8 mt-10">
+        <section className="w-full max-w-none">
           <DonantesPage />
         </section>
 
-        <section className="w-full px-8 mt-16">
+        <section className="w-full max-w-none">
           <NoticiasPage />
         </section>
 
-        <section id="donar" className="w-full mt-16">
+        <section id="donar" className="w-full max-w-none">
           <DonarPage />
         </section>
 
         {/* Usamos ContactoPage para no dejar import sin uso */}
-       
 
-        {/* Footer full width también */}
-        <section className="w-full mt-16">
+
+        {/* Footer full width */}
+        <section className="w-full max-w-none">
           <FooterPage />
         </section>
       </div>
-    </>
+    </div>
   );
 }

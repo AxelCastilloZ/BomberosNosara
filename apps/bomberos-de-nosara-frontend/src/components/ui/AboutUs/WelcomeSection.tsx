@@ -1,12 +1,12 @@
 import React from "react";
 
 export default function WelcomeSection() {
-  const scrollTo = (id: string) => {
+  const scrollTo=(id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
-    <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
+    <section className=" h-screen flex items-center justify-center">
       {/* Imagen de fondo */}
       <div
         className="absolute inset-0 bg-cover bg-center"
