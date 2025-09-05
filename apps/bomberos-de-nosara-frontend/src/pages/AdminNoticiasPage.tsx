@@ -134,8 +134,8 @@ const handleFilter = (newFilters: typeof filters) => {
     <div className="min-h-screen pt-28 bg-gradient-to-b from-white px-4 mt-4">
       <div className="max-w-6xl mx-auto">
         <div className=" mb-6">
-          <div className="flex items-end bg-black p-6 rounded-2xl">
-          <h1 className="text-4xl font-bold text-white ">
+          <div className="flex items-end">
+          <h1 className="text-4xl font-bold text-red-800 ">
             Gestión de Noticias
           </h1>
           </div>
@@ -145,7 +145,7 @@ const handleFilter = (newFilters: typeof filters) => {
               setEditingNoticia(null);
               setIsFormOpen(true);
             }}
-            className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 mt-5"
+            className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 mt-5"
           >
             + Agregar Noticia
           </button>

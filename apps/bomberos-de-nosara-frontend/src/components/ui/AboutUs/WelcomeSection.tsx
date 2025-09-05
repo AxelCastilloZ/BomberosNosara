@@ -38,7 +38,7 @@ export default function WelcomeSection() {
           </button>
           <button
             onClick={() => scrollTo("donar")}
-            className="px-4 py-3 bg-red-600 backdrop-blur-sm border border-white/30 text-white font-medium rounded-3xl hover:bg-red-800 transition"
+            className="px-4 py-3 bg-red-800 backdrop-blur-sm border border-white/30 text-white font-medium rounded-3xl hover:bg-red-700 transition"
           >
             ¿Cómo apoyar?
           </button>

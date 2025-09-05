@@ -45,7 +45,7 @@ export const NoticiaCard = ({ noticia }: Props) => {
           {/* Botón Leer más */}
           <button
             onClick={() => setShowFull(!showFull)}
-            className="bg-red-600 text-white px-2 py-1 rounded-full hover:bg-red-700 transition-colors text-xs sm:text-sm lg:text-lg font-semibold"
+            className="bg-red-800 text-white px-2 py-1 rounded-full hover:bg-red-900 transition-colors text-xs sm:text-sm lg:text-lg font-semibold"
           >
             {showFull ? 'Ver menos' : 'Leer más'}
           </button>

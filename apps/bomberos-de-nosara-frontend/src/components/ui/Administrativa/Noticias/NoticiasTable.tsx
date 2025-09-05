@@ -62,7 +62,7 @@ export default function NoticiasTable({ noticias, onEdit, onDelete }: Props) {
             </button>
             <button
               onClick={() => row.original.id && onDelete(row.original.id)}
-              className="text-white bg-red-600 rounded-full hover:bg-red-700 text-sm px-2"
+              className="text-white bg-red-800 rounded-full hover:bg-red-700 text-sm px-2"
             >
               Eliminar
             </button>
