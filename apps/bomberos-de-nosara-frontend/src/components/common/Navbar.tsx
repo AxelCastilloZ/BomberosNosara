@@ -171,7 +171,7 @@ export default function Navbar() {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`${navItemBase} ${link.isCta? ctaButton:''} ${location.pathname===link.to? 'text-red-600':''
+                className={`${navItemBase} ${location.pathname===link.to? 'text-red-600':''
                   }`}
                 activeOptions={{ exact: link.to==='/' }}
               >
