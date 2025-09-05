@@ -41,6 +41,8 @@ import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
 
 // Layout con sidebar
 import AdminLayout from '../components/ui/Layout/AdiminLayout';
+import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
+import AdminNoticiasPage from '../pages/AdminNoticiasPage';
 
 const Forbidden = () => <div className="p-6">No tenés permisos para ver esta sección.</div>;
 
@@ -52,12 +54,12 @@ type Role = 'SUPERUSER' | 'ADMIN' | 'PERSONAL_BOMBERIL' | 'VOLUNTARIO';
 const CAN = {
   donantes:     ['SUPERUSER', 'ADMIN'] as Role[],
   usuarios:     ['SUPERUSER'] as Role[],
-  // equipo:    ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[], // (sin tocar)
+   equipo:    ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[], // (sin tocar)
   vehiculos:    ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[],
   estadisticas: ['SUPERUSER', 'ADMIN'] as Role[],
   material:     ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] as Role[],
   chat:         ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] as Role[],
-  // noticias:  ['SUPERUSER', 'ADMIN'] as Role[], // (sin tocar)
+   noticias:  ['SUPERUSER', 'ADMIN'] as Role[], // (sin tocar)
   sugerencias:  ['SUPERUSER', 'ADMIN'] as Role[],
 };
 
@@ -166,12 +168,12 @@ const adminChildren = [
     beforeLoad: requireRoles(CAN.usuarios),
   }),
 
-  // ⚠️ Pendientes (no tocar por ahora):
-  // createRoute({ path: 'equipo', component: AdminEquipoPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.equipo) }),
-  // createRoute({ path: 'noticias', component: AdminNoticiasPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.noticias) }),
+ 
+   createRoute({ path: 'equipo', component: AdminEquipoPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.equipo) }),
+   createRoute({ path: 'noticias', component: AdminNoticiasPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.noticias) }),
 ];
 
-// Construcción del árbol
+
 adminLayoutRoute.addChildren(adminChildren);
 
 const routeTree = rootRoute.addChildren([
