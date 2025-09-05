@@ -9,7 +9,7 @@ import EditUser from "../../components/ui/Administrativa/UsuariosAdmin/EditUser"
 import ConfirmDelete from "../../components/ui/Administrativa/UsuariosAdmin/ConfirmDelete";
 import type { User } from "../../types/user";
 
-// Constantes de roles
+
 import { ROLES, ROLE_LABELS } from "../../constants/roles";
 import type { RoleName } from "../../types/user";
 
@@ -21,7 +21,7 @@ export default function AdminUsuariosPage() {
   const [editing, setEditing] = React.useState<User | null>(null);
   const [deleting, setDeleting] = React.useState<User | null>(null);
 
-  // Opciones del select (agrega "Todos" + roles definidos en constantes)
+
   const roleOptions: ("Todos" | RoleName)[] = React.useMemo(
     () => ["Todos", ...ROLES],
     []
