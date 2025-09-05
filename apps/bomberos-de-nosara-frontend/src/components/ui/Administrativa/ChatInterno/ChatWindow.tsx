@@ -47,7 +47,7 @@ const roleGroups: ChatTarget[]=[
 ];
 
 const ChatWindow=() => {
-
+  const [isNavbarOpen, setIsNavbarOpen]=useState(true);
   const { socket, isConnected }=useSocket();
   const { token }=useAuth();
   const {
@@ -827,7 +827,7 @@ const ChatWindow=() => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-[60vh] sm:h-[65vh] md:h-[70vh] lg:h-[75vh] xl:h-[80vh]">
         <FiLoader className="animate-spin text-red-500 text-2xl" />
       </div>
     );
@@ -835,10 +835,20 @@ const ChatWindow=() => {
 
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-white">
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col shadow-sm">
-          {/* Enhanced search section */}
+    <div className="bg-gray-50 h-full">
+      <div className="flex flex-col md:flex-row h-[60vh] sm:h-[65vh] md:h-[70vh] lg:h-[75vh] xl:h-[80vh] overflow-hidden">
+
+        <div
+          className="bg-white border-r border-gray-200 flex flex-col shadow-sm transition-all duration-300 ease-in-out w-full h-full md:w-64 lg:w-80"
+          style={{
+            marginLeft: isNavbarOpen ? '0' : '0',
+            width: isNavbarOpen ? 'calc(100% - 16rem)' : '100%',
+            maxWidth: isNavbarOpen ? '20rem' : '20rem',
+            minWidth: isNavbarOpen ? '16rem' : 'auto',
+            height: '100%',
+            maxHeight: '100%'
+          }}
+        >
           <div className="p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
             <div className="relative group">
               <input

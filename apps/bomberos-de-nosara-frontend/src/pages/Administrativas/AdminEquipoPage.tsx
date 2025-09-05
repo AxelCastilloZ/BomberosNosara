@@ -1,4 +1,4 @@
-// src/pages/admin/AdminEquipoPage.tsx  (ajusta la ruta según tu proyecto)
+
 import React from 'react';
 import DashboardEquipo from '../../components/ui/Administrativa/EquipoBomberil/DashboardEquipo';
 
