@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { Donante } from '../types/donate';
 
 const API_URL = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/donantes`;
@@ -15,17 +15,31 @@ const getAuthHeader = () => {
   }
 };
 
-// GET all
-export const useDonantes = () => {
-  return useQuery({
-    queryKey: ['donantes'],
-    queryFn: async (): Promise<Donante[]> => {
-      const res = await axios.get(API_URL, {
+// Define the response type
+export interface DonantesResponse {
+  data: Donante[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// GET all with pagination and search
+export const useDonantes = (page = 1, limit = 10, search = '') => {
+  return useQuery<DonantesResponse>({
+    queryKey: ['donantes', page, limit, search],
+    queryFn: async () => {
+      const res = await axios.get<DonantesResponse>(API_URL, {
+        params: { 
+          page, 
+          limit,
+          ...(search ? { search } : {}) // Only include search if it's not empty
+        },
         headers: getAuthHeader(),
       });
       return res.data;
     },
     staleTime: 1000 * 60 * 10,
+    placeholderData: (previousData) => previousData, // Keep previous data while fetching new data
   });
 };
 

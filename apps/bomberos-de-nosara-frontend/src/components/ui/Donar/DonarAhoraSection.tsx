@@ -12,7 +12,7 @@ export const DonarAhoraSection = () => (
         href="https://www.classy.org/give/216044/#!/donation/checkout"
         target="_blank"
         rel="noopener noreferrer"
-        className="transition transform hover:-translate-y-1 duration-300 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 lg:py-4 lg:px-8 rounded-2xl sm:rounded-3xl inline-block text-sm sm:text-base lg:text-lg"
+        className="transition transform hover:-translate-y-1 duration-300 bg-red-800 hover:bg-red-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 lg:py-4 lg:px-8 rounded-2xl sm:rounded-3xl inline-block text-sm sm:text-base lg:text-lg"
       >
         DONAR AHORA
       </a>

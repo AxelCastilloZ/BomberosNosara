@@ -1,15 +1,40 @@
-import { Link } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+// src/components/layout/Navbar.tsx
+import { Link, useRouterState } from '@tanstack/react-router';
+import { useState, useEffect, useRef } from 'react';
 import UserButton from '../ui/ProfileButton/UserButton.js';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { location } = useRouterState();
+  const ticking = useRef(false);
+
+  // ⛔️ Oculta navbar en /admin
+  if (location.pathname.startsWith('/admin')) return null;
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    const onScroll = () => {
+      if (ticking.current) return;
+      ticking.current = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY || 0;
+
+        // Histeresis para evitar vibración:
+        // - Activa estado "scrolled" cuando pasa de 24px
+        // - Lo desactiva cuando baja de 8px
+        setScrolled(prev => {
+          if (!prev && y > 24) return true;
+          if (prev && y < 8) return false;
+          return prev;
+        });
+
+        ticking.current = false;
+      });
+    };
+
+    onScroll(); // evalúa una vez al montar
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const link =
@@ -19,24 +44,29 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 w-full z-50 bg-white/95 backdrop-blur border-b border-slate-200 transition-all duration-300 ${
-        scrolled ? 'h-16' : 'h-24'
-      }`}
+      className={[
+        "sticky top-0 w-full z-50 bg-white/95 backdrop-blur border-b border-slate-200",
+        "transition-[height,background-color] duration-300",
+        scrolled ? "h-16" : "h-24",
+      ].join(' ')}
       role="navigation"
       aria-label="Main"
     >
-      {}
-      <div className="mx-auto max-w-7xl pl-0 pr-4 sm:pl-1 sm:pr-6 lg:pl-2 lg:pr-8 h-full">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-full">
         <div className="flex items-center justify-between h-full">
-          {}
-          <div className="flex items-center -ml-6 pr-4 lg:pr-8">
+          {/* Logo (sin márgenes negativos) */}
+          <div className="flex items-center pr-4 lg:pr-8">
             <Link to="/" aria-label="Inicio" className="flex items-center">
               <img
                 src="/logo.png"
                 alt="Bomberos de Nosara"
-                className={`block w-auto object-contain shrink-0 select-none transition-all duration-300 ${
-                  scrolled ? 'h-12' : 'h-16 md:h-20 lg:h-20 xl:h-20'
-                } -ml-2`}  
+                className={[
+                  "block w-auto object-contain shrink-0 select-none",
+                  "transition-transform duration-300 ease-out",
+                  scrolled ? "scale-90 opacity-95" : "scale-100 opacity-100",
+                  // Altura del logo se adapta al contenedor; no uses -ml
+                ].join(' ')}
+                style={{ height: scrolled ? '2.5rem' : '3.5rem' }} // ~40px / ~56px
                 draggable={false}
                 decoding="async"
                 onError={(e) => {
@@ -48,7 +78,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {}
+          {/* Links desktop */}
           <div className="hidden lg:flex items-center justify-center flex-1">
             <ul className="flex items-center gap-10 xl:gap-14">
               <li><Link to="/sobre-nosotros" className={link}>SOBRE NOSOTROS</Link></li>
@@ -59,8 +89,8 @@ export default function Navbar() {
             </ul>
           </div>
 
-          {}
-          <div className="flex items-center -mr-3 pl-8 lg:pl-12">
+          {/* Usuario + toggle móvil */}
+          <div className="flex items-center pl-6 lg:pl-12">
             <UserButton />
             <button
               type="button"
@@ -83,7 +113,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {}
+        {/* Menú móvil */}
         <div
           id="mobile-menu"
           className={`lg:hidden overflow-hidden transition-[max-height,opacity] duration-300 ${

@@ -56,13 +56,13 @@ export default function NoticiasTable({ noticias, onEdit, onDelete }: Props) {
           <div className="flex gap-2">
             <button
               onClick={() => onEdit(row.original)}
-              className="text-amber-600 hover:text-amber-700 text-sm"
+              className="text-white hover:bg-gray-600 rounded-full text-sm bg-gray-500 px-2"
             >
               Editar
             </button>
             <button
               onClick={() => row.original.id && onDelete(row.original.id)}
-              className="text-red-600 hover:text-red-700 text-sm"
+              className="text-white bg-red-800 rounded-full hover:bg-red-700 text-sm px-2"
             >
               Eliminar
             </button>
@@ -82,7 +82,7 @@ export default function NoticiasTable({ noticias, onEdit, onDelete }: Props) {
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
       <table className="min-w-full bg-white border border-gray-300">
-        <thead className="bg-red-600 text-white">
+        <thead className="bg-red-100 text-red-800">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (

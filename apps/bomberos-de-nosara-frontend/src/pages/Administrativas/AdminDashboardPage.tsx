@@ -5,11 +5,11 @@ import {
   FaChartBar, FaComments, FaNewspaper, FaBook
 } from 'react-icons/fa';
 
-// ⬇️ Asegúrate que el import apunte a tu servicio unificado
+
 import { getUserRoles } from '../../service/auth';
 
 type DashboardItem = {
-  icon: ReactNode;   // <- antes: JSX.Element
+  icon: ReactNode;   
   label: string;
   href: string;
   roles: string[];

@@ -26,14 +26,25 @@ export class User {
   @Column()
   password!: string;
 
-  @ManyToMany(() => Role, { eager: true })
+  
+  @ManyToMany(() => Role, { 
+    eager: true,
+    onDelete: 'CASCADE', 
+  })
   @JoinTable()
   roles!: Role[];
 
-  @ManyToMany(() => Conversation, (conversation) => conversation.participants)
+  
+  @ManyToMany(() => Conversation, conversation => conversation.participants, {
+    onDelete: 'CASCADE', 
+  })
   conversations!: Conversation[];
 
-  @OneToMany(() => Message, (message) => message.sender)
+
+  @OneToMany(() => Message, message => message.sender, {
+    cascade: true,         
+    onDelete: 'CASCADE',    
+  })
   messages!: Message[];
 
   isParticipant(conversationId: number): boolean {

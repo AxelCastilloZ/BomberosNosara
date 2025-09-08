@@ -156,7 +156,7 @@ export default function NoticiasForm({ noticia, onClose, onSave }: Props) {
               </div>
             )}
             {!noticia && !selectedFile && !previewUrl && (
-              <p className="text-red-600 text-sm mt-1">
+              <p className="text-red-700 text-sm mt-1">
                 La imagen es obligatoria
               </p>
             )}
@@ -207,7 +207,7 @@ export default function NoticiasForm({ noticia, onClose, onSave }: Props) {
                 !form.state.canSubmit ||
                 (!noticia && !selectedFile && !previewUrl)
               }
-              className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
+              className="bg-red-800 text-white px-4 py-2 rounded hover:bg-red-700 disabled:opacity-50"
             >
               {noticia ? "Actualizar" : "Agregar"}
             </button>
