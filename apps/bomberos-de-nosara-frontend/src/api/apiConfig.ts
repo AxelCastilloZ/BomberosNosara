@@ -1,33 +1,45 @@
-import axios from 'axios';
+// src/api/apiConfig.ts  (o donde tengas tu instancia)
+import axios, {
+  AxiosError,
+  AxiosHeaders,
+  InternalAxiosRequestConfig,
+} from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
-  headers: { 'Content-Type': 'application/json' },
+  timeout: 30000,
+  withCredentials: false,
 });
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token'); 
+// Helper para detectar FormData sin romper en SSR/tests
+const isFormData = (v: unknown): v is FormData =>
+  typeof FormData !== 'undefined' && v instanceof FormData;
 
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  // Aseguramos headers como AxiosHeaders
+  const headers = AxiosHeaders.from(config.headers);
+
+  // Token
+  const token = localStorage.getItem('access_token');
   if (token) {
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
-
-  if (config.data instanceof FormData && config.headers) {
-    delete config.headers['Content-Type'];
+  // Si mandamos FormData, dejá que el navegador ponga el boundary.
+  if (isFormData(config.data)) {
+    headers.delete('Content-Type'); // también elimina la variante case-insensitive
   }
 
+  config.headers = headers;
   return config;
 });
 
 api.interceptors.response.use(
-  (r) => r,
-  (err) => {
+  (resp) => resp,
+  (err: AxiosError) => {
     if (err?.response?.status === 401) {
       localStorage.removeItem('access_token');
       localStorage.removeItem('authUser');
-      // opcional: window.dispatchEvent(new Event('auth:token-changed'));
     }
     return Promise.reject(err);
   }

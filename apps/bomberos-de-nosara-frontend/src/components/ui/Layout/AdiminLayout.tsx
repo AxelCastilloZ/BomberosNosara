@@ -1,11 +1,22 @@
 // src/components/ui/Layout/AdminLayout.tsx
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { AnimatePresence, motion } from "framer-motion";
 import { ReactNode, useMemo, useRef, useState } from "react";
-import { Link, Outlet, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
-  FaUserShield, FaUsers, FaTruck, FaChartBar,
-  FaComments, FaBook, FaHome, FaBars, FaTimes, FaChevronRight, FaSignOutAlt
+  FaBars,
+  FaBook,
+  FaChartBar,
+  FaChevronRight,
+  FaComments,
+  FaHome,
+  FaRegNewspaper,
+  FaSignOutAlt,
+  FaTimes,
+  FaTruck,
+  FaUserShield,
+  FaUsers,
+  FaWrench,
 } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
 import { getUserRoles } from "../../../service/auth";
 
 type SidebarItem = {
@@ -16,14 +27,19 @@ type SidebarItem = {
 };
 
 const ALL_ITEMS: SidebarItem[] = [
-  { icon: <FaHome />, label: "Dashboard", href: "/admin", roles: ["SUPERUSER", "ADMIN"] },
-  { icon: <FaUserShield />, label: "Administrar Donantes", href: "/admin/donantes", roles: ["SUPERUSER", "ADMIN"] },
-  { icon: <FaUsers />, label: "Gestión de Usuarios", href: "/admin/usuarios", roles: ["SUPERUSER"] },
-  { icon: <FaTruck />, label: "Inventario de Vehículos", href: "/admin/vehiculos", roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL"] },
-  { icon: <FaChartBar />, label: "Estadísticas", href: "/admin/estadisticas", roles: ["SUPERUSER", "ADMIN"] },
-  { icon: <FaBook />, label: "Material Interno", href: "/admin/material-interno", roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"] },
-  { icon: <FaComments />, label: "Chat Interno", href: "/admin/chat", roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"] },
-  { icon: <FaComments />, label: "Sugerencias", href: "/admin/sugerencias", roles: ["SUPERUSER", "ADMIN"] },
+  { icon: <FaHome />,           label: "Dashboard",               href: "/admin",               roles: ["SUPERUSER", "ADMIN"] },
+  { icon: <FaUserShield />,     label: "Administrar Donantes",    href: "/admin/donantes",      roles: ["SUPERUSER", "ADMIN"] },
+  { icon: <FaUsers />,          label: "Gestión de Usuarios",     href: "/admin/usuarios",      roles: ["SUPERUSER"] },
+  { icon: <FaTruck />,          label: "Inventario de Vehículos", href: "/admin/vehiculos",     roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL"] },
+
+  // Nuevos
+  { icon: <FaWrench />,         label: "Inventario de Equipo",    href: "/admin/equipo",        roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL"] },
+  { icon: <FaRegNewspaper />,   label: "Noticias",                href: "/admin/noticias",      roles: ["SUPERUSER", "ADMIN"] },
+
+  { icon: <FaChartBar />,       label: "Estadísticas",            href: "/admin/estadisticas",  roles: ["SUPERUSER", "ADMIN"] },
+  { icon: <FaBook />,           label: "Material Interno",        href: "/admin/material-interno", roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"] },
+  { icon: <FaComments />,       label: "Chat Interno",            href: "/admin/chat",          roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"] },
+  
 ];
 
 const BRAND = {
@@ -262,7 +278,7 @@ export default function AdminLayout() {
                   : "bg-white border border-gray-200 shadow-sm",
                 "rounded-lg w-full",
                 needsFullHeight
-                  ? "min-h-[calc(100vh-4rem)] overflow-visible flex"
+                  ? "min-h[calc(100vh-4rem)] overflow-visible flex"
                   : "overflow-hidden",
               ].join(" ")}
             >
