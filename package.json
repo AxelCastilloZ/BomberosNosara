@@ -10,16 +10,20 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
 
+    "// === Backend NestJS ===": "--------------------------------",
     "dev:backend": "pnpm --filter bomberos-de-nosara-backend run start:dev",
     "start:backend": "pnpm --filter bomberos-de-nosara-backend run start",
     "build:backend": "pnpm --filter bomberos-de-nosara-backend run build",
     "lint:backend": "pnpm --filter bomberos-de-nosara-backend run lint",
 
-    "db:mig:create": "pnpm --filter bomberos-de-nosara-backend run db:mig:create",
-    "db:mig:generate": "pnpm --filter bomberos-de-nosara-backend run db:mig:generate",
-    "db:mig:run": "pnpm --filter bomberos-de-nosara-backend run db:mig:run",
-    "db:mig:revert": "pnpm --filter bomberos-de-nosara-backend run db:mig:revert",
-    "db:mig:show": "pnpm --filter bomberos-de-nosara-backend run db:mig:show",
+    "// === Migraciones TypeORM ===": "--------------------------------",
+    "db:mig:create": "pnpm --filter bomberos-de-nosara-backend run migration:create",
+    "db:mig:generate": "pnpm --filter bomberos-de-nosara-backend run migration:generate",
+    "db:mig:run": "pnpm --filter bomberos-de-nosara-backend run migration:run",
+    "db:mig:revert": "pnpm --filter bomberos-de-nosara-backend run migration:revert",
+    "db:mig:show": "pnpm --filter bomberos-de-nosara-backend run migration:show",
+
+    "// === Seeders (si implementados en backend) ===": "--------------------------------",
     "db:seed": "pnpm --filter bomberos-de-nosara-backend run db:seed"
   },
   "devDependencies": {
