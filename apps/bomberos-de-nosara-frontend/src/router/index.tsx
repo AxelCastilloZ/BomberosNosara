@@ -9,13 +9,11 @@ import {
 import App from '../App';
 import AboutSection from '../components/ui/AboutUs/AboutSection';
 import AdminDonantesPage from '../pages/AdminDonantesPage';
-import AdminLoginPage from '../pages/AdminLoginPage';
 
 // Auth helpers
 import { isAuthenticated, getUserRoles } from '../service/auth';
 
 // Públicas
-import Home from '../pages/Home';
 import DonantesPage from '../pages/DonantesPage';
 import Home from '../pages/Home';
 import SuggestionsPage from '../pages/SuggestionsPage';
@@ -37,6 +35,7 @@ import AdminEstadisticasPage from '../pages/Administrativas/AdminEstadisticasPag
 import AdminMaterialEducativoPage from '../pages/Administrativas/AdminMaterialEducativoPage';
 import AdminUsuariosPage from '../pages/Administrativas/AdminUsuariosPage';
 import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
+import AdminVoluntariosPage from '../pages/Administrativas/AdminVoluntariosPage';
 // ⚠️ No tocar estos por ahora
 // import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
 // import AdminNoticiasPage from '../pages/AdminNoticiasPage';
@@ -45,6 +44,7 @@ import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
 import AdminLayout from '../components/ui/Layout/AdiminLayout';
 import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
 import AdminNoticiasPage from '../pages/AdminNoticiasPage';
+import VoluntariosPage from '../pages/Administrativas/VoluntariosPage';
 
 const Forbidden = () => <div className="p-6">No tenés permisos para ver esta sección.</div>;
 
@@ -63,6 +63,8 @@ const CAN = {
   chat:         ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] as Role[],
    noticias:  ['SUPERUSER', 'ADMIN'] as Role[], // (sin tocar)
   sugerencias:  ['SUPERUSER', 'ADMIN'] as Role[],
+  voluntarios: [ 'VOLUNTARIO'] as Role[],
+  AdminVoluntarios : ['SUPERUSER', 'ADMIN'] as Role[], 
 };
 
 function hasAnyRole(userRoles: string[], allowed: Role[]) {
@@ -173,6 +175,8 @@ const adminChildren = [
  
    createRoute({ path: 'equipo', component: AdminEquipoPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.equipo) }),
    createRoute({ path: 'noticias', component: AdminNoticiasPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.noticias) }),
+   createRoute({ path: 'voluntarios', component: AdminVoluntariosPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.AdminVoluntarios) }),
+   createRoute({ path: 'registro-horas', component: VoluntariosPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.voluntarios) }),
 ];
 
 

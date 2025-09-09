@@ -155,4 +155,79 @@ export class VoluntariosService {
       return total + this.calcularHoras(p.horaInicio, p.horaFin);
     }, 0);
   }
+
+  // Service que obtiene estadísticas generales para el dashboard del admin
+  async obtenerEstadisticasGenerales(): Promise<any> {
+    const participaciones = await this.participacionRepo.find({
+      relations: ['voluntario'],
+    });
+
+    const aprobadas = participaciones.filter((p) => p.estado === 'aprobada');
+
+    // Total de horas aprobadas
+    const totalHoras = aprobadas.reduce(
+      (sum, p) => sum + this.calcularHoras(p.horaInicio, p.horaFin),
+      0,
+    );
+
+    // Voluntarios únicos activos
+    const voluntariosActivos = new Set(aprobadas.map((p) => p.voluntario.id))
+      .size;
+
+    // Promedio de horas por voluntario
+    const promedioHorasPorVoluntario =
+      voluntariosActivos > 0 ? totalHoras / voluntariosActivos : 0;
+
+    // Tasa de aprobación
+    const totalRegistros = participaciones.length;
+    const tasaAprobacion =
+      totalRegistros > 0 ? (aprobadas.length / totalRegistros) * 100 : 0;
+
+    // Top 10 voluntarios con más horas (todas las fechas)
+    const horasPorVoluntario: Record<
+      number,
+      { nombre: string; horas: number }
+    > = {};
+
+    aprobadas.forEach((p) => {
+      const id = p.voluntario.id;
+      const nombre =
+        p.voluntario.username ||
+        `${p.voluntario.firstName} ${p.voluntario.lastName}`;
+      const horas = this.calcularHoras(p.horaInicio, p.horaFin);
+
+      if (!horasPorVoluntario[id]) {
+        horasPorVoluntario[id] = { nombre, horas: 0 };
+      }
+      horasPorVoluntario[id].horas += horas;
+    });
+
+    const topVoluntarios = Object.values(horasPorVoluntario)
+      .sort((a, b) => b.horas - a.horas)
+      .slice(0, 10);
+
+    // Participaciones por tipo
+    const participacionesPorTipo = {
+      Entrenamiento: 0,
+      Emergencia: 0,
+      Simulacros: 0,
+    };
+
+    aprobadas.forEach((p) => {
+      if (p.actividad in participacionesPorTipo) {
+        participacionesPorTipo[p.actividad]++;
+      }
+    });
+
+    return {
+      totalHoras: parseFloat(totalHoras.toFixed(2)),
+      voluntariosActivos,
+      promedioHorasPorVoluntario: parseFloat(
+        promedioHorasPorVoluntario.toFixed(1),
+      ),
+      tasaAprobacion: parseFloat(tasaAprobacion.toFixed(1)),
+      topVoluntarios,
+      participacionesPorTipo,
+    };
+  }
 }

@@ -32,3 +32,16 @@ export type UpdateEstadoDto = {
   estado: 'aprobada' | 'rechazada';
   motivoRechazo?: string;
 };
+
+export type EstadisticasVoluntariosDto = {
+  totalHoras: number;
+  voluntariosActivos: number;
+  promedioHorasPorVoluntario: number;
+  tasaAprobacion: number;
+  topVoluntarios: { nombre: string; horas: number }[];
+  participacionesPorTipo: {
+    Entrenamiento: number;
+    Emergencia: number;
+    Simulacros: number;
+  };
+};

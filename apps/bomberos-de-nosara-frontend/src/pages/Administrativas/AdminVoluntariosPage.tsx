@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import AdminParticipacionesTable from '../../components/ui/Administrativa/Voluntarios/AdminParticipacionesTable';
 import { BarChart3, Users, ArrowLeft } from 'lucide-react';
-import EstadisticasVoluntarios from '../../components/ui/Administrativa/Voluntarios/EstadisticasVoluntarios';
+import AdminEstadisticasVoluntarios from '../../components/ui/Administrativa/Voluntarios/AdminEstadisticasVoluntarios';
 
 type VoluntarioView = 'dashboard' | 'lista' | 'estadisticas';
 
@@ -72,7 +72,7 @@ export default function AdminVoluntariosPage() {
       {/* Estadísticas */}
       {viewMode === 'estadisticas' && (
   <div className="bg-white border border-gray-200 shadow rounded-lg p-6 mt-6">
-    <EstadisticasVoluntarios />
+    <AdminEstadisticasVoluntarios />
   </div>
 )}
     </div>

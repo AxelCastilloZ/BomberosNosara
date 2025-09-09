@@ -97,4 +97,11 @@ export class VoluntariosController {
   ) {
     return this.voluntariosService.actualizarEstadoParticipacion(id, dto);
   }
+
+  // Admin obtiene estadísticas generales
+  @Get('estadisticas')
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  async obtenerEstadisticas() {
+    return this.voluntariosService.obtenerEstadisticasGenerales();
+  }
 }
