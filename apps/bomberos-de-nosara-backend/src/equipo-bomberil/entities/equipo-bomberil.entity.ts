@@ -1,17 +1,17 @@
 // src/equipo-bomberil/entities/equipo-bomberil.entity.ts
 import {
-  Entity,
-  PrimaryGeneratedColumn,
   Column,
+  Entity,
+  Index,
+  JoinColumn,
   ManyToOne,
   OneToMany,
-  JoinColumn,
-  Index,
+  PrimaryGeneratedColumn,
 } from 'typeorm';
+import { EstadoActual } from '../enums/equipo-bomberil.enums';
 import { CatalogoEquipo } from './catalogo-equipo.entity';
 import { EquipoMantenimiento } from './equipo-mantenimiento.entity';
 import { MantenimientoProgramado } from './mantenimiento-programado.entity';
-import { EstadoActual } from '../enums/equipo-bomberil.enums';
 
 @Entity('equipo_bomberil')
 export class EquipoBomberil {

@@ -1,29 +1,29 @@
-import { join } from 'path';
-import { existsSync } from 'fs';
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import * as Joi from 'joi';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { ThrottlerModule } from '@nestjs/throttler';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { JwtModule } from '@nestjs/jwt';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { existsSync } from 'fs';
+import * as Joi from 'joi';
+import { join } from 'path';
 
-import { DonantesModule } from './donantes/donantes.module';
+import { AppMobileModule } from './app-mobile/app-mobile.module';
 import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { RolesModule } from './roles/roles.module';
-import { SeederModule } from './seeder/seeder.module';
-import { NoticiaModule } from './noticias/noticia.module';
-import { SugerenciaModule } from './suggestion/suggestion.module';
+import { ChatModule } from './chat/chat.module';
+import { DonantesModule } from './donantes/donantes.module';
 import { EquipoBomberilModule } from './equipo-bomberil/equipo-bomberil.module';
 import { MaterialEducativoModule } from './material-educativo/material-educativo.module';
+import { NoticiaModule } from './noticias/noticia.module';
+import { RolesModule } from './roles/roles.module';
+import { SeederModule } from './seeder/seeder.module';
+import { SugerenciaModule } from './suggestion/suggestion.module';
 import { UploadModule } from './upload/upload.module';
+import { UsersModule } from './users/users.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
-import { AppMobileModule } from './app-mobile/app-mobile.module';
 import { VoluntariosModule } from './voluntarios/voluntarios.module';
-import { ChatModule } from './chat/chat.module'; // <-- agregado
 
 @Module({
   imports: [
@@ -103,8 +103,8 @@ import { ChatModule } from './chat/chat.module'; // <-- agregado
         password: cfg.getOrThrow<string>('DATABASE_PASSWORD'),
         database: cfg.getOrThrow<string>('DATABASE_NAME'),
         autoLoadEntities: true,
-        synchronize: cfg.get<boolean>('DB_SYNC', true),
-        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', true),
+        synchronize: cfg.get<boolean>('DB_SYNC', false),
+        dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', false),
         retryAttempts: 10,
         retryDelay: 3000,
       }),

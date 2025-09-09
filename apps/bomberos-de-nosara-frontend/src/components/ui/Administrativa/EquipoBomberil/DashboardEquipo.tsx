@@ -1,11 +1,11 @@
 // src/components/ui/Administrativa/EquipoBomberil/DashboardEquipo.tsx
 import React, { useMemo, useState } from 'react';
 import { useEquiposBomberiles } from '../../../../hooks/useEquiposBomberiles';
-import EquipoList from './EquipoList';
-import AddEquipo from './AddEquipo';
-import UpdateEstado from './UpdateEstado';
-import MantenimientoEquipo from './MantenimientoEquipo';
 import type { EquipoBomberil } from '../../../../interfaces/EquipoBomberil/equipoBomberil';
+import AddEquipo from './AddEquipo';
+import EquipoList from './EquipoList';
+import MantenimientoEquipo from './MantenimientoEquipo';
+import UpdateEstado from './UpdateEstado';
 
 type Vista = 'home' | 'lista' | 'agregar' | 'estado' | 'mantenimiento';
 
@@ -73,7 +73,7 @@ export default function DashboardEquipo() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <NavCard title="Lista de equipos" subtitle="Ver y filtrar todos los equipos" onClick={() => go('lista')} />
         <NavCard title="Agregar equipo" subtitle="Registrar nuevo equipo" onClick={() => go('agregar')} highlight />
-        <NavCard title="Actualizar estado" subtitle="Cambiar estado de un equipo" onClick={() => go('estado')} />
+       
         <NavCard title="Mantenimiento" subtitle="Registrar / Programar / Historial" onClick={() => go('mantenimiento')} />
       </div>
 
