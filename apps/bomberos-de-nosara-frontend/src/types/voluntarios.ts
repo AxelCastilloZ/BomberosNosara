@@ -40,8 +40,27 @@ export type EstadisticasVoluntariosDto = {
   tasaAprobacion: number;
   topVoluntarios: { nombre: string; horas: number }[];
   participacionesPorTipo: {
-    Entrenamiento: number;
-    Emergencia: number;
-    Simulacros: number;
+  Entrenamiento: number;
+  Emergencia: number;
+  Simulacros: number;
   };
+};
+
+export type PaginatedDto = {
+  descripcion?: string;
+  voluntario?: string;
+  tipoActividad?: TipoActividad;
+  fechaDesde?: string;
+  fechaHasta?: string;
+  estado?: 'aprobada' | 'pendiente' | 'rechazada';
+  
+  page?: number;
+  limit?: number;
+};
+
+export type PaginatedResponse = {
+  data: Participacion[];
+  total: number;
+  page: number;
+  totalPages: number;
 };

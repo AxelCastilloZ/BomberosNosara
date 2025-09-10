@@ -1,7 +1,7 @@
 // useVoluntarios.ts - VERSIÓN COMPLETA CON DEBUG
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { voluntariadoService } from '../service/voluntariosService';
-import { CreateParticipacionDto, EstadisticasVoluntariosDto, UpdateEstadoDto } from '../types/voluntarios';
+import { CreateParticipacionDto, EstadisticasVoluntariosDto, PaginatedDto, UpdateEstadoDto } from '../types/voluntarios';
 
 // Hook para ver el historial de participaciones del voluntario
 export const useMisParticipaciones = (estado?: string) =>
@@ -11,11 +11,11 @@ export const useMisParticipaciones = (estado?: string) =>
   });
 
 // Hook para ver todas las participaciones (admin)
-export const useTodasParticipaciones = (estado?: string) =>
-  useQuery({
-    queryKey: ['participaciones', estado],
-    queryFn: () => voluntariadoService.listarTodas(estado).then((r) => r.data),
-  });
+// export const useTodasParticipaciones = (estado?: string) =>
+//   useQuery({
+//     queryKey: ['participaciones', estado],
+//     queryFn: () => voluntariadoService.listarTodas(estado).then((r) => r.data),
+//   });
 
 // Hook para obtener horas aprobadas
 export const useHorasAprobadas = () =>
@@ -63,4 +63,11 @@ export const useEstadisticasVoluntarios = () =>
   useQuery<EstadisticasVoluntariosDto>({
     queryKey: ['estadisticas-voluntarios'],
     queryFn: () => voluntariadoService.obtenerEstadisticas(),
+  });
+
+// Hook para obtener participaciones paginadas (admin)
+  export const useParticipacionesPaginadas = (filtros: PaginatedDto) =>
+  useQuery({
+    queryKey: ['participaciones-paginado', filtros],
+    queryFn: () => voluntariadoService.listarPaginado(filtros),
   });

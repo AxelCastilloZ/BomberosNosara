@@ -10,11 +10,12 @@ import {
 } from '@nestjs/common/exceptions';
 import { User } from '../users/entities/user.entity';
 import { RoleEnum } from '../roles/role.enum';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { Participacion } from './entities/participacion.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateParticipacionDto } from './dto/CreateParticipacionDto';
 import { ActualizarEstadoDto } from './dto/ActualizarEstadoDto';
+import { FiltrosParticipacionDto } from './dto/FiltrosParticipacionDto';
 
 @Injectable()
 export class VoluntariosService {
@@ -26,6 +27,8 @@ export class VoluntariosService {
   private verificarRolVoluntario(user: any): boolean {
     return user.roles?.includes(RoleEnum.VOLUNTARIO);
   }
+
+  // ----- VOLUNTARIO ------
 
   private calcularHoras(horaInicio: string, horaFin: string): number {
     const [hi, mi] = horaInicio.split(':').map(Number);
@@ -88,21 +91,23 @@ export class VoluntariosService {
     }));
   }
 
+  // ----- ADMIN ------
+
   // Service para listar todas las participaciones (admin)
-  async listarTodasParticipaciones(estado?: string): Promise<any[]> {
-    const where: any = {};
-    if (estado) where.estado = estado;
+  // async listarTodasParticipaciones(estado?: string): Promise<any[]> {
+  //   const where: any = {};
+  //   if (estado) where.estado = estado;
 
-    const participaciones = await this.participacionRepo.find({
-      where,
-      order: { fecha: 'DESC' },
-    });
+  //   const participaciones = await this.participacionRepo.find({
+  //     where,
+  //     order: { fecha: 'DESC' },
+  //   });
 
-    return participaciones.map((p) => ({
-      ...p,
-      horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
-    }));
-  }
+  //   return participaciones.map((p) => ({
+  //     ...p,
+  //     horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
+  //   }));
+  // }
 
   //Service para el administrador que actualiza el estado de una participación
   async actualizarEstadoParticipacion(
@@ -191,9 +196,7 @@ export class VoluntariosService {
 
     aprobadas.forEach((p) => {
       const id = p.voluntario.id;
-      const nombre =
-        p.voluntario.username ||
-        `${p.voluntario.firstName} ${p.voluntario.lastName}`;
+      const nombre = p.voluntario.username;
       const horas = this.calcularHoras(p.horaInicio, p.horaFin);
 
       if (!horasPorVoluntario[id]) {
@@ -228,6 +231,70 @@ export class VoluntariosService {
       tasaAprobacion: parseFloat(tasaAprobacion.toFixed(1)),
       topVoluntarios,
       participacionesPorTipo,
+    };
+  }
+
+  // Service que lista todas las participaciones con paginación y filtros (admin)
+  async listarTodasPaginado(dto: FiltrosParticipacionDto) {
+    const page = dto.page ?? 1;
+    const limit = dto.limit ?? 10;
+
+    const query = this.participacionRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.voluntario', 'voluntario')
+      .orderBy('p.fecha', 'DESC');
+
+    if (dto.descripcion) {
+      console.log('[FILTRO] descripcion:', dto.descripcion);
+      query.andWhere(
+        new Brackets((qb) =>
+          qb.where('p.actividad LIKE :txt').orWhere('p.descripcion LIKE :txt'),
+        ),
+        { txt: `%${dto.descripcion}%` },
+      );
+    }
+
+    if (dto.voluntario) {
+      console.log('[FILTRO] voluntario:', dto.voluntario);
+      query.andWhere('voluntario.username LIKE :nombre', {
+        nombre: `%${dto.voluntario}%`,
+      });
+    }
+
+    if (dto.tipoActividad) {
+      console.log('[FILTRO] tipoActividad:', dto.tipoActividad);
+      query.andWhere('p.actividad = :tipo', { tipo: dto.tipoActividad });
+    }
+
+    if (dto.fechaDesde) {
+      query.andWhere('p.fecha >= :desde', { desde: dto.fechaDesde });
+    }
+
+    if (dto.fechaHasta) {
+      query.andWhere('p.fecha <= :hasta', { hasta: dto.fechaHasta });
+    }
+
+    if (dto.estado) {
+      query.andWhere('p.estado = :estado', { estado: dto.estado });
+    }
+
+    console.log('Query SQL:', query.getQuery());
+    console.log('Parámetros:', query.getParameters());
+
+    const total = await query.getCount();
+    const result = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      data: result.map((p) => ({
+        ...p,
+        horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
+      })),
+      total,
+      page: dto.page,
+      totalPages: Math.ceil(total / limit),
     };
   }
 }

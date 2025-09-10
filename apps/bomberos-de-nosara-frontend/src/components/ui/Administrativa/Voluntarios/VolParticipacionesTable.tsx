@@ -50,7 +50,7 @@ export default function VolParticipacionesTable() {
             <span className={`px-2 py-1 rounded-full text-xs font-semibold transition-all duration-300 ${
               estado === "aprobada" ? "bg-green-200 text-black" :
               estado === "pendiente" ? "bg-gray-200 text-black" :
-              "bg-red-100 text-red-700 hover:scale-110"
+              "bg-red-100 text-black hover:scale-110"
             }`}>
               {estado}
             </span>
@@ -90,7 +90,7 @@ export default function VolParticipacionesTable() {
         <div className="p-4 text-center text-gray-500">No hay participaciones registradas</div>
       ) : (
         <table className="min-w-full divide-y divide-gray-200 bg-white">
-          <thead className="bg-red-600 text-white">
+          <thead className="bg-red-100 text-red-800">
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map(header => (

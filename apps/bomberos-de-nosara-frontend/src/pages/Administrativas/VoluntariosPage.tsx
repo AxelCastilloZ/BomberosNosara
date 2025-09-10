@@ -14,8 +14,8 @@ export default function VoluntariosPage() {
   return (
     <div className="p-2 space-y-6 pt-24">
       {/* Encabezado */}
-      <div className=" bg-black text-yellow-300 rounded-t-3xl shadow-lg p-6 flex items-center justify-between">
-        <div className="p-6 shadow-lg">
+      <div className=" text-red-800 p-6 flex items-center justify-between">
+        <div className="p-6">
         <h2 className="text-3xl font-bold mb-2">
           Bienvenido a la sección de registro de horas de voluntarios
         </h2>
@@ -32,17 +32,17 @@ export default function VoluntariosPage() {
        {/* Horas aprobadas */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
       <section className="bg-white border rounded-e-3xl p-4 flex justify-between items-center shadow-md">
-        <h3 className="text-lg font-semibold text-gray-800">
+        <h3 className="text-lg font-semibold text-black">
           Total horas aprobadas:
         </h3>
-        <span className="text-2xl font-bold text-green-400">
+        <span className="text-2xl font-bold text-black">
           {isLoadingHorasA ? "..." : horasAprobadas}
         </span>
       </section>
 
       {/* Sección de horas pendientes */}
        <section className="bg-white border rounded-s-3xl p-4 flex justify-between items-center shadow-md">
-        <h3 className="text-lg font-semibold text-gray-800">
+        <h3 className="text-lg font-semibold text-black">
           Total horas pendientes:
         </h3>
         <span className="text-2xl font-bold">
@@ -56,7 +56,7 @@ export default function VoluntariosPage() {
       <div className="text-center text-white font-semibold">
         <button
           onClick={() => setShowForm(true)}
-          className="float-right mr-11 bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg shadow-2xl transition-colors duration-200 mb-4"
+          className="float-right mr-11 bg-red-800 hover:bg-red-700 px-6 py-2 rounded-lg shadow-2xl transition-colors duration-200 mb-4"
         >
            Registrar participación
         </button>

@@ -22,6 +22,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { ActualizarEstadoDto } from './dto/ActualizarEstadoDto';
+import { FiltrosParticipacionDto } from './dto/FiltrosParticipacionDto';
 
 interface AuthUser {
   id: number;
@@ -32,6 +33,8 @@ interface AuthUser {
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class VoluntariosController {
   constructor(private readonly voluntariosService: VoluntariosService) {}
+
+  /* ----------  VOLUNTARIO  ---------- */
 
   // Voluntario crea participaciones
   @Post('participaciones')
@@ -81,11 +84,20 @@ export class VoluntariosController {
     return { horasPendientes: horas };
   }
 
+  /* ----------  ADMIN  ---------- */
+
   // Admin ve todas las participaciones
-  @Get('participaciones')
+  // @Get('participaciones')
+  // @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  // listarTodas(@Query('estado') estado?: string) {
+  //   return this.voluntariosService.listarTodasParticipaciones(estado);
+  // }
+
+  // Admin ve todas las participaciones paginadas y filtradas
+  @Get('paginado')
   @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  listarTodas(@Query('estado') estado?: string) {
-    return this.voluntariosService.listarTodasParticipaciones(estado);
+  async listarPaginado(@Query() dto: FiltrosParticipacionDto) {
+    return this.voluntariosService.listarTodasPaginado(dto);
   }
 
   // Admin actualiza estado de participación

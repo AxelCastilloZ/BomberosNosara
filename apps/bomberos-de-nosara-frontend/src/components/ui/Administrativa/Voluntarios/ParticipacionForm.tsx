@@ -29,7 +29,6 @@ export default function ParticipacionForm({ onSuccess }: { onSuccess?: () => voi
     if (!formData.horaFin) newErrors.horaFin = "Hora fin requerida";
     if (!formData.descripcion || formData.descripcion.length < 5) newErrors.descripcion = "Mínimo 5 caracteres";
     if (!formData.ubicacion || formData.ubicacion.length < 3) newErrors.ubicacion = "Mínimo 3 caracteres";
-    
     // Validar que horaFin > horaInicio
     if (formData.horaInicio && formData.horaFin) {
       const [hInicio, mInicio] = formData.horaInicio.split(':').map(Number);
@@ -162,7 +161,7 @@ export default function ParticipacionForm({ onSuccess }: { onSuccess?: () => voi
       <button
         type="submit"
         disabled={crear.isPending}
-        className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+        className="w-full bg-red-800 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
       >
         {crear.isPending ? "Registrando..." : "Registrar"}
       </button>

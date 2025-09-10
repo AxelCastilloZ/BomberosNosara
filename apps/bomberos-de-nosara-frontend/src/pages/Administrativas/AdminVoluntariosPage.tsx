@@ -1,8 +1,7 @@
-// src/pages/Administrativas/AdminVoluntariosPage.tsx
 import { useState } from 'react';
-import AdminParticipacionesTable from '../../components/ui/Administrativa/Voluntarios/AdminParticipacionesTable';
 import { BarChart3, Users, ArrowLeft } from 'lucide-react';
 import AdminEstadisticasVoluntarios from '../../components/ui/Administrativa/Voluntarios/AdminEstadisticasVoluntarios';
+import AdminParticipacionesFilt from '../../components/ui/Administrativa/Voluntarios/AdminParticipacionesFilt';
 
 type VoluntarioView = 'dashboard' | 'lista' | 'estadisticas';
 
@@ -10,7 +9,7 @@ export default function AdminVoluntariosPage() {
   const [viewMode, setViewMode] = useState<VoluntarioView>('dashboard');
 
   return (
-    <div className="min-h-screen px-6 py-8 w-full bg-[#f9fafb] pt-28">
+    <div className="min-h-screen px-6 py-8 w-full bg-[#f9fafb] pt-14">
       {viewMode !== 'dashboard' && (
         <button
           onClick={() => setViewMode('dashboard')}
@@ -36,7 +35,7 @@ export default function AdminVoluntariosPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <button
               onClick={() => setViewMode('lista')}
-              className="bg-white border border-gray-200 p-4 rounded-lg hover:bg-gray-100 text-center"
+              className="bg-red-50 border border-red-200 p-4 rounded-lg hover:bg-red-100 text-center"
             >
               <Users className="h-6 w-6 mx-auto text-gray-600" />
               <h3 className="mt-2 font-semibold text-gray-800">Participaciones</h3>
@@ -47,8 +46,8 @@ export default function AdminVoluntariosPage() {
               onClick={() => setViewMode('estadisticas')}
               className="bg-red-50 border border-red-200 p-4 rounded-lg hover:bg-red-100 text-center"
             >
-              <BarChart3 className="h-6 w-6 mx-auto text-red-600" />
-              <h3 className="mt-2 font-semibold text-red-700">Estadísticas</h3>
+              <BarChart3 className="h-6 w-6 mx-auto text-gray-600" />
+              <h3 className="mt-2 font-semibold text-gray-800">Estadísticas sobre Voluntarios</h3>
               <p className="text-sm text-gray-600">Ver estadísticas generales (próximamente)</p>
             </button>
           </div>
@@ -65,7 +64,7 @@ export default function AdminVoluntariosPage() {
           <span>Gestiona aqui las participaciones, aprueba o rechaza los registros.</span>
           </div>
         
-          <AdminParticipacionesTable />
+          <AdminParticipacionesFilt />
         </div>
       )}
 
