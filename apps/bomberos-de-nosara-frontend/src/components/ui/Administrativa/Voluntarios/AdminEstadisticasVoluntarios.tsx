@@ -27,6 +27,12 @@ export default function AdminEstadisticasVoluntarios() {
     participacionesPorTipo,
   } = data as EstadisticasVoluntariosDto;
 
+   const fmtHoras = (dec: number) => {
+    const h = Math.floor(dec);
+    const m = Math.round((dec - h) * 60);
+    return `${h} h ${m} min`;
+  };
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-red-800 mb-6">Estadísticas de Voluntarios</h2>
@@ -36,7 +42,7 @@ export default function AdminEstadisticasVoluntarios() {
           <Clock className="h-8 w-8 text-blue-600" />
           <div>
             <p className="text-sm text-gray-600">Total Horas</p>
-            <p className="text-2xl font-bold">{totalHoras}</p>
+            <p className="text-2xl font-bold">{fmtHoras(totalHoras)}</p>
           </div>
         </div>
 
@@ -52,7 +58,7 @@ export default function AdminEstadisticasVoluntarios() {
           <BarChart3 className="h-8 w-8 text-purple-600" />
           <div>
             <p className="text-sm text-gray-600">Horas/Voluntario</p>
-            <p className="text-2xl font-bold">{promedioHorasPorVoluntario}</p>
+            <p className="text-2xl font-bold">{fmtHoras(promedioHorasPorVoluntario)}</p>
           </div>
         </div>
 
@@ -72,7 +78,7 @@ export default function AdminEstadisticasVoluntarios() {
             {topVoluntarios.map((v, index) => (
               <li key={index} className="flex justify-between">
                 <span>{v.nombre}</span>
-                <span className="font-semibold">{v.horas}h</span>
+                <span className="font-semibold">{fmtHoras(v.horas)}</span>
               </li>
             ))}
           </ul>

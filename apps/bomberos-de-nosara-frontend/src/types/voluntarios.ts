@@ -64,3 +64,13 @@ export type PaginatedResponse = {
   page: number;
   totalPages: number;
 };
+
+export type FiltrosVoluntarioDto = {
+  estado?: 'aprobada' | 'pendiente' | 'rechazada';
+  fechaDesde?: string;
+  fechaHasta?: string;
+  actividad?: TipoActividad;
+  descripcion?: string;
+  page?: number;
+  limit?: number;
+};

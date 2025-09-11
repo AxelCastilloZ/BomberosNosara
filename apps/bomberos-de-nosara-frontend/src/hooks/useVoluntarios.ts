@@ -10,13 +10,6 @@ export const useMisParticipaciones = (estado?: string) =>
     queryFn: () => voluntariadoService.listarMisParticipaciones(estado).then((r) => r.data),
   });
 
-// Hook para ver todas las participaciones (admin)
-// export const useTodasParticipaciones = (estado?: string) =>
-//   useQuery({
-//     queryKey: ['participaciones', estado],
-//     queryFn: () => voluntariadoService.listarTodas(estado).then((r) => r.data),
-//   });
-
 // Hook para obtener horas aprobadas
 export const useHorasAprobadas = () =>
   useQuery({
@@ -54,6 +47,7 @@ export const useActualizarEstado = () => {
       qc.invalidateQueries({ queryKey: ['participaciones'] });
       qc.invalidateQueries({ queryKey: ['mis-participaciones'] });
       qc.invalidateQueries({ queryKey: ['mis-horas'] });
+      qc.invalidateQueries({ queryKey: ['participaciones-paginado'] });
     },
   });
 };

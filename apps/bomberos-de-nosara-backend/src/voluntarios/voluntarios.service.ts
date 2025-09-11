@@ -38,7 +38,8 @@ export class VoluntariosService {
     const fin = new Date(0, 0, 0, hf, mf);
 
     const diffMs = fin.getTime() - inicio.getTime();
-    return diffMs / (1000 * 60 * 60);
+    const horas = diffMs / (1000 * 60 * 60);
+    return Math.round(horas * 100) / 100; //
   }
 
   async crearParticipacion(
@@ -75,7 +76,7 @@ export class VoluntariosService {
     };
   }
 
-  // Service para listar el historial de participaciones de un voluntario
+  //Service para listar el historial de participaciones de un voluntario
   async listarHistorial(user: User, estado?: string): Promise<any[]> {
     const where: any = { voluntario: { id: user.id } };
     if (estado) where.estado = estado;
@@ -109,6 +110,7 @@ export class VoluntariosService {
   //   }));
   // }
 
+  // ----- ADMIN ------
   //Service para el administrador que actualiza el estado de una participación
   async actualizarEstadoParticipacion(
     id: number,

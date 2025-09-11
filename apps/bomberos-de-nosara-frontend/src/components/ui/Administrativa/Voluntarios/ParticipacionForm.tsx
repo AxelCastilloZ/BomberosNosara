@@ -28,7 +28,9 @@ export default function ParticipacionForm({ onSuccess }: { onSuccess?: () => voi
     if (!formData.horaInicio) newErrors.horaInicio = "Hora inicio requerida";
     if (!formData.horaFin) newErrors.horaFin = "Hora fin requerida";
     if (!formData.descripcion || formData.descripcion.length < 5) newErrors.descripcion = "Mínimo 5 caracteres";
-    if (!formData.ubicacion || formData.ubicacion.length < 3) newErrors.ubicacion = "Mínimo 3 caracteres";
+    if (formData.descripcion.length > 200) newErrors.descripcion = "Máximo 200 caracteres";
+    if (!formData.ubicacion || formData.ubicacion.length < 5) newErrors.ubicacion = "Mínimo 5 caracteres";
+     if (formData.ubicacion.length > 100) newErrors.ubicacion = "Máximo 100 caracteres";
     // Validar que horaFin > horaInicio
     if (formData.horaInicio && formData.horaFin) {
       const [hInicio, mInicio] = formData.horaInicio.split(':').map(Number);
@@ -133,7 +135,23 @@ export default function ParticipacionForm({ onSuccess }: { onSuccess?: () => voi
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
           rows={3}
           placeholder="Describe la actividad..."
+          maxLength={200} 
         />
+        {/* Indicador de contador */}
+        <div className="flex justify-between text-xs mt-1">
+          <span
+            className={`${
+              formData.descripcion.length >= 200 ? 'text-red-600 font-semibold' : 'text-gray-500'
+            }`}
+          >
+            {formData.descripcion.length}/200
+          </span>
+          {formData.descripcion.length >= 200 && (
+            <span className="text-red-600 font-semibold">
+              Máximo 200 caracteres permitidos
+            </span>
+          )}
+        </div>
         {errors.descripcion && <p className="text-red-500 text-xs mt-1">{errors.descripcion}</p>}
       </div>
 
@@ -146,7 +164,23 @@ export default function ParticipacionForm({ onSuccess }: { onSuccess?: () => voi
           className="w-full border border-gray-300 rounded-lg px-3 py-2"
           rows={2}
           placeholder="Lugar donde se realizó la actividad..."
+          maxLength={100}
         />
+        {/* Indicador de contador */}
+       <div className="flex justify-between text-xs mt-1">
+          <span
+            className={`${
+              formData.ubicacion.length >= 100 ? 'text-red-600 font-semibold' : 'text-gray-500'
+            }`}
+          >
+            {formData.ubicacion.length}/100
+          </span>
+          {formData.ubicacion.length >= 100 && (
+            <span className="text-red-600 font-semibold">
+              Máximo 100 caracteres permitidos
+            </span>
+          )}
+        </div>
         {errors.ubicacion && <p className="text-red-500 text-xs mt-1">{errors.ubicacion}</p>}
       </div>
 
