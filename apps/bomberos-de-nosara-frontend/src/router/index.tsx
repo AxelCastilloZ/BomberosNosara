@@ -35,14 +35,11 @@ import AdminEstadisticasPage from '../pages/Administrativas/AdminEstadisticasPag
 import AdminMaterialEducativoPage from '../pages/Administrativas/AdminMaterialEducativoPage';
 import AdminUsuariosPage from '../pages/Administrativas/AdminUsuariosPage';
 import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
-// ⚠️ No tocar estos por ahora
-// import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
-// import AdminNoticiasPage from '../pages/AdminNoticiasPage';
+import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
+import AdminNoticiasPage from '../pages/AdminNoticiasPage';
 
 // Layout con sidebar
 import AdminLayout from '../components/ui/Layout/AdiminLayout';
-import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
-import AdminNoticiasPage from '../pages/AdminNoticiasPage';
 
 const Forbidden = () => <div className="p-6">No tenés permisos para ver esta sección.</div>;
 
@@ -54,32 +51,57 @@ type Role = 'SUPERUSER' | 'ADMIN' | 'PERSONAL_BOMBERIL' | 'VOLUNTARIO';
 const CAN = {
   donantes:     ['SUPERUSER', 'ADMIN'] as Role[],
   usuarios:     ['SUPERUSER'] as Role[],
-   equipo:    ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[], // (sin tocar)
+  equipo:       ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[],
   vehiculos:    ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] as Role[],
   estadisticas: ['SUPERUSER', 'ADMIN'] as Role[],
   material:     ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] as Role[],
   chat:         ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] as Role[],
-   noticias:  ['SUPERUSER', 'ADMIN'] as Role[], // (sin tocar)
+  noticias:     ['SUPERUSER', 'ADMIN'] as Role[],
   sugerencias:  ['SUPERUSER', 'ADMIN'] as Role[],
 };
 
 function hasAnyRole(userRoles: string[], allowed: Role[]) {
+  console.log('🔄 Verificando roles:', { userRoles, allowed });
   const set = new Set(userRoles);
-  return allowed.some((r) => set.has(r));
+  const result = allowed.some((r) => set.has(r));
+  console.log('📊 Resultado de verificación:', result);
+  return result;
 }
 
 /* =========================
    Guards
    ========================= */
 function requireAuth() {
-  if (!isAuthenticated()) throw redirect({ to: '/login' });
+  console.log('🔍 Verificando autenticación...');
+  if (!isAuthenticated()) {
+    console.log('❌ Usuario no autenticado, redirigiendo a login');
+    throw redirect({ to: '/login' });
+  }
+  console.log('✅ Usuario autenticado');
 }
 
 function requireRoles(allowed: Role[]) {
   return () => {
-    if (!isAuthenticated()) throw redirect({ to: '/login' });
+    console.log('🔍 Verificando roles para:', allowed);
+    
+    if (!isAuthenticated()) {
+      console.log('❌ Usuario no autenticado');
+      throw redirect({ to: '/login' });
+    }
+    
     const roles = getUserRoles();
-    if (!hasAnyRole(roles, allowed)) throw redirect({ to: '/forbidden' });
+    console.log('👤 Roles del usuario:', roles);
+    console.log('✅ Roles permitidos:', allowed);
+    
+    const hasAccess = hasAnyRole(roles, allowed);
+    console.log('🔑 ¿Tiene acceso?', hasAccess);
+    
+    if (!hasAccess) {
+      console.log('🚫 Redirigiendo a /forbidden');
+      throw redirect({ to: '/forbidden' });
+    }
+    
+    console.log('✅ Acceso permitido');
   };
 }
 
@@ -116,63 +138,78 @@ const adminLayoutRoute = createRoute({
   beforeLoad: requireAuth,
 });
 
-// --- Hijos del layout /admin (rutas relativas) ---
+// --- Hijos del layout /admin (rutas relativas SIN BARRA INICIAL) ---
 const adminChildren = [
   // index de /admin
   createRoute({
-    path: '/', // index
+    path: '/', // index - CORRECTO
     component: AdminDashboardPage,
     getParentRoute: () => adminLayoutRoute,
   }),
 
   createRoute({
-    path: 'donantes',
+    path: 'donantes', // SIN BARRA INICIAL - CORREGIDO
     component: AdminDonantesPage,
     getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.donantes),
   }),
+  
   createRoute({
-    path: 'sugerencias',
+    path: 'sugerencias', // SIN BARRA INICIAL - CORREGIDO
     component: AdminSuggestionsPage,
     getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.sugerencias),
   }),
+  
   createRoute({
-    path: 'chat',
+    path: 'chat', // SIN BARRA INICIAL - CORREGIDO
     component: AdminChatPage,
     getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.chat),
   }),
+  
   createRoute({
-    path: 'vehiculos',
+    path: 'vehiculos', // SIN BARRA INICIAL - CORREGIDO ⭐
     component: AdminVehiculosPage,
     getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.vehiculos),
   }),
+  
   createRoute({
-    path: 'estadisticas',
+    path: 'estadisticas', // SIN BARRA INICIAL - CORREGIDO
     component: AdminEstadisticasPage,
     getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.estadisticas),
   }),
+  
   createRoute({
-    path: 'material-interno',
+    path: 'material-interno', // SIN BARRA INICIAL - CORREGIDO
     component: AdminMaterialEducativoPage,
     getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.material),
   }),
+  
   createRoute({
-    path: 'usuarios',
+    path: 'usuarios', // SIN BARRA INICIAL - CORREGIDO
     component: AdminUsuariosPage,
     getParentRoute: () => adminLayoutRoute,
     beforeLoad: requireRoles(CAN.usuarios),
   }),
 
- 
-   createRoute({ path: 'equipo', component: AdminEquipoPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.equipo) }),
-   createRoute({ path: 'noticias', component: AdminNoticiasPage, getParentRoute: () => adminLayoutRoute, beforeLoad: requireRoles(CAN.noticias) }),
+  createRoute({ 
+    path: 'equipo', // SIN BARRA INICIAL - CORREGIDO
+    component: AdminEquipoPage, 
+    getParentRoute: () => adminLayoutRoute, 
+    beforeLoad: requireRoles(CAN.equipo) 
+  }),
+  
+  createRoute({ 
+    path: 'noticias', // SIN BARRA INICIAL - CORREGIDO
+    component: AdminNoticiasPage, 
+    getParentRoute: () => adminLayoutRoute, 
+    beforeLoad: requireRoles(CAN.noticias) 
+  }),
 ];
-
 
 adminLayoutRoute.addChildren(adminChildren);
 
