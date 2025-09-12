@@ -31,15 +31,11 @@ const ALL_ITEMS: SidebarItem[] = [
   { icon: <FaUserShield />,     label: "Administrar Donantes",    href: "/admin/donantes",      roles: ["SUPERUSER", "ADMIN"] },
   { icon: <FaUsers />,          label: "Gestión de Usuarios",     href: "/admin/usuarios",      roles: ["SUPERUSER"] },
   { icon: <FaTruck />,          label: "Inventario de Vehículos", href: "/admin/vehiculos",     roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL"] },
-
-  // Nuevos
   { icon: <FaWrench />,         label: "Inventario de Equipo",    href: "/admin/equipo",        roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL"] },
   { icon: <FaRegNewspaper />,   label: "Noticias",                href: "/admin/noticias",      roles: ["SUPERUSER", "ADMIN"] },
-
   { icon: <FaChartBar />,       label: "Estadísticas",            href: "/admin/estadisticas",  roles: ["SUPERUSER", "ADMIN"] },
   { icon: <FaBook />,           label: "Material Interno",        href: "/admin/material-interno", roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"] },
   { icon: <FaComments />,       label: "Chat Interno",            href: "/admin/chat",          roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"] },
-  
 ];
 
 const BRAND = {
@@ -51,11 +47,24 @@ const BRAND = {
 };
 
 export default function AdminLayout() {
-  const userRoles = useMemo(() => getUserRoles(), []);
-  const items = useMemo(
-    () => ALL_ITEMS.filter((i) => i.roles.some((r) => userRoles.includes(r))),
-    [userRoles]
-  );
+  const userRoles = useMemo(() => {
+    try {
+      const roles = getUserRoles();
+      console.log("👤 Roles obtenidos en AdminLayout:", roles);
+      return roles;
+    } catch (error) {
+      console.error("❌ Error obteniendo roles:", error);
+      return [];
+    }
+  }, []);
+
+  const items = useMemo(() => {
+    const filteredItems = ALL_ITEMS.filter((i) =>
+      i.roles.some((r) => userRoles.includes(r))
+    );
+    console.log("📋 Items filtrados para el usuario:", filteredItems);
+    return filteredItems;
+  }, [userRoles]);
 
   const { location } = useRouterState();
   const navigate = useNavigate();
@@ -73,15 +82,26 @@ export default function AdminLayout() {
 
   const isActive = (href: string) => {
     if (href === "/admin") return location.pathname === "/admin";
-    return location.pathname === href || location.pathname.startsWith(href + "/");
-  };
-
+    return (
+      location.pathname === href || location.pathname.startsWith(href + "/")
+    );
+    };
+  
   const handleLogout = () => {
-    // Si tienes un auth.logout(), llámalo aquí.
+    console.log("🚪 Cerrando sesión...");
     localStorage.clear();
     sessionStorage.clear();
     navigate({ to: "/login" });
   };
+
+  // Debug del estado actual
+  console.log("🔍 Estado actual AdminLayout:", {
+    currentPath: location.pathname,
+    userRoles,
+    itemsCount: items.length,
+    showSidebar,
+    isDashboard,
+  });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -93,7 +113,9 @@ export default function AdminLayout() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.2 }}
         >
-          <h2 className="text-lg font-semibold text-gray-800">Panel Administrativo</h2>
+          <h2 className="text-lg font-semibold text-gray-800">
+            Panel Administrativo
+          </h2>
           <button
             onClick={() => setOpen(!open)}
             className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200"
@@ -152,18 +174,19 @@ export default function AdminLayout() {
         {showSidebar && (
           <motion.aside
             ref={sidebarRef}
-            className={`fixed left-0 z-40 bg-white border-r border-gray-200 ${
-              isCollapsed ? "w-16" : "w-64"
-            } ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-16"}`}
+            className={`fixed left-0 z-40 bg-white border-r border-gray-200 flex flex-col
+              ${isCollapsed ? "w-16" : "w-64"}
+              ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-16"}`}
             initial={{ x: "-100%" }}
             animate={{
               x: open ? 0 : "-100%",
               width: isCollapsed ? "4rem" : "16rem",
             }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            style={{ height: "100vh", top: 0, overflowY: "auto" }}
+            style={{ height: "100vh", top: 0 }}
           >
-            <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+            {/* Header del sidebar */}
+            <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 shrink-0">
               <div className="flex items-center space-x-3">
                 <img
                   className="w-8 h-8 rounded-lg"
@@ -198,7 +221,8 @@ export default function AdminLayout() {
               </div>
             </div>
 
-            <div className="p-2 sm:p-3 space-y-0.5">
+            {/* Contenedor scrollable del menú */}
+            <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-0.5">
               {!isCollapsed && (
                 <div className="px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-medium text-gray-500">
                   MENÚ PRINCIPAL
@@ -218,31 +242,49 @@ export default function AdminLayout() {
                       isActive(href) ? BRAND.itemActive : ""
                     } ${isCollapsed ? "justify-center" : ""}`}
                     title={isCollapsed ? label : ""}
+                    onClick={() => {
+                      console.log(`🔗 Navegando a: ${href}`);
+                      setOpen(false); // Cerrar menú móvil al navegar
+                    }}
                   >
                     <span className="text-lg">{icon}</span>
-                    {!isCollapsed && <span className="font-medium text-sm">{label}</span>}
+                    {!isCollapsed && (
+                      <span className="font-medium text-sm">{label}</span>
+                    )}
                   </Link>
                 </motion.li>
               ))}
             </div>
 
-            {!isCollapsed && (
-              <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+            {/* Footer (sin absolute) */}
+            {isCollapsed ? (
+              <div className="border-t border-gray-200 py-3 flex flex-col items-center gap-2 shrink-0">
+                <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-semibold">
+                  {userRoles[0]?.charAt(0) || "U"}
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-md text-red-600 hover:bg-red-50"
+                  title="Cerrar sesión"
+                  aria-label="Cerrar sesión"
+                >
+                  <FaSignOutAlt className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="p-4 border-t border-gray-200 shrink-0">
                 <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
-                  {/* Avatar / inicial */}
                   <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-sm font-medium">
                     {userRoles[0]?.charAt(0) || "U"}
                   </div>
-
-                  {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {userRoles[0] || "Usuario"}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">Administrador</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      Administrador
+                    </p>
                   </div>
-
-                  {/* Cerrar sesión */}
                   <button
                     onClick={handleLogout}
                     className="shrink-0 p-2 rounded-md text-red-600 hover:bg-red-50"
@@ -257,7 +299,7 @@ export default function AdminLayout() {
           </motion.aside>
         )}
 
-        {/* Contenido principal: margen depende de si hay sidebar o no */}
+        {/* Contenido principal */}
         <motion.main
           className={`flex-1 p-2 sm:p-3 md:p-4 w-full transition-all duration-300 ${
             showSidebar ? (isCollapsed ? "lg:ml-16" : "lg:ml-64") : "lg:ml-0"
@@ -267,10 +309,6 @@ export default function AdminLayout() {
           transition={{ delay: 0.1 }}
         >
           <div className="w-full max-w-full 2xl:max-w-7xl mx-auto">
-            {/* Contenedor del contenido:
-               - /admin (dashboard): sin tarjeta ni bordes
-               - /admin/chat: altura completa y sin recortes
-               - resto: tarjeta normal */}
             <div
               className={[
                 isDashboard
@@ -278,7 +316,7 @@ export default function AdminLayout() {
                   : "bg-white border border-gray-200 shadow-sm",
                 "rounded-lg w-full",
                 needsFullHeight
-                  ? "min-h[calc(100vh-4rem)] overflow-visible flex"
+                  ? "min-h-[calc(100vh-4rem)] overflow-visible flex"
                   : "overflow-hidden",
               ].join(" ")}
             >

@@ -19,7 +19,7 @@ export default function MaterialCard({
   material,
   onEdit,
   onDelete,
-  onDownload, // 👈 nuevo
+  onDownload,
 }: {
   material: MaterialEducativo;
   onEdit?: (m: MaterialEducativo) => void;
@@ -37,43 +37,38 @@ export default function MaterialCard({
       <p className="text-sm text-gray-600">{material.descripcion}</p>
 
       <div className="mt-auto flex items-center justify-between gap-2">
-        <div className="flex gap-2">
-          {material.tipo === 'Video' ? (
-            <Button className="bg-blue-600 hover:bg-blue-700">📺 Previsualizar</Button>
-          ) : null}
+       <div className="flex gap-2">
+        <Button
+          className="bg-red-500 hover:bg-red-600 flex items-center gap-2"
+          onClick={() => onDownload?.(material)}
+          title="Descargar"
+          aria-label={`Descargar ${material.titulo}`}
+        >
+          <FaDownload /> Descargar
+        </Button>
 
+        {onEdit && (
           <Button
-            className="bg-red-600 hover:bg-red-700 flex items-center gap-2"
-            onClick={() => onDownload?.(material)}
-            title="Descargar"
-            aria-label={`Descargar ${material.titulo}`}
+            className="bg-amber-400 hover:bg-amber-500 flex items-center gap-2"
+            onClick={() => onEdit(material)}
+            title="Editar"
+            aria-label={`Editar ${material.titulo}`}
           >
-            <FaDownload /> Descargar
+            <FaPen /> Editar
           </Button>
-        </div>
+        )}
 
-        <div className="flex gap-2">
-          {onEdit && (
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 flex items-center gap-2"
-              onClick={() => onEdit(material)}
-              title="Editar"
-              aria-label={`Editar ${material.titulo}`}
-            >
-              <FaPen /> Editar
-            </Button>
-          )}
-          {onDelete && (
-            <Button
-              className="bg-rose-600 hover:bg-rose-700 flex items-center gap-2"
-              onClick={() => onDelete(material)}
-              title="Eliminar"
-              aria-label={`Eliminar ${material.titulo}`}
-            >
-              <FaTrash /> Eliminar
-            </Button>
-          )}
-        </div>
+        {onDelete && (
+          <Button
+            className="bg-gray-600 hover:bg-gray-700 flex items-center gap-2"
+            onClick={() => onDelete(material)}
+            title="Eliminar"
+            aria-label={`Eliminar ${material.titulo}`}
+          >
+            <FaTrash /> Eliminar
+          </Button>
+        )}
+      </div>
       </div>
     </div>
   );
