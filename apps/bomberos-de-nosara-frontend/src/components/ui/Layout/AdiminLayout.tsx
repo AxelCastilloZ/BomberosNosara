@@ -18,6 +18,7 @@ import {
   FaWrench,
 } from "react-icons/fa";
 import { getUserRoles } from "../../../service/auth";
+import React from "react";
 
 type SidebarItem = {
   icon: ReactNode;
@@ -69,8 +70,33 @@ export default function AdminLayout() {
   const { location } = useRouterState();
   const navigate = useNavigate();
 
-  const [isCollapsed, setCollapsed] = useState(false);
-  const [open, setOpen] = useState(false); // menú móvil
+  // Always keep sidebar open and uncollapsed by default
+  const [isCollapsed, setCollapsedState] = useState<boolean>(false);
+  const [open, setOpenState] = useState<boolean>(true);
+
+  // State setters - simplified since we always want it open and uncollapsed
+  const setCollapsed = (value: boolean) => {
+    setCollapsedState(false); // Always keep it uncollapsed
+  };
+
+  const setOpen = (value: boolean) => {
+    setOpenState(true); // Always keep it open
+  };
+  
+  // Ensure sidebar is always open on desktop
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setOpen(true);
+        setCollapsed(false);
+      }
+    };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   const sidebarRef = useRef<HTMLDivElement>(null);
 
   // Ocultar sidebar únicamente en /admin (dashboard)
