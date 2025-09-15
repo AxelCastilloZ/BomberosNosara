@@ -835,7 +835,7 @@ const ChatWindow=() => {
 
 
   return (
-    <div className="bg-gray-50 h-full w-full min-w-full">
+    <div className="bg-gray-50 h-[calc(90vh-100px)] w-full min-w-full">
       <div className="flex flex-col md:flex-row h-full overflow-hidden w-full">
 
         <div
@@ -900,7 +900,7 @@ const ChatWindow=() => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="flex-1 overflow-y-auto bg-gray-50" style={{ maxHeight: 'calc(100vh - 300px)' }}>
             {showGroups? (
               <div className="p-2 space-y-1">
                 {getVisibleGroups().map((group) => {
@@ -1180,7 +1180,7 @@ const ChatWindow=() => {
               </div>
             </div>
 
-            <div ref={messagesContainerRef} className="flex-1 p-4 md:p-6 overflow-y-auto bg-gradient-to-b from-gray-50 to-white w-full h-full min-w-0">
+            <div ref={messagesContainerRef} className="flex-1 p-4 md:p-6 overflow-y-auto bg-gradient-to-b from-gray-50 to-white w-full h-[calc(100vh-350px)] min-w-0">
               {isLoading? (
                 <div className="h-full flex items-center justify-center">
                   <div className="flex flex-col items-center space-y-4">
@@ -1364,7 +1364,7 @@ const ChatWindow=() => {
                 💬 Sistema de Chat Interno
               </h3>
               <p className="text-gray-600 mb-8 leading-relaxed">
-                🔒 Comunícate con tu equipo de forma segura y eficiente
+                 Comunícate con tu equipo de forma segura y eficiente
               </p>
 
               {/* Simplified feature highlights */}
