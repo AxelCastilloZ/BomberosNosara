@@ -835,19 +835,11 @@ const ChatWindow=() => {
 
 
   return (
-    <div className="bg-gray-50 h-full">
-      <div className="flex flex-col md:flex-row h-[60vh] sm:h-[65vh] md:h-[70vh] lg:h-[75vh] xl:h-[80vh] overflow-hidden">
+    <div className="bg-gray-50 h-[calc(90vh-100px)] w-full min-w-full">
+      <div className="flex flex-col md:flex-row h-full overflow-hidden w-full">
 
         <div
-          className="bg-white border-r border-gray-200 flex flex-col shadow-sm transition-all duration-300 ease-in-out w-full h-full md:w-64 lg:w-80"
-          style={{
-            marginLeft: isNavbarOpen ? '0' : '0',
-            width: isNavbarOpen ? 'calc(100% - 16rem)' : '100%',
-            maxWidth: isNavbarOpen ? '20rem' : '20rem',
-            minWidth: isNavbarOpen ? '16rem' : 'auto',
-            height: '100%',
-            maxHeight: '100%'
-          }}
+          className={`bg-white border-r border-gray-200 flex flex-col shadow-sm transition-all duration-300 ease-in-out ${isNavbarOpen? 'w-80':'w-20'} flex-shrink-0 h-full overflow-y-auto`}
         >
           <div className="p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
             <div className="relative group">
@@ -908,7 +900,7 @@ const ChatWindow=() => {
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-gray-50">
+          <div className="flex-1 overflow-y-auto bg-gray-50" style={{ maxHeight: 'calc(100vh - 300px)' }}>
             {showGroups? (
               <div className="p-2 space-y-1">
                 {getVisibleGroups().map((group) => {
@@ -1050,7 +1042,7 @@ const ChatWindow=() => {
           </div>
         </div>
         {selectedTarget? (
-          <div className="flex-1 flex flex-col bg-white border-l border-gray-200">
+          <div className="flex-1 flex flex-col bg-white border-l border-gray-200 w-full max-w-full overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50 sticky top-0 z-10 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
@@ -1188,7 +1180,7 @@ const ChatWindow=() => {
               </div>
             </div>
 
-            <div ref={messagesContainerRef} className="flex-1 p-6 overflow-y-auto bg-gradient-to-b from-gray-50 to-white">
+            <div ref={messagesContainerRef} className="flex-1 p-4 md:p-6 overflow-y-auto bg-gradient-to-b from-gray-50 to-white w-full h-[calc(100vh-350px)] min-w-0">
               {isLoading? (
                 <div className="h-full flex items-center justify-center">
                   <div className="flex flex-col items-center space-y-4">
@@ -1314,7 +1306,7 @@ const ChatWindow=() => {
                           </div>
 
                           {/* Picker footer */}
-                          <div className="mt-4 pt-3 border-t border-gray-100 text-center">
+                          <div className="p-4 border-t border-gray-100 bg-white w-full text-center">
                             <p className="text-xs text-gray-500">
                               Haz clic en un emoji para agregarlo 😊
                             </p>
@@ -1360,7 +1352,7 @@ const ChatWindow=() => {
             </form>
           </div>
         ):(
-          <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-gray-50 to-white">
+          <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-gray-50 to-white h-full w-full">
             <div className="text-center p-12 max-w-lg">
               {/* Enhanced icon with gradient background */}
               <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center shadow-lg">
@@ -1372,7 +1364,7 @@ const ChatWindow=() => {
                 💬 Sistema de Chat Interno
               </h3>
               <p className="text-gray-600 mb-8 leading-relaxed">
-                🔒 Comunícate con tu equipo de forma segura y eficiente
+                 Comunícate con tu equipo de forma segura y eficiente
               </p>
 
               {/* Simplified feature highlights */}
