@@ -54,10 +54,19 @@ export const useActualizarEstado = () => {
 };
 
 // Hook para obtener estadísticas generales (admin)
-export const useEstadisticasVoluntarios = () =>
+export const useEstadisticasVolGenerales = () =>
   useQuery<EstadisticasVoluntariosDto>({
     queryKey: ['estadisticas-voluntarios'],
-    queryFn: () => voluntariadoService.obtenerEstadisticas(),
+    queryFn: () => voluntariadoService.obtenerEstadisticasGenerales(),
+    staleTime: 1000 * 60, // 1 minuto cahe
+  });
+
+// Hook para obtener estadísticas mensuales (admin)
+  export const useEstadisticasVolMensuales = (mes: string) =>
+  useQuery({
+    queryKey: ['estadisticasMensuales', mes],
+    queryFn: () => voluntariadoService.obtenerEstadisticasMensuales(mes),
+    staleTime: 0, //para que se actualice al cambiar mes
   });
 
 // Hook para obtener participaciones paginadas (admin)
@@ -67,14 +76,5 @@ export const useEstadisticasVoluntarios = () =>
     queryFn: () => voluntariadoService.listarPaginado(filtros),
   });
 
-// Hook para obtener estadísticas mensuales (admin)  ---falta dividir en service---
-  export const useEstadisticasVoluntariosMensuales = () => {
-  const fecha = new Date();
-  const mes = fecha.toISOString().slice(0, 7); // formato YYYY-MM
-
-  return useQuery({
-    queryKey: ['estadisticasVoluntariosMensuales', mes],
-    queryFn: () =>
-      api.get(`/voluntarios/estadisticas?mes=${mes}`).then((res) => res.data),
-  });
-};
+  
+  

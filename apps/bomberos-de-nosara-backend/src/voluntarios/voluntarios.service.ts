@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common/exceptions';
 import { User } from '../users/entities/user.entity';
 import { RoleEnum } from '../roles/role.enum';
-import { Brackets, Repository } from 'typeorm';
+import { Between, Brackets, Repository } from 'typeorm';
 import { Participacion } from './entities/participacion.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateParticipacionDto } from './dto/CreateParticipacionDto';
@@ -164,54 +164,105 @@ export class VoluntariosService {
   }
 
   // Service que obtiene estadísticas generales para el dashboard del admin
-  async obtenerEstadisticasGenerales(mes?: string): Promise<any> {
-    let inicio: Date | null = null;
-    let fin: Date | null = null;
+  async obtenerEstadisticasGenerales(): Promise<any> {
+    // 1. Solo aprobadas (sin filtro de mes)
+    const aprobadas = await this.participacionRepo.find({
+      where: { estado: 'aprobada' },
+      relations: ['voluntario'],
+    });
 
-    // Si llega "mes" en formato "YYYY-MM" calculamos inicio/fin del mes
-    if (mes) {
-      const [year, month] = mes.split('-').map(Number);
-      inicio = new Date(year, month - 1, 1);
-      fin = new Date(year, month, 0, 23, 59, 59); // último día del mes
-    }
-
-    // Query base: solo aprobadas
-    const query = this.participacionRepo
-      .createQueryBuilder('p')
-      .leftJoinAndSelect('p.voluntario', 'voluntario')
-      .where('p.estado = :estado', { estado: 'aprobada' });
-
-    // Filtro opcional por mes
-
-    if (mes && inicio && fin) {
-      query.andWhere('p.fecha BETWEEN :inicio AND :fin', { inicio, fin });
-    }
-
-    const aprobadas = await query.getMany();
-
-    // ----- cálculos idénticos a los que ya tenías -----
+    // 2. Total de horas
     const totalHoras = aprobadas.reduce(
       (sum, p) => sum + this.calcularHoras(p.horaInicio, p.horaFin),
       0,
     );
 
+    // 3. Voluntarios únicos
     const voluntariosActivos = new Set(aprobadas.map((p) => p.voluntario.id))
       .size;
 
+    // 4. Promedio
     const promedioHorasPorVoluntario =
       voluntariosActivos > 0 ? totalHoras / voluntariosActivos : 0;
 
-    // Para la tasa necesitamos el total de registros (todos los estados)
-    const totalQuery = this.participacionRepo.createQueryBuilder('p');
-    if (mes) {
-      totalQuery.where('p.fecha BETWEEN :inicio AND :fin', { inicio, fin });
-    }
-    const totalRegistros = await totalQuery.getCount();
-
+    // 5. Tasa de aprobación (todos los tiempos)
+    const totalRegistros = await this.participacionRepo.count();
     const tasaAprobacion =
       totalRegistros > 0 ? (aprobadas.length / totalRegistros) * 100 : 0;
 
-    // Top 10 voluntarios
+    // 6. Todos los voluntarios (sin .slice)
+    const horasPorVoluntario: Record<
+      number,
+      { nombre: string; horas: number }
+    > = {};
+    aprobadas.forEach((p) => {
+      const id = p.voluntario.id;
+      const nombre = p.voluntario.username;
+      const horas = this.calcularHoras(p.horaInicio, p.horaFin);
+      if (!horasPorVoluntario[id]) {
+        horasPorVoluntario[id] = { nombre, horas: 0 };
+      }
+      horasPorVoluntario[id].horas += horas;
+    });
+
+    const topVoluntarios = Object.values(horasPorVoluntario).sort(
+      (a, b) => b.horas - a.horas,
+    ); // ← sin .slice
+
+    // 7. Por tipo
+    const participacionesPorTipo = {
+      Entrenamiento: 0,
+      Emergencia: 0,
+      Simulacros: 0,
+    };
+    aprobadas.forEach((p) => {
+      if (p.actividad in participacionesPorTipo) {
+        participacionesPorTipo[p.actividad]++;
+      }
+    });
+
+    return {
+      totalHoras: parseFloat(totalHoras.toFixed(2)),
+      voluntariosActivos,
+      promedioHorasPorVoluntario: parseFloat(
+        promedioHorasPorVoluntario.toFixed(1),
+      ),
+      tasaAprobacion: parseFloat(tasaAprobacion.toFixed(1)),
+      topVoluntarios, // ← TODOS
+      participacionesPorTipo,
+    };
+  }
+
+  // Service que obtiene estadísticas mensuales para el dashboard del admin
+  async obtenerEstadisticasMensuales(mes: string): Promise<any> {
+    const [year, month] = mes.split('-').map(Number);
+    const inicio = new Date(year, month - 1, 1);
+    const fin = new Date(year, month, 0, 23, 59, 59);
+
+    // Solo aprobadas del mes
+    const aprobadas = await this.participacionRepo.find({
+      where: {
+        estado: 'aprobada',
+        fecha: Between(inicio, fin),
+      },
+      relations: ['voluntario'],
+    });
+
+    // Total de horas
+    const totalHoras = aprobadas.reduce(
+      (sum, p) => sum + this.calcularHoras(p.horaInicio, p.horaFin),
+      0,
+    );
+
+    // Voluntarios únicos
+    const voluntariosActivos = new Set(aprobadas.map((p) => p.voluntario.id))
+      .size;
+
+    // Promedio de horas por voluntario
+    const promedioHorasPorVoluntario =
+      voluntariosActivos > 0 ? totalHoras / voluntariosActivos : 0;
+
+    // Top 5 voluntarios
     const horasPorVoluntario: Record<
       number,
       { nombre: string; horas: number }
@@ -228,7 +279,7 @@ export class VoluntariosService {
 
     const topVoluntarios = Object.values(horasPorVoluntario)
       .sort((a, b) => b.horas - a.horas)
-      .slice(0, 10);
+      .slice(0, 5);
 
     // Contador por tipo
     const participacionesPorTipo = {
@@ -236,11 +287,22 @@ export class VoluntariosService {
       Emergencia: 0,
       Simulacros: 0,
     };
+
     aprobadas.forEach((p) => {
       if (p.actividad in participacionesPorTipo) {
         participacionesPorTipo[p.actividad]++;
       }
     });
+
+    // Tasa de aprobación
+    const totalRegistros = await this.participacionRepo.count({
+      where: {
+        fecha: Between(inicio, fin),
+      },
+    });
+
+    const tasaAprobacion =
+      totalRegistros > 0 ? (aprobadas.length / totalRegistros) * 100 : 0;
 
     return {
       totalHoras: parseFloat(totalHoras.toFixed(2)),

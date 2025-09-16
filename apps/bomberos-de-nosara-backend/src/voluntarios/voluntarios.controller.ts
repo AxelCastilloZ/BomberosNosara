@@ -111,9 +111,16 @@ export class VoluntariosController {
   }
 
   // Admin obtiene estadísticas generales
-  @Get('estadisticas')
+  @Get('estadisticas/generales')
   @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  async obtenerEstadisticas(@Query('mes') mes?: string) {
-    return this.voluntariosService.obtenerEstadisticasGenerales(mes);
+  async obtenerEstadisticasGenerales() {
+    return this.voluntariosService.obtenerEstadisticasGenerales();
+  }
+
+  // Admin obtiene estadísticas mensuales para el dashboard del admin
+  @Get('estadisticas/mensuales')
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  async obtenerEstadisticasMensuales(@Query('mes') mes: string) {
+    return this.voluntariosService.obtenerEstadisticasMensuales(mes);
   }
 }

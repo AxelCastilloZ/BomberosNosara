@@ -11,10 +11,6 @@ export const voluntariadoService = {
   // Lista las participaciones de cada viluntario
   listarMisParticipaciones: (estado?: string) =>
     api.get('/voluntarios/mis-participaciones', { params: { estado } }),
-  
-  // Método para que el admin liste todas las participaciones
-  // listarTodas: (estado?: string) =>
-  //   api.get('/voluntarios/participaciones', { params: { estado } }),
 
   // Método para actualizar el estado de una participación
   actualizarEstado: (id: number, dto: UpdateEstadoDto) =>
@@ -29,10 +25,14 @@ export const voluntariadoService = {
     api.get('/voluntarios/mis-horas-Pendientes'),
 
   // Método para obtener estadísticas generales
-  obtenerEstadisticas: (): Promise<EstadisticasVoluntariosDto> =>
-  api.get('/voluntarios/estadisticas').then((res) => res.data),
+  obtenerEstadisticasGenerales: (): Promise<EstadisticasVoluntariosDto> =>
+  api.get('/voluntarios/estadisticas/generales').then((res) => res.data),
 
+  // Método para obtener estadísticas mensuales para el dashboard del admin
+obtenerEstadisticasMensuales: (mes: string) =>
+  api.get(`/voluntarios/estadisticas/mensuales`, { params: { mes } }).then((res) => res.data),
   
+  // Método para listar participaciones paginadas y filtradas (solo para admin)
   listarPaginado: (params: PaginatedDto): Promise<PaginatedResponse> => {
     const cleaned = Object.fromEntries(
       Object.entries(params).map(([k, v]) => [k, v === '' ? undefined : v])

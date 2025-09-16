@@ -1,10 +1,10 @@
 // src/components/ui/Administrativa/Voluntarios/EstadisticasVoluntarios.tsx
-import { useEstadisticasVoluntarios } from '../../../../hooks/useVoluntarios';
+import { useEstadisticasVolGenerales } from '../../../../hooks/useVoluntarios';
 import { BarChart3, Users, Clock, CheckCircle } from 'lucide-react';
 import { EstadisticasVoluntariosDto } from '../../../../types/voluntarios';
 
 export default function AdminEstadisticasVoluntarios() {
-  const { data, isLoading } = useEstadisticasVoluntarios();
+  const { data, isLoading } = useEstadisticasVolGenerales();
 
   if (isLoading) return <p className="text-gray-600">Cargando estadísticas...</p>;
 
@@ -35,7 +35,7 @@ export default function AdminEstadisticasVoluntarios() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-red-800 mb-6">Estadísticas de Voluntarios</h2>
+      <h2 className="text-2xl font-bold text-red-800 mb-6">Estadísticas Absolutas de Voluntarios</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
@@ -57,7 +57,7 @@ export default function AdminEstadisticasVoluntarios() {
         <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
           <BarChart3 className="h-8 w-8 text-purple-600" />
           <div>
-            <p className="text-sm text-gray-600">Horas/Voluntario</p>
+            <p className="text-sm text-gray-600">Promedio general</p>
             <p className="text-2xl font-bold">{fmtHoras(promedioHorasPorVoluntario)}</p>
           </div>
         </div>
@@ -73,7 +73,7 @@ export default function AdminEstadisticasVoluntarios() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold text-gray-800 mb-2">Top 10 Voluntarios</h3>
+          <h3 className="font-bold text-gray-800 mb-2">Lista General</h3>
           <ul className="space-y-2">
             {topVoluntarios.map((v, index) => (
               <li key={index} className="flex justify-between">
@@ -85,7 +85,7 @@ export default function AdminEstadisticasVoluntarios() {
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold text-gray-800 mb-2">Participaciones por Tipo</h3>
+          <h3 className="font-bold text-gray-800 mb-2">Participaciones por Tipo</h3>
           <ul className="space-y-2">
             {Object.entries(participacionesPorTipo).map(([tipo, cantidad]) => (
               <li key={tipo} className="flex justify-between">

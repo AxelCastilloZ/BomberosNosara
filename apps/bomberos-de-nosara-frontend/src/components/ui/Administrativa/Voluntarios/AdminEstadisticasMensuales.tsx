@@ -1,10 +1,12 @@
 // src/components/ui/Administrativa/Voluntarios/EstadisticasVoluntariosMensuales.tsx
-import { useEstadisticasVoluntariosMensuales } from '../../../../hooks/useVoluntarios';
+import { useEstadisticasVolMensuales} from '../../../../hooks/useVoluntarios';
 import { BarChart3, Users, Clock, CheckCircle } from 'lucide-react';
 import { EstadisticasVoluntariosDto } from '../../../../types/voluntarios';
+import { useState } from 'react';
 
 export default function AdminEstadisticasMensuales() {
-  const { data, isLoading } = useEstadisticasVoluntariosMensuales();
+  const [mes, setMes] = useState(new Date().toISOString().slice(0, 7));
+  const { data, isLoading } = useEstadisticasVolMensuales(mes);
 
   if (isLoading) return <p className="text-gray-600">Cargando estadísticas mensuales...</p>;
 
@@ -35,13 +37,18 @@ export default function AdminEstadisticasMensuales() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-red-800 mb-6">Estadísticas de Voluntarios - Este Mes</h2>
-
+      <h2 className="text-2xl font-bold text-red-800 mb-6">Estadísticas Mensuales de Voluntarios</h2>
+        <input
+          type="month"
+          value={mes}
+          onChange={(e) => setMes(e.target.value)}
+          className="mb-4 p-2 border rounded"
+        />
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
           <Clock className="h-8 w-8 text-blue-600" />
           <div>
-            <p className="text-sm text-gray-600">Total Horas (Mes)</p>
+            <p className="text-sm text-gray-600">Horas Totales del Mes</p>
             <p className="text-2xl font-bold">{fmtHoras(totalHoras)}</p>
           </div>
         </div>
@@ -49,7 +56,7 @@ export default function AdminEstadisticasMensuales() {
         <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
           <Users className="h-8 w-8 text-green-600" />
           <div>
-            <p className="text-sm text-gray-600">Voluntarios Activos (Mes)</p>
+            <p className="text-sm text-gray-600">Voluntarios Activos del Mes</p>
             <p className="text-2xl font-bold">{voluntariosActivos}</p>
           </div>
         </div>
@@ -57,7 +64,7 @@ export default function AdminEstadisticasMensuales() {
         <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
           <BarChart3 className="h-8 w-8 text-purple-600" />
           <div>
-            <p className="text-sm text-gray-600">Horas/Voluntario (Mes)</p>
+            <p className="text-sm text-gray-600">Promedio</p>
             <p className="text-2xl font-bold">{fmtHoras(promedioHorasPorVoluntario)}</p>
           </div>
         </div>
@@ -65,7 +72,7 @@ export default function AdminEstadisticasMensuales() {
         <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
           <CheckCircle className="h-8 w-8 text-green-500" />
           <div>
-            <p className="text-sm text-gray-600">Tasa de Aprobación (Mes)</p>
+            <p className="text-sm text-gray-600">Tasa de Aprobación del mes</p>
             <p className="text-2xl font-bold">{tasaAprobacion}%</p>
           </div>
         </div>
@@ -73,7 +80,7 @@ export default function AdminEstadisticasMensuales() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold text-gray-800 mb-2">Top 10 Voluntarios (Mes)</h3>
+          <h3 className="font-semibold text-gray-800 mb-2">Top 5 Voluntarios</h3>
           <ul className="space-y-2">
             {topVoluntarios.map((v, index) => (
               <li key={index} className="flex justify-between">
@@ -85,7 +92,7 @@ export default function AdminEstadisticasMensuales() {
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold text-gray-800 mb-2">Participaciones por Tipo (Mes)</h3>
+          <h3 className="font-bold text-gray-800 mb-2">Participaciones por Tipo (Mes)</h3>
           <ul className="space-y-2">
             {Object.entries(participacionesPorTipo).map(([tipo, cantidad]) => (
               <li key={tipo} className="flex justify-between">
