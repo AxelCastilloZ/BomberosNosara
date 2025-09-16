@@ -2,7 +2,8 @@ import { useMemo, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   FaUserShield, FaUsers, FaFireExtinguisher, FaTruck,
-  FaChartBar, FaComments, FaNewspaper, FaBook, FaHandshake
+  FaChartBar, FaComments, FaNewspaper, FaBook, FaHandshake,
+  FaHandsHelping
 } from 'react-icons/fa';
 
 
@@ -27,6 +28,78 @@ const ALL_ITEMS: DashboardItem[] = [
   { icon: <FaComments size={24} />, label: 'Sugerencias', href: '/admin/sugerencias', roles: ['SUPERUSER', 'ADMIN'] },
   { icon: <FaHandshake size={24} />, label: 'Gestión de Voluntarios', href: '/admin/voluntarios', roles: ['SUPERUSER', 'ADMIN'] },
   { icon: <FaHandshake size={24} />, label: 'Registro Voluntarios', href: '/admin/registro-horas', roles: ['VOLUNTARIO'] },
+ 
+
+
+  {
+    icon: <FaUserShield size={24} />,
+    label: "Administrar Donantes",
+    href: "/admin/donantes",
+    roles: ["SUPERUSER", "ADMIN"],
+  },
+  {
+    icon: <FaUsers size={24} />,
+    label: "Gestión de Usuarios",
+    href: "/admin/usuarios",
+    roles: ["SUPERUSER"],
+  },
+  {
+    icon: <FaFireExtinguisher size={24} />,
+    label: "Inventario de Equipo",
+    href: "/admin/equipo",
+    roles: ["SUPERUSER", "ADMIN"],
+  },
+  {
+    icon: <FaTruck size={24} />,
+    label: "Inventario de Vehículos",
+    href: "/admin/vehiculos",
+    roles: ["SUPERUSER", "ADMIN","PERSONAL_BOMBERIL" ],
+  },
+  {
+    icon: <FaChartBar size={24} />,
+    label: "Estadísticas",
+    href: "/admin/estadisticas",
+    roles: ["SUPERUSER", "ADMIN"],
+  },
+
+ {
+  icon: <FaBook size={24} />, 
+  label: "Material Interno",
+  href: "/admin/material-interno",
+  roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"],
+},
+
+
+  {
+    icon: <FaComments size={24} />,
+    label: "Chat Interno",
+    href: "/admin/chat",
+    roles: ["SUPERUSER", "ADMIN", "PERSONAL_BOMBERIL", "VOLUNTARIO"],
+  },
+  {
+    icon: <FaNewspaper size={24} />,
+    label: "Administrar Noticias",
+    href: "/admin/noticias",
+    roles: ["SUPERUSER", "ADMIN"],
+  },
+  {
+    icon: <FaComments size={24} />,
+    label: "Sugerencias",
+    href: "/admin/sugerencias",
+    roles: ["SUPERUSER", "ADMIN"],
+  },
+  {
+  icon: <FaHandsHelping size={24} />, 
+  label: "Voluntarios",
+  href: '/voluntarios/registro-horas',
+  roles: ["VOLUNTARIO"],
+},
+{
+  icon: <FaHandsHelping size={24} />, 
+  label: "Voluntarios",
+  href: '/admin/participaciones',
+  roles: ["SUPERUSER", "ADMIN"],
+},
 ];
 //<FontAwesomeIcon 
 export default function AdminDashboardPage() {

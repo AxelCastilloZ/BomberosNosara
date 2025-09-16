@@ -62,3 +62,6 @@ export class EquipoBomberil {
   programados!: MantenimientoProgramado[];
 }
 
+  @Column({ type: 'int', default: 1 })
+  cantidad!: number;
+}

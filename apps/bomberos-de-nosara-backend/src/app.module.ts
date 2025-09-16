@@ -127,6 +127,7 @@ import { VoluntariosModule } from './voluntarios/voluntarios.module';
     VoluntariosModule,
     // --- Cambios de la compañera ---
     ChatModule, // <-- agregado
+    VoluntariosModule,
   ],
 })
 export class AppModule {}
