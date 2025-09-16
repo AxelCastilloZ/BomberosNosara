@@ -37,6 +37,8 @@ import AdminUsuariosPage from '../pages/Administrativas/AdminUsuariosPage';
 import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
 import AdminEquipoPage from '../pages/Administrativas/AdminEquipoPage';
 import AdminNoticiasPage from '../pages/AdminNoticiasPage';
+import AdminVoluntariosPage from '../pages/Administrativas/AdminVoluntariosPage';
+import VoluntariosPage from '../pages/Administrativas/VoluntariosPage';
 
 
 // Layout con sidebar

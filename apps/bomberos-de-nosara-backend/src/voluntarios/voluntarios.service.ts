@@ -164,43 +164,62 @@ export class VoluntariosService {
   }
 
   // Service que obtiene estadísticas generales para el dashboard del admin
-  async obtenerEstadisticasGenerales(): Promise<any> {
-    const participaciones = await this.participacionRepo.find({
-      relations: ['voluntario'],
-    });
+  async obtenerEstadisticasGenerales(mes?: string): Promise<any> {
+    let inicio: Date | null = null;
+    let fin: Date | null = null;
 
-    const aprobadas = participaciones.filter((p) => p.estado === 'aprobada');
+    // Si llega "mes" en formato "YYYY-MM" calculamos inicio/fin del mes
+    if (mes) {
+      const [year, month] = mes.split('-').map(Number);
+      inicio = new Date(year, month - 1, 1);
+      fin = new Date(year, month, 0, 23, 59, 59); // último día del mes
+    }
 
-    // Total de horas aprobadas
+    // Query base: solo aprobadas
+    const query = this.participacionRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.voluntario', 'voluntario')
+      .where('p.estado = :estado', { estado: 'aprobada' });
+
+    // Filtro opcional por mes
+
+    if (mes && inicio && fin) {
+      query.andWhere('p.fecha BETWEEN :inicio AND :fin', { inicio, fin });
+    }
+
+    const aprobadas = await query.getMany();
+
+    // ----- cálculos idénticos a los que ya tenías -----
     const totalHoras = aprobadas.reduce(
       (sum, p) => sum + this.calcularHoras(p.horaInicio, p.horaFin),
       0,
     );
 
-    // Voluntarios únicos activos
     const voluntariosActivos = new Set(aprobadas.map((p) => p.voluntario.id))
       .size;
 
-    // Promedio de horas por voluntario
     const promedioHorasPorVoluntario =
       voluntariosActivos > 0 ? totalHoras / voluntariosActivos : 0;
 
-    // Tasa de aprobación
-    const totalRegistros = participaciones.length;
+    // Para la tasa necesitamos el total de registros (todos los estados)
+    const totalQuery = this.participacionRepo.createQueryBuilder('p');
+    if (mes) {
+      totalQuery.where('p.fecha BETWEEN :inicio AND :fin', { inicio, fin });
+    }
+    const totalRegistros = await totalQuery.getCount();
+
     const tasaAprobacion =
       totalRegistros > 0 ? (aprobadas.length / totalRegistros) * 100 : 0;
 
-    // Top 10 voluntarios con más horas (todas las fechas)
+    // Top 10 voluntarios
     const horasPorVoluntario: Record<
       number,
       { nombre: string; horas: number }
     > = {};
-
     aprobadas.forEach((p) => {
       const id = p.voluntario.id;
       const nombre = p.voluntario.username;
       const horas = this.calcularHoras(p.horaInicio, p.horaFin);
-
       if (!horasPorVoluntario[id]) {
         horasPorVoluntario[id] = { nombre, horas: 0 };
       }
@@ -211,13 +230,12 @@ export class VoluntariosService {
       .sort((a, b) => b.horas - a.horas)
       .slice(0, 10);
 
-    // Participaciones por tipo
+    // Contador por tipo
     const participacionesPorTipo = {
       Entrenamiento: 0,
       Emergencia: 0,
       Simulacros: 0,
     };
-
     aprobadas.forEach((p) => {
       if (p.actividad in participacionesPorTipo) {
         participacionesPorTipo[p.actividad]++;
