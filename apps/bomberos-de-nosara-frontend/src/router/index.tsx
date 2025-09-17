@@ -40,6 +40,8 @@ import AdminNoticiasPage from '../pages/AdminNoticiasPage';
 
 // Layout con sidebar
 import AdminLayout from '../components/ui/Layout/AdiminLayout';
+import AdminVoluntariosPage from '../pages/Administrativas/AdminVoluntariosPage';
+import VoluntariosPage from '../pages/Administrativas/VoluntariosPage';
 
 const Forbidden = () => <div className="p-6">No tenés permisos para ver esta sección.</div>;
 
@@ -58,6 +60,8 @@ const CAN = {
   chat:         ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] as Role[],
   noticias:     ['SUPERUSER', 'ADMIN'] as Role[],
   sugerencias:  ['SUPERUSER', 'ADMIN'] as Role[],
+  voluntarios: [ 'VOLUNTARIO'] as Role[],
+  AdminVoluntarios : ['SUPERUSER', 'ADMIN'] as Role[],
 };
 
 function hasAnyRole(userRoles: string[], allowed: Role[]) {
@@ -209,6 +213,16 @@ const adminChildren = [
     getParentRoute: () => adminLayoutRoute, 
     beforeLoad: requireRoles(CAN.noticias) 
   }),
+  createRoute({ 
+  path: 'voluntarios', 
+  component: AdminVoluntariosPage, 
+  getParentRoute: () => adminLayoutRoute, 
+  beforeLoad: requireRoles(CAN.AdminVoluntarios) }),
+
+  createRoute({ path: 'registro-horas', 
+    component: VoluntariosPage, 
+    getParentRoute: () => adminLayoutRoute, 
+    beforeLoad: requireRoles(CAN.voluntarios) }),
 ];
 
 adminLayoutRoute.addChildren(adminChildren);
