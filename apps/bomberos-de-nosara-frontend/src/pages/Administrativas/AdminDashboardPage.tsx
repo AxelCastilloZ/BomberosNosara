@@ -2,7 +2,8 @@ import { useMemo, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   FaUserShield, FaUsers, FaFireExtinguisher, FaTruck,
-  FaChartBar, FaComments, FaNewspaper, FaBook
+  FaChartBar, FaComments, FaNewspaper, FaBook,
+  FaHandshake
 } from 'react-icons/fa';
 
 
@@ -25,6 +26,9 @@ const ALL_ITEMS: DashboardItem[] = [
   { icon: <FaComments size={24} />, label: 'Chat Interno', href: '/admin/chat', roles: ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] },
   { icon: <FaNewspaper size={24} />, label: 'Administrar Noticias', href: '/admin/noticias', roles: ['SUPERUSER', 'ADMIN'] },
   { icon: <FaComments size={24} />, label: 'Sugerencias', href: '/admin/sugerencias', roles: ['SUPERUSER', 'ADMIN'] },
+  { icon: <FaHandshake size={24} />, label: 'Gestión de Voluntarios', href: '/admin/voluntarios', roles: ['SUPERUSER', 'ADMIN'] },
+  { icon: <FaHandshake size={24} />, label: 'Registro Voluntarios', href: '/admin/registro-horas', roles: ['VOLUNTARIO'] },
+
 ];
 
 export default function AdminDashboardPage() {

@@ -1,4 +1,3 @@
-
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -24,6 +23,7 @@ import { UploadModule } from './upload/upload.module';
 import { UsersModule } from './users/users.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
+import { VoluntariosModule } from './voluntarios/voluntarios.module';
 
 @Module({
   imports: [
@@ -39,7 +39,9 @@ import { WebSocketsModule } from './web-sockets/web-sockets.module';
         return existsSync(localPath) ? localPath : undefined;
       })(),
       validationSchema: Joi.object({
-        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
         PORT: Joi.number().default(3000),
 
         DATABASE_HOST: Joi.string().required(),
@@ -68,13 +70,10 @@ import { WebSocketsModule } from './web-sockets/web-sockets.module';
       }),
     }),
 
-   
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
-
 
     EventEmitterModule.forRoot(),
 
-    
     JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],
@@ -85,7 +84,6 @@ import { WebSocketsModule } from './web-sockets/web-sockets.module';
       }),
     }),
 
-    
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
@@ -109,7 +107,6 @@ import { WebSocketsModule } from './web-sockets/web-sockets.module';
       }),
     }),
 
-    
     DonantesModule,
     NoticiaModule,
     AuthModule,
@@ -123,8 +120,8 @@ import { WebSocketsModule } from './web-sockets/web-sockets.module';
     VehiculosModule,
     WebSocketsModule,
     AppMobileModule,
+    VoluntariosModule,
 
-  
     ChatModule,
   ],
 })
