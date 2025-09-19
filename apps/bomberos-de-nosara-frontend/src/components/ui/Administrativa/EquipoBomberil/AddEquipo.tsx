@@ -1,3 +1,4 @@
+// src/components/ui/Administrativa/EquipoBomberil/AddEquipo.tsx
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import {
@@ -25,6 +26,13 @@ interface Props {
 
 const todayISO = new Date().toISOString().slice(0, 10);
 
+const normalize = (s: string) =>
+  (s ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
 export default function AddEquipo({ equipo, onSuccess }: Props) {
   const { data: catalogos = [] } = useCatalogos();
   const addEquipo = useAddEquipoBomberil();
@@ -36,7 +44,17 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
   const [nuevoTipo, setNuevoTipo] = useState<'terrestre' | 'marítimo'>('terrestre');
   const [creating, setCreating] = useState(false);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<FormValues>();
+  const SERIE_MAX = 20;
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<FormValues>({ mode: 'onChange' });
+
+  const serieVal = watch('numeroSerie') ?? '';
 
   useEffect(() => {
     if (equipo) {
@@ -73,26 +91,30 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
     setValue('catalogoId', v);
   };
 
-  const crearYSeleccionarCatalogo = async () => {
-    if (!nuevoNombre.trim()) return;
+  // Crear y seleccionar catálogo (usado por el mini-form)
+  const crearOSeleccionar = async (nombre: string, tipo: 'terrestre' | 'marítimo') => {
+    if (!nombre.trim()) return;
     setCreating(true);
     try {
-      // si existe mismo nombre+tipo, reutilizar
       const existing = catalogos.find(
-        c => c.nombre.toLowerCase() === nuevoNombre.trim().toLowerCase() && c.tipo === nuevoTipo
+        (c) => normalize(c.nombre) === normalize(nombre) && c.tipo === tipo
       );
       if (existing) {
         setValue('catalogoId', existing.id);
         setCrearCatOpen(false);
         return;
       }
-      const created = await addCatalogo.mutateAsync({ nombre: nuevoNombre.trim(), tipo: nuevoTipo });
+      const created = await addCatalogo.mutateAsync({ nombre: nombre.trim(), tipo });
       setValue('catalogoId', created.id);
       setCrearCatOpen(false);
       setNuevoNombre('');
     } finally {
       setCreating(false);
     }
+  };
+
+  const crearYSeleccionarCatalogo = async () => {
+    await crearOSeleccionar(nuevoNombre, nuevoTipo);
   };
 
   const onSubmit = (data: FormValues) => {
@@ -111,7 +133,7 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {/* Tipo de equipo */}
+      {/* Tipo de equipo (catálogo) */}
       <div>
         <label className="block text-sm font-medium mb-1">Tipo de equipo</label>
         <select
@@ -121,15 +143,18 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
           disabled={creating}
         >
           <option value="">-- Seleccionar --</option>
-          {catalogos.map(c => (
+          {catalogos.map((c) => (
             <option key={c.id} value={c.id}>
               {c.nombre} ({c.tipo})
             </option>
           ))}
           <option value="__create__">+ Agregar catálogo…</option>
         </select>
-        {errors.catalogoId && <p className="text-red-600 text-sm">{errors.catalogoId.message}</p>}
+        {errors.catalogoId && (
+          <p className="text-red-600 text-sm">{errors.catalogoId.message}</p>
+        )}
 
+        {/* Mini-form para crear un catálogo manualmente */}
         {crearCatOpen && (
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2 items-end">
             <div className="md:col-span-2">
@@ -137,7 +162,7 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
               <input
                 className="input w-full"
                 value={nuevoNombre}
-                onChange={e => setNuevoNombre(e.target.value)}
+                onChange={(e) => setNuevoNombre(e.target.value)}
                 placeholder="Ej: casco, manguera, SCBA…"
               />
             </div>
@@ -146,7 +171,7 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
               <select
                 className="input w-full"
                 value={nuevoTipo}
-                onChange={e => setNuevoTipo(e.target.value as any)}
+                onChange={(e) => setNuevoTipo(e.target.value as any)}
               >
                 <option value="terrestre">Terrestre</option>
                 <option value="marítimo">Marítimo</option>
@@ -168,10 +193,20 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
 
       {/* Fecha */}
       <div>
-        <label className="block text-sm font-medium mb-1">Fecha de adquisición</label>
-        <input type="date" max={todayISO} className="input w-full"
-          {...register('fechaAdquisicion', { required: 'Requerido' })}
+        <label className="block text-sm font-medium mb-1" htmlFor="fechaAdquisicion">
+          Fecha de adquisición
+        </label>
+        <input
+          id="fechaAdquisicion"
+          type="date"
+          max={todayISO}
+          className={`input w-full ${errors.fechaAdquisicion ? 'ring-1 ring-red-500' : ''}`}
+          aria-invalid={!!errors.fechaAdquisicion}
+          {...register('fechaAdquisicion', { required: 'La fecha de adquisición es requerida' })}
         />
+        {errors.fechaAdquisicion && (
+          <p className="text-red-600 text-sm">{errors.fechaAdquisicion.message as string}</p>
+        )}
       </div>
 
       {/* Estado inicial */}
@@ -189,14 +224,36 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
         <select className="input w-full" {...register('estadoActual', { required: 'Requerido' })}>
           <option value="disponible">Disponible</option>
           <option value="en mantenimiento">En mantenimiento</option>
-       
+          <option value="dado de baja">Dado de baja</option>
         </select>
       </div>
 
       {/* Serie */}
       <div>
-        <label className="block text-sm font-medium mb-1">Número de serie (opcional)</label>
-        <input className="input w-full" {...register('numeroSerie')} />
+        <label className="block text-sm font-medium mb-1" htmlFor="numeroSerie">
+          Número de serie (opcional)
+        </label>
+
+        <input
+          id="numeroSerie"
+          className={`input w-full ${errors.numeroSerie ? 'ring-1 ring-red-500' : ''}`}
+          placeholder="Ej: Mr-45"
+          maxLength={SERIE_MAX}
+          {...register('numeroSerie', {
+            maxLength: { value: SERIE_MAX, message: `Máximo ${SERIE_MAX} caracteres` },
+          })}
+        />
+
+        <div className="mt-1 flex items-center justify-between">
+          {(errors.numeroSerie || serieVal.length >= SERIE_MAX) ? (
+            <p className="text-red-600 text-sm">Máximo {SERIE_MAX} caracteres</p>
+          ) : (
+            <span />
+          )}
+          <span className="text-xs text-slate-400">
+            {serieVal.length}/{SERIE_MAX}
+          </span>
+        </div>
       </div>
 
       {/* Foto */}
@@ -208,7 +265,9 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
             validate: (v) => !v || /^https?:\/\//i.test(v) || 'Debe ser URL http/https',
           })}
         />
-        {errors.fotoUrl && <p className="text-red-600 text-sm">{errors.fotoUrl.message as string}</p>}
+        {errors.fotoUrl && (
+          <p className="text-red-600 text-sm">{errors.fotoUrl.message as string}</p>
+        )}
       </div>
 
       {/* Cantidad */}
@@ -217,9 +276,15 @@ export default function AddEquipo({ equipo, onSuccess }: Props) {
         <input
           type="number"
           className="input w-full"
-          {...register('cantidad', { required: true, valueAsNumber: true, min: { value: 1, message: 'Mínimo 1' } })}
+          {...register('cantidad', {
+            required: true,
+            valueAsNumber: true,
+            min: { value: 1, message: 'Mínimo 1' },
+          })}
         />
-        {errors.cantidad && <p className="text-red-600 text-sm">{errors.cantidad.message as string}</p>}
+        {errors.cantidad && (
+          <p className="text-red-600 text-sm">{errors.cantidad.message as string}</p>
+        )}
       </div>
 
       <div className="md:col-span-2 text-right">
