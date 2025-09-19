@@ -90,8 +90,8 @@ export default function EquipoList({ onEstado, onEdit }: Props) {
 
   if (isLoading) return <div>Cargando…</div>;
 
-  // 🔹 Cambiar TODO el grupo a un estado (disponible / en mantenimiento)
-  const changeAllGroupTo = async (g: Grupo, estado: Exclude<Estado, 'dado de baja'>) => {
+  // 🔹 Cambiar TODO el grupo a un estado (servicio / malo / fuera de servicio)
+  const changeAllGroupTo = async (g: Grupo, estado: Estado) => {
     // Cambiamos cada fila del grupo; el backend consolida.
     for (const it of g.items) {
       if (it.estadoActual !== estado) {
@@ -167,16 +167,11 @@ export default function EquipoList({ onEstado, onEdit }: Props) {
                 <td className="px-4 py-2">
                   <div className="flex gap-3 text-xs">
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" /> Disp: {g.disp}
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 inline-block" /> En servicio: {g.disp}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" /> Mantto: {g.mantto}
+                      <span className="h-2 w-2 rounded-full bg-amber-500 inline-block" /> Malo: {g.mantto}
                     </span>
-                    {g.baja > 0 && (
-                      <span className="inline-flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-rose-500 inline-block" /> Baja: {g.baja}
-                      </span>
-                    )}
                   </div>
                 </td>
                 <td className="px-4 py-2">
@@ -184,15 +179,16 @@ export default function EquipoList({ onEstado, onEdit }: Props) {
                     className="border rounded px-2 py-1"
                     defaultValue=""
                     onChange={async (ev) => {
-                      const v = ev.target.value as '' | 'disponible' | 'en mantenimiento';
+                      const v = ev.target.value as '' | 'disponible' | 'en mantenimiento' | 'dado de baja';
                       if (!v) return;
                       await changeAllGroupTo(g, v);
                       ev.currentTarget.value = ''; // reset placeholder
                     }}
                   >
                     <option value="" disabled>Selecciona…</option>
-                    <option value="disponible">Disponible</option>
-                    <option value="en mantenimiento">En mantenimiento</option>
+                    <option value="disponible">En servicio</option>
+                    <option value="en mantenimiento">Malo</option>
+                    <option value="dado de baja">Fuera de servicio</option>
                   </select>
                 </td>
                 <td className="px-4 py-2 text-right font-semibold">{g.total}</td>
@@ -218,8 +214,6 @@ export default function EquipoList({ onEstado, onEdit }: Props) {
                       className="text-red-600 hover:underline"
                       onClick={() => {
                         const it = g.items[0];
-                        // aquí podrías abrir tu modal de baja parcial/total del lote
-                        // por simplicidad, baja total del primer ítem (ajústalo a tu flujo actual)
                         // darDeBaja.mutate({ id: String(it.id), cantidad: it.cantidad });
                         onEstado(it); // reutiliza tu modal existente si ya lo tienes
                       }}
@@ -260,8 +254,8 @@ export default function EquipoList({ onEstado, onEdit }: Props) {
                       setMover((m) => ({ ...m, desde: e.target.value as any }))
                     }
                   >
-                    <option value="disponible">Disponible ({mover.grupo.disp})</option>
-                    <option value="en mantenimiento">En mantenimiento ({mover.grupo.mantto})</option>
+                    <option value="disponible">En servicio ({mover.grupo.disp})</option>
+                    <option value="en mantenimiento">Malo ({mover.grupo.mantto})</option>
                   </select>
                 </div>
                 <div>
@@ -273,8 +267,8 @@ export default function EquipoList({ onEstado, onEdit }: Props) {
                       setMover((m) => ({ ...m, hacia: e.target.value as any }))
                     }
                   >
-                    <option value="disponible">Disponible</option>
-                    <option value="en mantenimiento">En mantenimiento</option>
+                    <option value="disponible">En servicio</option>
+                    <option value="en mantenimiento">Malo</option>
                   </select>
                 </div>
                 <div>

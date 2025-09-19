@@ -67,7 +67,7 @@ export default function MaterialGrid() {
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Encabezado */}
       <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
-        Plataforma de Material Educativo
+        Gestión de Material Educativo
       </h1>
       <p className="text-center text-gray-600 mb-8">
         Accede a recursos esenciales para la formación y capacitación de Bomberos de Nosara.

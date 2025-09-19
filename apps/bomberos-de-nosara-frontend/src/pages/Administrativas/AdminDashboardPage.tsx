@@ -6,37 +6,71 @@ import {
   FaHandshake
 } from 'react-icons/fa';
 
-
 import { getUserRoles } from '../../service/auth';
+import { RoleEnum } from '../../types/role.enum';
 
 type DashboardItem = {
-  icon: ReactNode;   
+  icon: ReactNode;
   label: string;
   href: string;
-  roles: string[];
+  roles: RoleEnum[];
 };
 
-const ALL_ITEMS: DashboardItem[] = [
-  { icon: <FaUserShield size={24} />, label: 'Administrar Donantes', href: '/admin/donantes', roles: ['SUPERUSER', 'ADMIN'] },
-  { icon: <FaUsers size={24} />, label: 'Gestión de Usuarios', href: '/admin/usuarios', roles: ['SUPERUSER'] },
-  { icon: <FaFireExtinguisher size={24} />, label: 'Inventario de Equipo', href: '/admin/equipo', roles: ['SUPERUSER', 'ADMIN','PERSONAL_BOMBERIL'] },
-  { icon: <FaTruck size={24} />, label: 'Inventario de Vehículos', href: '/admin/vehiculos', roles: ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL'] },
-  { icon: <FaChartBar size={24} />, label: 'Estadísticas', href: '/admin/estadisticas', roles: ['SUPERUSER', 'ADMIN'] },
-  { icon: <FaBook size={24} />, label: 'Material Interno', href: '/admin/material-interno', roles: ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] },
-  { icon: <FaComments size={24} />, label: 'Chat Interno', href: '/admin/chat', roles: ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'] },
-  { icon: <FaNewspaper size={24} />, label: 'Administrar Noticias', href: '/admin/noticias', roles: ['SUPERUSER', 'ADMIN'] },
-  { icon: <FaComments size={24} />, label: 'Sugerencias', href: '/admin/sugerencias', roles: ['SUPERUSER', 'ADMIN'] },
-  { icon: <FaHandshake size={24} />, label: 'Gestión de Voluntarios', href: '/admin/voluntarios', roles: ['SUPERUSER', 'ADMIN'] },
-  { icon: <FaHandshake size={24} />, label: 'Registro Voluntarios', href: '/admin/registro-horas', roles: ['VOLUNTARIO'] },
-
+const ALL_ITEMS: Omit<DashboardItem, 'href'>[] = [
+  { icon: <FaUserShield size={24} />, label: 'Administrar Donantes', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
+  { icon: <FaUsers size={24} />, label: 'Gestión de Usuarios', roles: [RoleEnum.SUPERUSER] },
+  { icon: <FaFireExtinguisher size={24} />, label: 'Inventario de Equipo', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL] },
+  { icon: <FaTruck size={24} />, label: 'Inventario de Vehículos', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL] },
+  { icon: <FaChartBar size={24} />, label: 'Estadísticas', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
+  { icon: <FaBook size={24} />, label: 'Material Interno', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL, RoleEnum.VOLUNTARIO] },
+  { icon: <FaComments size={24} />, label: 'Chat Interno', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL, RoleEnum.VOLUNTARIO] },
+  { icon: <FaNewspaper size={24} />, label: 'Administrar Noticias', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
+  { icon: <FaComments size={24} />, label: 'Sugerencias', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
+  { icon: <FaHandshake size={24} />, label: 'Gestión de Voluntarios', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
+  { icon: <FaHandshake size={24} />, label: 'Registro Voluntarios', roles: [RoleEnum.VOLUNTARIO] },
 ];
 
 export default function AdminDashboardPage() {
   const userRoles = useMemo(() => getUserRoles(), []);
-  const items = useMemo(
-    () => ALL_ITEMS.filter(i => i.roles.some(r => userRoles.includes(r))),
-    [userRoles]
-  );
+
+  const items = useMemo(() => {
+    return ALL_ITEMS
+      .filter(i => i.roles.some(r => userRoles.includes(r)))
+      .map(i => {
+        // 🚀 Caso especial: Material Interno
+        if (i.label === 'Material Interno') {
+          if (userRoles.includes(RoleEnum.SUPERUSER) || userRoles.includes(RoleEnum.ADMIN)) {
+            return { ...i, href: '/admin/material-interno' };
+          }
+          return { ...i, href: '/admin/material-voluntarios' };
+        }
+
+        switch (i.label) {
+          case 'Administrar Donantes':
+            return { ...i, href: '/admin/donantes' };
+          case 'Gestión de Usuarios':
+            return { ...i, href: '/admin/usuarios' };
+          case 'Inventario de Equipo':
+            return { ...i, href: '/admin/equipo' };
+          case 'Inventario de Vehículos':
+            return { ...i, href: '/admin/vehiculos' };
+          case 'Estadísticas':
+            return { ...i, href: '/admin/estadisticas' };
+          case 'Chat Interno':
+            return { ...i, href: '/admin/chat' };
+          case 'Administrar Noticias':
+            return { ...i, href: '/admin/noticias' };
+          case 'Sugerencias':
+            return { ...i, href: '/admin/sugerencias' };
+          case 'Gestión de Voluntarios':
+            return { ...i, href: '/admin/voluntarios' };
+          case 'Registro Voluntarios':
+            return { ...i, href: '/admin/registro-horas' };
+          default:
+            return { ...i, href: '#' };
+        }
+      });
+  }, [userRoles]);
 
   return (
     <div className="p-6">
