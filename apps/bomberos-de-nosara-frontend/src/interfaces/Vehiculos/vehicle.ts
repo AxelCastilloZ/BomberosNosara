@@ -4,11 +4,13 @@ export type EstadoVehiculo =
   | 'dado de baja';
 
 export type TipoVehiculo =
-  | 'camión'
-  | 'ambulancia'
-  | 'pickup'
-  | 'moto'
-  | 'vehículo utilitario'
+  | 'Camión'
+  | 'Ambulancia'
+  | 'Pickup'
+  | 'Lancha de rescate'
+  | 'Moto Acúatica de Rescate'
+  | 'Cuadraciclo de Patrullaje de Playa'
+  | 'Vehículo Utilitario'
   | 'otro';
 
 export interface Vehicle {
