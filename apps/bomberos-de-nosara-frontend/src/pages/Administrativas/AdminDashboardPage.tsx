@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import {
   FaUserShield, FaUsers, FaFireExtinguisher, FaTruck,
   FaChartBar, FaComments, FaNewspaper, FaBook,
-  FaHandshake
+  FaHandshake, FaCommentAlt
 } from 'react-icons/fa';
 
 import { getUserRoles } from '../../service/auth';
@@ -73,19 +73,38 @@ export default function AdminDashboardPage() {
   }, [userRoles]);
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-8 text-red-700">Panel Administrativo</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {items.map(({ icon, label, href }) => (
-          <Link
-            key={label}
-            to={href}
-            className="bg-white border border-gray-200 rounded-lg p-6 shadow hover:shadow-md transition-all hover:-translate-y-1 flex items-center space-x-4 hover:bg-gray-50"
-          >
-            <div className="text-red-600">{icon}</div>
-            <span className="font-medium text-gray-800">{label}</span>
-          </Link>
-        ))}
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar */}
+      <nav className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-bold text-red-700">Panel Administrativo</h1>
+          <div className="flex items-center space-x-4">
+            <Link
+              to="/admin/chat"
+              className="p-2 text-gray-600 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors duration-200"
+              aria-label="Ir al chat"
+              title="Ir al chat"
+            >
+              <FaCommentAlt className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <div className="p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {items.map(({ icon, label, href }) => (
+            <Link
+              key={label}
+              to={href}
+              className="bg-white border border-gray-200 rounded-lg p-6 shadow hover:shadow-md transition-all hover:-translate-y-1 flex items-center space-x-4 hover:bg-gray-50"
+            >
+              <div className="text-red-600">{icon}</div>
+              <span className="font-medium text-gray-800">{label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
