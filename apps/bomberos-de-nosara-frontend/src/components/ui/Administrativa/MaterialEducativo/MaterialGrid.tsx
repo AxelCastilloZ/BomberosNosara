@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 // Hooks
 import { useMaterialEducativo } from '../../../../hooks/useMaterialEducativo';
@@ -39,13 +39,31 @@ export default function MaterialGrid() {
   const [editing, setEditing] = useState<MaterialEducativo | null>(null);
   const [toDelete, setToDelete] = useState<MaterialEducativo | null>(null);
 
-  const { upload } = useUploadMaterial(reload);
-  const { update, updateWithFile, isUpdating } = useUpdateMaterial(() => {
-    setEditing(null);
+  // ✅ estados para notificaciones tipo toast
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // ⏱️ autocierre de la notificación
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 7000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const { upload } = useUploadMaterial(async () => {
+    setToast({ type: 'success', msg: '✅ Material subido con éxito.' });
     reload();
   });
-  const { remove, isDeleting } = useDeleteMaterial(() => {
+
+  const { update, updateWithFile, isUpdating } = useUpdateMaterial(async () => {
+    setEditing(null);
+    setToast({ type: 'success', msg: '✅ Material actualizado con éxito.' });
+    reload();
+  });
+
+  const { remove, isDeleting } = useDeleteMaterial(async () => {
     setToDelete(null);
+    setToast({ type: 'success', msg: '✅ Material eliminado con éxito.' });
     reload();
   });
 
@@ -64,7 +82,24 @@ export default function MaterialGrid() {
     return <p className="text-gray-700 text-center py-6">Cargando materiales...</p>;
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 bg-gray-50 min-h-screen relative">
+      {/* ✅ Notificación tipo toast */}
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 px-4 py-3 rounded shadow-lg text-white flex items-center justify-between gap-4 z-50 ${
+            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+          }`}
+        >
+          <span>{toast.msg}</span>
+          <button
+            onClick={() => setToast(null)}
+            className="font-bold text-xl leading-none hover:opacity-75"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Encabezado */}
       <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
         Gestión de Material Educativo
@@ -73,7 +108,7 @@ export default function MaterialGrid() {
         Accede a recursos esenciales para la formación y capacitación de Bomberos de Nosara.
       </p>
 
-      {/* Barra de filtros directamente sobre el fondo */}
+      {/* Barra de filtros */}
       <MaterialFilterBar
         onSearch={setSearch}
         onFilter={setFilter}
@@ -83,7 +118,13 @@ export default function MaterialGrid() {
       <UploadMaterialModal
         isOpen={showUpload}
         onClose={() => setShowUpload(false)}
-        onSubmit={upload}
+        onSubmit={async (data) => {
+          try {
+            await upload(data);
+          } catch (e: any) {
+            setToast({ type: 'error', msg: e?.message || '❌ Error al subir el material.' });
+          }
+        }}
       />
 
       {/* Grid de tarjetas */}
@@ -95,11 +136,16 @@ export default function MaterialGrid() {
             onEdit={setEditing}
             onDelete={setToDelete}
             onDownload={async () => {
-              const res = await materialService.download(material.id);
-              const cd = res.headers?.['content-disposition'] as string | undefined;
-              const filename =
-                filenameFromContentDisposition(cd) || guessFilename(material);
-              downloadBlob(res.data, filename);
+              try {
+                const res = await materialService.download(material.id);
+                const cd = res.headers?.['content-disposition'] as string | undefined;
+                const filename =
+                  filenameFromContentDisposition(cd) || guessFilename(material);
+                downloadBlob(res.data, filename);
+                setToast({ type: 'success', msg: '✅ Descarga realizada con éxito.' });
+              } catch (e: any) {
+                setToast({ type: 'error', msg: e?.message || '❌ Error al descargar el material.' });
+              }
             }}
           />
         ))}
@@ -110,15 +156,33 @@ export default function MaterialGrid() {
         isOpen={!!editing}
         onClose={() => setEditing(null)}
         material={editing}
-        onSubmit={update}
-        onSubmitWithFile={updateWithFile}
+        onSubmit={async (id, data) => {
+          try {
+            await update(id, data);
+          } catch (e: any) {
+            setToast({ type: 'error', msg: e?.message || '❌ Error al actualizar el material.' });
+          }
+        }}
+        onSubmitWithFile={async (id, data) => {
+          try {
+            await updateWithFile(id, data);
+          } catch (e: any) {
+            setToast({ type: 'error', msg: e?.message || '❌ Error al actualizar el material.' });
+          }
+        }}
         isSubmitting={isUpdating}
       />
       <ConfirmDeleteModal
         isOpen={!!toDelete}
         material={toDelete}
         onClose={() => setToDelete(null)}
-        onConfirm={(id: number) => remove(id)}
+        onConfirm={async (id: number) => {
+          try {
+            await remove(id);
+          } catch (e: any) {
+            setToast({ type: 'error', msg: e?.message || '❌ Error al eliminar el material.' });
+          }
+        }}
         isSubmitting={isDeleting}
       />
     </div>
