@@ -11,12 +11,21 @@ const TITLE_MAX = 50;
 const DESC_MAX = 80;
 const ONE_FILE_MSG = 'Solo se puede seleccionar un archivo.';
 
+const isNonEmpty = (v?: string) => !!v && v.trim().length > 0;
+
 export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props) {
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [tipo, setTipo] = useState<MaterialTipo>('PDF');
   const [archivo, setArchivo] = useState<File | null>(null);
   const [archivoError, setArchivoError] = useState<string>('');
+  const [titleOver, setTitleOver] = useState(false);
+  const [descOver, setDescOver] = useState(false);
+
+  // 👇 nuevos estados para controlar si el campo fue tocado
+  const [titleTouched, setTitleTouched] = useState(false);
+  const [descTouched, setDescTouched] = useState(false);
+
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -45,6 +54,10 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
     setDescripcion('');
     setTipo('Imagen');
     setArchivoError('');
+    setTitleOver(false);
+    setDescOver(false);
+    setTitleTouched(false);
+    setDescTouched(false);
     clearFile();
   };
 
@@ -53,7 +66,7 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
     onClose();
   };
 
-  const validateFile = (f: File | null, t: MaterialTipo): string =>{
+  const validateFile = (f: File | null, t: MaterialTipo): string => {
     if (!f) return 'Debes seleccionar un archivo.';
     const ext = f.name.split('.').pop()?.toLowerCase() || '';
     if (!validExtensions[t].includes(ext)) {
@@ -64,6 +77,12 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isNonEmpty(titulo) || !isNonEmpty(descripcion)) {
+      setTitleTouched(true);
+      setDescTouched(true);
+      return;
+    }
 
     const err = validateFile(archivo, tipo);
     if (err) {
@@ -82,11 +101,6 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
     onClose();
   };
 
-  const titleCount = titulo.length;
-  const descCount = descripcion.length;
-  const titleLimit = titleCount === TITLE_MAX;
-  const descLimit  = descCount === DESC_MAX;
-
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
       <form
@@ -98,24 +112,37 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
         {/* TÍTULO */}
         <div>
           <input
-            type="text"
             placeholder="Título"
             value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-            maxLength={TITLE_MAX}
-            required
-            aria-invalid={titleLimit}
-            className={`w-full border rounded p-2 ${titleLimit ? 'border-red-500' : ''}`}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next.length > TITLE_MAX) setTitleOver(true);
+              else if (titleOver) setTitleOver(false);
+              setTitulo(next.slice(0, TITLE_MAX));
+            }}
+            onBlur={() => setTitleTouched(true)} // 👈 marca como tocado
+            className={`w-full border p-2 rounded ${
+              (!isNonEmpty(titulo) && titleTouched) || titleOver
+                ? 'border-red-500'
+                : 'border-gray-300'
+            }`}
+            aria-describedby="titulo-help"
           />
-          <div className="mt-1 flex items-center justify-between text-xs">
-            <span className={titleLimit ? 'text-red-600' : 'text-gray-500'}>
-              {titleCount}/{TITLE_MAX}
-            </span>
-            {titleLimit && (
-              <span className="text-red-600" aria-live="polite">
-                Llegaste al límite ({TITLE_MAX})
-              </span>
-            )}
+          <div className="flex justify-between text-xs mt-1">
+            <p id="titulo-help" className="text-red-600">
+              {titleOver
+                ? `No puedes superar ${TITLE_MAX} caracteres.`
+                : !isNonEmpty(titulo) && titleTouched
+                ? 'El título es obligatorio.'
+                : ''}
+            </p>
+            <p
+              className={`text-gray-500 ${
+                titulo.length === TITLE_MAX ? 'text-red-600 font-semibold' : ''
+              }`}
+            >
+              {titulo.length}/{TITLE_MAX}
+            </p>
           </div>
         </div>
 
@@ -124,21 +151,35 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
           <textarea
             placeholder="Descripción"
             value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            maxLength={DESC_MAX}
-            required
-            aria-invalid={descLimit}
-            className={`w-full border rounded p-2 ${descLimit ? 'border-red-500' : ''}`}
+            onChange={(e) => {
+              const next = e.target.value;
+              if (next.length > DESC_MAX) setDescOver(true);
+              else if (descOver) setDescOver(false);
+              setDescripcion(next.slice(0, DESC_MAX));
+            }}
+            onBlur={() => setDescTouched(true)} // 👈 marca como tocado
+            className={`w-full border p-2 rounded h-24 ${
+              (!isNonEmpty(descripcion) && descTouched) || descOver
+                ? 'border-red-500'
+                : 'border-gray-300'
+            }`}
+            aria-describedby="descripcion-help"
           />
-          <div className="mt-1 flex items-center justify-between text-xs">
-            <span className={descLimit ? 'text-red-600' : 'text-gray-500'}>
-              {descCount}/{DESC_MAX}
-            </span>
-            {descLimit && (
-              <span className="text-red-600" aria-live="polite">
-                Llegaste al límite ({DESC_MAX})
-              </span>
-            )}
+          <div className="flex justify-between text-xs mt-1">
+            <p id="descripcion-help" className="text-red-600">
+              {descOver
+                ? `No puedes superar ${DESC_MAX} caracteres.`
+                : !isNonEmpty(descripcion) && descTouched
+                ? 'La descripción es obligatoria.'
+                : ''}
+            </p>
+            <p
+              className={`text-gray-500 ${
+                descripcion.length === DESC_MAX ? 'text-red-600 font-semibold' : ''
+              }`}
+            >
+              {descripcion.length}/{DESC_MAX}
+            </p>
           </div>
         </div>
 
@@ -149,11 +190,12 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
             const nuevoTipo = e.target.value as MaterialTipo;
             setTipo(nuevoTipo);
 
-            // Si hay archivo y ya no coincide con el nuevo tipo, limpiar y avisar
             if (archivo) {
               const err = validateFile(archivo, nuevoTipo);
               if (err) {
-                setArchivoError(`El archivo seleccionado no coincide con el tipo ${nuevoTipo}. Vuelve a seleccionarlo.`);
+                setArchivoError(
+                  `El archivo seleccionado no coincide con el tipo ${nuevoTipo}. Vuelve a seleccionarlo.`
+                );
                 clearFile();
               } else {
                 setArchivoError('');
@@ -168,7 +210,7 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
           <option value="Imagen">Imagen</option>
         </select>
 
-        {/* ARCHIVO (obligatorio, solo 1) */}
+        {/* ARCHIVO */}
         <div>
           <input
             ref={fileRef}
@@ -179,7 +221,6 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
               const files = e.target.files;
               if (!files || files.length === 0) return;
 
-              // 🚫 Más de un archivo
               if (files.length > 1) {
                 setArchivoError(ONE_FILE_MSG);
                 clearFile();
@@ -195,21 +236,6 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
               }
               setArchivoError('');
               setArchivo(file);
-            }}
-            // Maneja drag-and-drop múltiple directo sobre el input
-            onDrop={(e) => {
-              if (e.dataTransfer?.files?.length > 1) {
-                e.preventDefault();
-                e.stopPropagation();
-                setArchivoError(ONE_FILE_MSG);
-                clearFile();
-              }
-            }}
-            onDragOver={(e) => {
-              // Permite cancelar el drop si detectamos múltiples archivos
-              if (e.dataTransfer?.items?.length > 1) {
-                e.preventDefault();
-              }
             }}
             accept={acceptMap[tipo]}
             aria-invalid={!!archivoError}
