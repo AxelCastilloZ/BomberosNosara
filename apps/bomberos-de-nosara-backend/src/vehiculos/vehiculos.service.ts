@@ -11,7 +11,7 @@ import { Vehiculo } from './entities/vehiculo.entity';
 import { Mantenimiento } from './entities/mantenimiento-vehiculo.entity';
 
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
-import { UpdateVehiculoDto } from './dto/update-vehiculo.dto';
+import { EditVehiculoDto } from './dto/edit-vehiculo.dto';
 import { MantenimientoVehiculoDto } from './dto/mantenimiento-vehiculo.dto';
 import { MantenimientoProgramadoVehiculoDto } from './dto/mantenimiento-programado-vehiculo.dto';
 import { ReposicionVehiculoDto } from './dto/reposicion-vehiculo.dto';
@@ -27,10 +27,6 @@ export class VehiculosService {
   ) {}
 
   // ----------------- Helpers -----------------
-  private isDuplicateError(err: any) {
-    // MySQL / MariaDB
-    return err?.errno === 1062 || err?.code === 'ER_DUP_ENTRY';
-  }
 
   private ensurePastOrToday(dateStr: string, field = 'fechaAdquisicion') {
     const d = new Date(dateStr);
@@ -43,7 +39,6 @@ export class VehiculosService {
     }
     const today = new Date();
     if (d > new Date(today.toISOString().slice(0, 10))) {
-      // compara contra hoy (00:00) de forma segura
       throw new BadRequestException({
         code: 'DATE_IN_FUTURE',
         field,
@@ -53,7 +48,63 @@ export class VehiculosService {
     return d;
   }
 
-  // ----------------- CRUD -----------------
+  /**
+   * Valida transiciones de estado según las reglas de negocio
+   */
+  private async validateStateTransition(
+    currentState: EstadoVehiculo,
+    newState: EstadoVehiculo,
+    dto: EditVehiculoDto
+  ): Promise<void> {
+    // Estados que requieren información adicional
+    if (newState === EstadoVehiculo.MALO && !dto.observacionesProblema) {
+      throw new BadRequestException({
+        code: 'MISSING_PROBLEM_DESCRIPTION',
+        message: 'Describe el problema del vehículo al marcarlo como MALO',
+      });
+    }
+
+    if (newState === EstadoVehiculo.BAJA && !dto.motivoBaja) {
+      throw new BadRequestException({
+        code: 'MISSING_REASON',
+        message: 'Especifica el motivo para dar de baja el vehículo',
+      });
+    }
+
+    // Validar transiciones válidas
+    const validTransitions: Record<EstadoVehiculo, EstadoVehiculo[]> = {
+      [EstadoVehiculo.EN_SERVICIO]: [
+        EstadoVehiculo.MALO,
+        EstadoVehiculo.FUERA_DE_SERVICIO,
+        EstadoVehiculo.BAJA
+      ],
+      [EstadoVehiculo.MALO]: [
+        EstadoVehiculo.EN_SERVICIO,
+        EstadoVehiculo.FUERA_DE_SERVICIO,
+        EstadoVehiculo.BAJA
+      ],
+      [EstadoVehiculo.FUERA_DE_SERVICIO]: [
+        EstadoVehiculo.EN_SERVICIO,
+        EstadoVehiculo.MALO,
+        EstadoVehiculo.BAJA
+      ],
+      [EstadoVehiculo.BAJA]: [
+        EstadoVehiculo.EN_SERVICIO,
+        EstadoVehiculo.MALO,
+        EstadoVehiculo.FUERA_DE_SERVICIO
+      ]
+    };
+
+    if (!validTransitions[currentState]?.includes(newState)) {
+      throw new BadRequestException({
+        code: 'INVALID_STATE_TRANSITION',
+        message: `No se puede cambiar de ${currentState} a ${newState}`,
+      });
+    }
+  }
+
+  // ----------------- CRUD BÁSICO -----------------
+  
   async findAll(): Promise<Vehiculo[]> {
     return this.vehiculoRepo.find();
   }
@@ -64,31 +115,35 @@ export class VehiculosService {
     return v;
   }
 
-  async create(dto: CreateVehiculoDto): Promise<Vehiculo> {
-    // Validación de fecha (no futura)
-    const fechaAdq = this.ensurePastOrToday(dto.fechaAdquisicion, 'fechaAdquisicion');
-
-    try {
-      const entity = this.vehiculoRepo.create({
-        ...dto,
-        placa: dto.placa?.trim(),
-        fechaAdquisicion: fechaAdq,
-      });
-      return await this.vehiculoRepo.save(entity);
-    } catch (err) {
-      if (this.isDuplicateError(err)) {
-        throw new ConflictException({
-          code: 'PLATE_EXISTS',
-          field: 'placa',
-          message: 'La placa ya está registrada',
-        });
-      }
-      throw err;
-    }
+  async findAllWithDeleted(): Promise<Vehiculo[]> {
+    return this.vehiculoRepo.find({ withDeleted: true });
   }
 
-  async update(id: string, dto: UpdateVehiculoDto): Promise<Vehiculo> {
+  // ----------------- CREAR -----------------
+  
+  async create(dto: CreateVehiculoDto, userId: number): Promise<Vehiculo> {
+    const fechaAdq = this.ensurePastOrToday(dto.fechaAdquisicion, 'fechaAdquisicion');
+
+    const entity = this.vehiculoRepo.create({
+      ...dto,
+      placa: dto.placa?.trim(),
+      fechaAdquisicion: fechaAdq,
+      createdBy: userId,
+      updatedBy: userId,
+    });
+    
+    return await this.vehiculoRepo.save(entity);
+  }
+
+  // ----------------- ACTUALIZAR -----------------
+  
+  async edit(id: string, dto: EditVehiculoDto, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
+
+    // Validar transiciones de estado si se está cambiando
+    if (dto.estadoActual && dto.estadoActual !== vehiculo.estadoActual) {
+      await this.validateStateTransition(vehiculo.estadoActual, dto.estadoActual, dto);
+    }
 
     // Si viene fecha, valida que no sea futura
     let fechaAdq = vehiculo.fechaAdquisicion;
@@ -96,40 +151,97 @@ export class VehiculosService {
       fechaAdq = this.ensurePastOrToday(dto.fechaAdquisicion, 'fechaAdquisicion');
     }
 
-    try {
-      Object.assign(vehiculo, {
-        ...dto,
-        placa: dto.placa?.trim() ?? vehiculo.placa,
-        fechaAdquisicion: fechaAdq,
-      });
-      return await this.vehiculoRepo.save(vehiculo);
-    } catch (err) {
-      if (this.isDuplicateError(err)) {
-        // Esto cubre el caso de intentar cambiar la placa a una ya existente
-        throw new ConflictException({
-          code: 'PLATE_EXISTS',
-          field: 'placa',
-          message: 'La placa ya está registrada',
-        });
-      }
-      throw err;
+    // Manejo especial de observaciones según el estado
+    let observacionesFinales = vehiculo.observaciones;
+    if (dto.estadoActual === EstadoVehiculo.MALO && dto.observacionesProblema) {
+      observacionesFinales = `${observacionesFinales ?? ''} | PROBLEMA: ${dto.observacionesProblema}`.trim();
     }
+    if (dto.estadoActual === EstadoVehiculo.BAJA && dto.motivoBaja) {
+      observacionesFinales = `${observacionesFinales ?? ''} | BAJA: ${dto.motivoBaja}`.trim();
+    }
+
+    Object.assign(vehiculo, {
+      ...dto,
+      placa: dto.placa?.trim() ?? vehiculo.placa,
+      fechaAdquisicion: fechaAdq,
+      observaciones: observacionesFinales,
+      updatedBy: userId,
+    });
+
+    return await this.vehiculoRepo.save(vehiculo);
   }
 
-  async updateEstado(id: string, estadoActual: Vehiculo['estadoActual']) {
+  async updateEstado(id: string, estadoActual: Vehiculo['estadoActual']): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
     vehiculo.estadoActual = estadoActual;
     return this.vehiculoRepo.save(vehiculo);
   }
 
-  async darDeBaja(id: string, motivo: string) {
+  async darDeBaja(id: string, motivo: string): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
     vehiculo.estadoActual = EstadoVehiculo.BAJA;
     vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | Baja: ${motivo}`.trim();
     return this.vehiculoRepo.save(vehiculo);
   }
 
-  async registrarReposicion(id: string, dto: ReposicionVehiculoDto) {
+  // ----------------- SOFT DELETE Y RESTAURACIÓN -----------------
+
+  async softDelete(id: string, userId: number): Promise<{ message: string }> {
+    const vehiculo = await this.findOne(id);
+
+    // Verificar que no tenga mantenimientos pendientes críticos
+    const mantenimientosPendientes = await this.mantenimientoRepo.count({
+      where: { vehiculo: { id } }
+    });
+
+    if (mantenimientosPendientes > 0) {
+      throw new BadRequestException({
+        code: 'HAS_PENDING_MAINTENANCE',
+        message: 'No se puede eliminar un vehículo con mantenimientos pendientes',
+      });
+    }
+
+    // Marcar como eliminado con auditoría
+    vehiculo.deletedBy = userId;
+    await this.vehiculoRepo.save(vehiculo);
+
+    // Soft delete
+    await this.vehiculoRepo.softDelete(id);
+
+    return { message: 'Vehículo eliminado correctamente' };
+  }
+
+  async restore(id: string, userId: number): Promise<Vehiculo> {
+    const vehiculo = await this.vehiculoRepo.findOne({
+      where: { id },
+      withDeleted: true
+    });
+
+    if (!vehiculo) {
+      throw new NotFoundException('Vehículo no encontrado');
+    }
+
+    if (!vehiculo.deletedAt) {
+      throw new BadRequestException({
+        code: 'NOT_DELETED',
+        message: 'El vehículo no está eliminado',
+      });
+    }
+
+    // Restaurar
+    await this.vehiculoRepo.restore(id);
+
+    // Actualizar auditoría
+    vehiculo.updatedBy = userId;
+    vehiculo.deletedBy = null;
+    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | RESTAURADO por usuario ${userId}`.trim();
+
+    return await this.vehiculoRepo.save(vehiculo);
+  }
+
+  // ----------------- REPOSICIÓN -----------------
+  
+  async registrarReposicion(id: string, dto: ReposicionVehiculoDto): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
     vehiculo.reposicionSolicitada = true;
     vehiculo.motivoReposicion = dto.motivo;
@@ -137,9 +249,9 @@ export class VehiculosService {
     return this.vehiculoRepo.save(vehiculo);
   }
 
-  // ----------------- Mantenimientos -----------------
-  // registra mantenimiento en historial
-  async registrarMantenimiento(id: string, dto: MantenimientoVehiculoDto) {
+  // ----------------- MANTENIMIENTOS -----------------
+  
+  async registrarMantenimiento(id: string, dto: MantenimientoVehiculoDto): Promise<Mantenimiento> {
     const vehiculo = await this.findOne(id);
 
     vehiculo.kilometraje = dto.kilometraje;
@@ -151,10 +263,11 @@ export class VehiculosService {
       fecha: new Date(dto.fecha),
       vehiculo,
     });
+    
     return this.mantenimientoRepo.save(registro);
   }
 
-  async programarMantenimiento(id: string, dto: MantenimientoProgramadoVehiculoDto) {
+  async programarMantenimiento(id: string, dto: MantenimientoProgramadoVehiculoDto): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
     vehiculo.fechaProximoMantenimiento = new Date(dto.fechaProximoMantenimiento);
     return this.vehiculoRepo.save(vehiculo);
@@ -167,7 +280,8 @@ export class VehiculosService {
     });
   }
 
-  // ----------------- (Opcional) validación asíncrona de placa -----------------
+  // ----------------- UTILIDADES -----------------
+  
   async existsByPlaca(placa: string): Promise<{ exists: boolean }> {
     const count = await this.vehiculoRepo.count({ where: { placa } });
     return { exists: count > 0 };

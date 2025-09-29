@@ -1,19 +1,13 @@
-import api from '../api/apiConfig';
+// src/modules/inventarioVehiculos/services/vehiculoService.ts
+import api from '../../../api/apiConfig';
 import type {
   MantenimientoProgramadoData,
   MantenimientoData,
   Vehicle,
   ReposicionData,
-} from '../interfaces/Vehiculos/vehicle';
+  ApiErrorPayload,
+} from '../../../types/vehiculo.types';
 import type { AxiosError } from 'axios';
-
-export type ApiErrorPayload = {
-  code?: string;
-  field?: string;
-  message?: string;
-  details?: any;
-  statusCode?: number;
-};
 
 function normalizeApiError(err: unknown): never {
   const axErr = err as AxiosError<ApiErrorPayload>;
@@ -56,7 +50,7 @@ export const vehiculoService = {
   update: async (vehiculo: Partial<Vehicle> & { id: string }): Promise<Vehicle> => {
     try {
       const { id, ...data } = vehiculo;
-      const res = await api.put(`/vehiculos/${id}`, data);
+      const res = await api.patch(`/vehiculos/${id}`, data); // ← CORREGIDO: PATCH
       return res.data;
     } catch (err) {
       normalizeApiError(err);
@@ -101,7 +95,7 @@ export const vehiculoService = {
   },
 
   // ---- Mantenimientos ----
-  registrarMantenimiento: async (id: string, data: MantenimientoData) => {
+  registrarMantenimiento: async (id: string, data: MantenimientoData): Promise<any> => {
     try {
       const res = await api.post(`/vehiculos/${id}/historial`, data);
       return res.data;
@@ -110,7 +104,7 @@ export const vehiculoService = {
     }
   },
 
-  programarMantenimiento: async (id: string, data: MantenimientoProgramadoData) => {
+  programarMantenimiento: async (id: string, data: MantenimientoProgramadoData): Promise<any> => {
     try {
       const res = await api.put(`/vehiculos/${id}/mantenimiento`, data);
       return res.data;
@@ -119,22 +113,12 @@ export const vehiculoService = {
     }
   },
 
-  getHistorial: async (id: string) => {
+  getHistorial: async (id: string): Promise<any[]> => {
     try {
       const res = await api.get(`/vehiculos/${id}/historial`);
       return res.data;
     } catch (err) {
       normalizeApiError(err);
-    }
-  },
-
-  // ---- Validación de placa ----
-  checkPlacaExists: async (placa: string): Promise<boolean> => {
-    try {
-      const res = await api.get(`/vehiculos/existe-placa/${encodeURIComponent(placa)}`);
-      return Boolean(res.data?.exists);
-    } catch {
-      return false;
     }
   },
 };

@@ -1,16 +1,22 @@
+// src/modules/inventarioVehiculos/components/ScheduleMaintenance.tsx
 import React, { useEffect, useState } from 'react';
-import { useVehiculos, useProgramarMantenimiento } from '../../../../hooks/useVehiculos';
-import type { Vehicle } from '../../../../interfaces/Vehiculos/vehicle';
 
-interface Props {
-  vehiculoId?: string;
-  fechaActual?: string;
-  onClose: () => void;
-}
+// Types globales
+import type { Vehicle } from '../../../types/vehiculo.types';
 
-export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }: Props) {
+// Types del módulo
+import type { ScheduleMaintenanceProps } from '../types';
+
+// Hooks del módulo
+import { useVehiculos, useProgramarMantenimiento } from '../hooks/useVehiculos';
+
+// Sistema de notificaciones
+import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
+
+export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }: ScheduleMaintenanceProps) {
   const { data: vehicles = [] } = useVehiculos();
   const programarMantenimiento = useProgramarMantenimiento();
+  const { notifyCreated, notifyError } = useCrudNotifications();
 
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehicle | undefined>(undefined);
 
@@ -23,8 +29,8 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
 
   const [fecha, setFecha] = useState<string>(fechaActual ?? '');
   const [tecnico, setTecnico] = useState<string>('');
-  const [tipo, setTipo] = useState<string>('preventivo');
-  const [prioridad, setPrioridad] = useState<string>('media');
+  const [tipo, setTipo] = useState<'preventivo' | 'correctivo' | 'inspección'>('preventivo');
+  const [prioridad, setPrioridad] = useState<'baja' | 'media' | 'alta'>('media');
   const [observaciones, setObservaciones] = useState<string>('');
 
   const isDisabled = !vehiculoSeleccionado || !fecha || !tecnico;
@@ -43,7 +49,16 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
           observaciones,
         },
       },
-      { onSuccess: () => onClose() }
+      { 
+        onSuccess: () => {
+          notifyCreated('Mantenimiento programado');
+          onClose();
+        },
+        onError: (error: any) => {
+          const message = error?.message || 'Error al programar mantenimiento';
+          notifyError('programar mantenimiento', message);
+        }
+      }
     );
   };
 
@@ -61,7 +76,7 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Seleccionar vehículo</label>
               <select
-                className="w-full border rounded px-3 py-2"
+                className="w-full border border-gray-300 rounded px-3 py-2"
                 onChange={(e) =>
                   setVehiculoSeleccionado(vehicles.find((v) => v.id === e.target.value))
                 }
@@ -81,7 +96,7 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
             <label className="block text-sm font-semibold text-gray-700 mb-1">Técnico responsable</label>
             <input
               type="text"
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2"
               value={tecnico}
               onChange={(e) => setTecnico(e.target.value)}
               placeholder="Nombre del técnico"
@@ -91,9 +106,9 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo de mantenimiento</label>
             <select
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2"
               value={tipo}
-              onChange={(e) => setTipo(e.target.value)}
+              onChange={(e) => setTipo(e.target.value as typeof tipo)}
             >
               <option value="preventivo">Preventivo</option>
               <option value="correctivo">Correctivo</option>
@@ -108,8 +123,8 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
             <label className="block text-sm font-semibold text-gray-700 mb-1">Fecha de mantenimiento</label>
             <input
               type="date"
-              min={new Date().toISOString().slice(0,10)}
-              className="w-full border rounded px-3 py-2"
+              min={new Date().toISOString().slice(0, 10)}
+              className="w-full border border-gray-300 rounded px-3 py-2"
               value={fecha}
               onChange={(e) => setFecha(e.target.value)}
             />
@@ -118,9 +133,9 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Prioridad</label>
             <select
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2"
               value={prioridad}
-              onChange={(e) => setPrioridad(e.target.value)}
+              onChange={(e) => setPrioridad(e.target.value as typeof prioridad)}
             >
               <option value="baja">Baja</option>
               <option value="media">Media</option>
@@ -131,11 +146,11 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">Observaciones (opcional)</label>
             <textarea
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2"
               rows={3}
               value={observaciones}
               onChange={(e) => setObservaciones(e.target.value)}
-              placeholder="Notas adicionales sobre el mantenimiento..."
+              placeholder="Notas adicionales..."
             />
           </div>
         </div>

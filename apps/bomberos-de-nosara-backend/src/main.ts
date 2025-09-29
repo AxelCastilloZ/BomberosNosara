@@ -6,22 +6,21 @@ import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import * as express from 'express';
 import { TypeOrmExceptionFilter } from './common/filters/typeorm-exception.filter';
-
-
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { ServerOptions } from 'socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
- 
+  // Crear directorios de uploads
   const uploadDir = join(process.cwd(), 'uploads');
   const donorsDir = join(uploadDir, 'donantes');
 
   if (!existsSync(uploadDir)) mkdirSync(uploadDir);
   if (!existsSync(donorsDir)) mkdirSync(donorsDir);
 
-
+  // CORS
   const corsOrigins = [
     'http://localhost:3000', 
     'http://localhost:5173',
@@ -34,7 +33,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-
+  // WebSocket adapter
   const webSocketAdapter = new (class extends IoAdapter {
     createIOServer(port: number, options?: ServerOptions): any {
       const server = super.createIOServer(port, {
@@ -51,7 +50,7 @@ async function bootstrap() {
 
   app.useWebSocketAdapter(webSocketAdapter);
 
-
+  // Validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -60,14 +59,17 @@ async function bootstrap() {
     }),
   );
 
-
+  // Static assets
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
   });
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
- 
-  app.useGlobalFilters(new TypeOrmExceptionFilter());
+  // Exception filters - ORDEN IMPORTANTE: específico primero, genérico después
+  app.useGlobalFilters(
+    new TypeOrmExceptionFilter(),  // Errores de base de datos
+    new AllExceptionsFilter()       // Cualquier otro error
+  );
 
   await app.listen(3000);
 }
