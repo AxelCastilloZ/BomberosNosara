@@ -78,6 +78,7 @@ const ChatWindow=() => {
   const messagesEndRef=useRef<HTMLDivElement>(null);
   const messagesContainerRef=useRef<HTMLDivElement>(null);
   const emojiPickerRef=useRef<HTMLDivElement>(null);
+  const { markMessagesAsRead }=useChatApi();
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -221,8 +222,118 @@ const ChatWindow=() => {
     }
   }, [getUsersByRole, getOrCreateGroupConversation, users]);
 
+  // Mark messages as read for the current conversation
+  const markConversationAsRead=useCallback(async (conversationId: number) => {
+    if (!conversationId||!currentUser?.id) return;
+
+    try {
+      console.log('Marking messages as read for conversation:', conversationId, 'user:', currentUser.id);
+
+      // Get current unread count before updating
+      const unreadCount=messages.filter(m =>
+        m.conversationId===conversationId&&
+        !m.isRead&&
+        m.senderId!==currentUser.id
+      ).length;
+
+      // Mark messages as read in the database first
+      const success=await markMessagesAsRead(conversationId);
+
+      if (success) {
+        // Optimistically update the UI for better responsiveness
+        setMessages(prevMessages =>
+          prevMessages.map(msg => ({
+            ...msg,
+            isRead: msg.conversationId===conversationId&&
+              msg.senderId!==currentUser.id? true:msg.isRead
+          }))
+        );
+
+
+        // Notify other clients that messages have been read
+        if (socket) {
+          console.log('Emitting markConversationAsRead event');
+          socket.emit('markConversationAsRead', {
+            conversationId,
+            userId: currentUser.id
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error marking conversation as read:', error);
+
+      // Revert optimistic update on error
+      setMessages(prevMessages =>
+        prevMessages.map(msg => ({
+          ...msg,
+          isRead: msg.conversationId===conversationId? false:msg.isRead
+        }))
+      );
+    }
+  }, [socket, currentUser?.id, markMessagesAsRead]);
+
   const joinConversation=useCallback(async (target: ChatTarget) => {
-    if (!socket||!target) return;
+    if (!socket||!target||!currentUser?.id) return;
+
+    console.log('Joining conversation for target:', target);
+
+    // Get the conversation ID for the target
+    let targetConversationId=conversationId;
+    let isNewConversation=false;
+
+    // If we're switching to a different conversation, we need to fetch the conversation ID
+    if (target.type==='user'&&(!selectedTarget||selectedTarget.id!==target.id||selectedTarget.type!=='user')) {
+      try {
+        const conversation=await findConversationWithUser(Number(target.id));
+        if (conversation) {
+          console.log('Found existing conversation:', conversation.id);
+          targetConversationId=Number(conversation.id);
+          setConversationId(Number(conversation.id));
+        } else {
+          console.log('No existing conversation found, will create one when sending first message');
+          isNewConversation=true;
+        }
+      } catch (error) {
+        console.error('Error finding conversation:', error);
+        return; // Don't proceed if we can't find or create the conversation
+      }
+    }
+
+    // Don't mark as read if this is a brand new conversation with no messages yet
+    if (isNewConversation) {
+      console.log('Skipping mark as read for new conversation');
+      return;
+    }
+
+    // Mark messages as read when joining a conversation
+    if (targetConversationId) {
+      console.log('Marking messages as read for conversation:', targetConversationId, 'user:', currentUser.id);
+      try {
+        // First, update the UI optimistically for better responsiveness
+        setMessages(prevMessages =>
+          prevMessages.map(msg => ({
+            ...msg,
+            isRead: msg.conversationId===targetConversationId&&
+              msg.senderId!==currentUser.id? true:msg.isRead
+          }))
+        );
+
+        // Then update the server
+        await markConversationAsRead(targetConversationId);
+
+
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+
+        // Revert optimistic update on error
+        setMessages(prevMessages =>
+          prevMessages.map(msg => ({
+            ...msg,
+            isRead: msg.conversationId===targetConversationId? false:msg.isRead
+          }))
+        );
+      }
+    }
 
     if (selectedTarget?.id===target.id&&selectedTarget?.type===target.type) {
       return;
@@ -287,18 +398,46 @@ const ChatWindow=() => {
 
         setMessages(processedMessages);
         setSelectedTarget(target);
+
+        // Mark all messages in this conversation as read
+        if (conversationId) {
+          await markConversationAsRead(conversationId);
+        }
       }
     } catch (err) {
 
     } finally {
       setIsLoading(false);
     }
-  }, [socket, token, currentUser?.id, handleGetOrCreateGroupConversation, selectedTarget, getConversationMessages]);
+  }, [socket, token, currentUser?.id, handleGetOrCreateGroupConversation, selectedTarget, getConversationMessages, markConversationAsRead]);
 
+  // Handle incoming markAsRead events from other clients
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleMessagesRead=(data: { conversationId: number }) => {
+      if (selectedTarget?.id===data.conversationId.toString()) {
+        // Update local state to reflect read status
+        setMessages(prev =>
+          prev.map(msg => ({
+            ...msg,
+            isRead: true
+          }))
+        );
+      }
+    };
+
+    socket.on('messagesRead', handleMessagesRead);
+    return () => {
+      socket.off('messagesRead', handleMessagesRead);
+    };
+  }, [socket, selectedTarget]);
+
+  // Handle conversation selection and cleanup
   useEffect(() => {
     if (!selectedTarget) return;
 
-    const currentTarget=selectedTarget;
+    const currentTarget={ ...selectedTarget };
     joinConversation(currentTarget);
 
     return () => {
@@ -539,28 +678,33 @@ const ChatWindow=() => {
     socket.emit('getOnlineUsers');
 
     const handleNewMessage=(message: Message) => {
+      // If no target is selected, we can't determine the conversation
+      if (!selectedTarget) return;
 
-
-      if (!selectedTarget) {
-
-        return;
-      }
-
+      // Determine if this message is for the current conversation
       const isForCurrentConversation=
+        // For group messages
         (selectedTarget.type==='role'&&message.isGroup&&
-          (message.groupId===selectedTarget.role||message.groupId===selectedTarget.id))||
+          (message.groupId===selectedTarget.id||
+            message.conversationId===conversationId))||
+        // For direct messages
         (selectedTarget.type==='user'&&!message.isGroup&&
-          (message.senderId===selectedTarget.id||message.to===selectedTarget.id))||
-        (selectedTarget.type==='role'&&message.isGroup&&message.conversationId===conversationId);
+          (message.senderId===selectedTarget.id||
+            message.to===selectedTarget.id||
+            (message.sender&&message.sender.id===selectedTarget.id)));
 
+      // If not for current conversation, don't process
+      if (!isForCurrentConversation) return;
 
+      // Determine if this is the current user's own message
+      const isOwnMessage=message.senderId===currentUser?.id||
+        (message.sender&&message.sender.id===currentUser?.id);
 
-      if (!isForCurrentConversation) {
-
-        return;
-      }
+      // Always mark as read if in current conversation and not our own message
+      const shouldMarkAsRead=!isOwnMessage;
 
       setMessages(prev => {
+        // Check if message already exists to prevent duplicates
         const messageExists=prev.some(existingMsg =>
           existingMsg.id===message.id||
           (existingMsg.content===message.content&&
@@ -569,17 +713,18 @@ const ChatWindow=() => {
         );
 
         if (messageExists) {
-
           return prev;
         }
+
+        // Mark as read if it's in the current conversation and not our own message
+        const shouldMarkAsRead=isForCurrentConversation&&!isOwnMessage;
 
         const newMessages=[
           ...prev,
           {
             ...message,
-            isOwn: message.isOwn!==undefined? message.isOwn:
-              (message.senderId===currentUser?.id||
-                (message.sender&&message.sender.id===currentUser?.id)),
+            isOwn: isOwnMessage,
+            isRead: shouldMarkAsRead? true:message.isRead,
             timestamp: message.timestamp||new Date().toISOString()
           }
         ];
@@ -618,6 +763,36 @@ const ChatWindow=() => {
       }
     };
 
+    const handleMessagesRead=(data: {
+      conversationId: number;
+      userId: number;
+      updatedMessages?: Array<{ id: number; isRead: boolean; senderId: number }>;
+    }) => {
+      console.log('Received messagesRead event:', data);
+
+      // Don't process our own read receipts
+      if (data.userId===currentUser?.id) return;
+
+      setMessages(prevMessages => {
+        // If we have specific updated messages, use that for more precise updates
+        if (data.updatedMessages&&data.updatedMessages.length>0) {
+          const updatedMessageIds=new Set(data.updatedMessages.map(m => m.id));
+          return prevMessages.map(msg =>
+            updatedMessageIds.has(msg.id!!)
+              ? { ...msg, isRead: true }
+              :msg
+          );
+        }
+
+        // Fallback to marking all messages from the user as read
+        return prevMessages.map(msg => ({
+          ...msg,
+          isRead: msg.conversationId===data.conversationId&&
+            msg.senderId!==currentUser?.id? true:msg.isRead
+        }));
+      });
+    };
+
     socket.on('newMessage', handleNewMessage);
     socket.on('typing', handleUserTyping);
     socket.on('stopTyping', handleStopTyping);
@@ -625,6 +800,7 @@ const ChatWindow=() => {
     socket.on('messageError', handleMessageError);
     socket.on('userStatus', handleUserOnline);
     socket.on('onlineUsers', handleOnlineUsers);
+    socket.on('messagesRead', handleMessagesRead);
 
     socket.emit('getOnlineUsers');
 
@@ -634,6 +810,7 @@ const ChatWindow=() => {
       socket.off('stopTyping', handleStopTyping);
       socket.off('messageSent', handleMessageSent);
       socket.off('messageError', handleMessageError);
+      socket.off('messagesRead', handleMessagesRead);
       socket.off('userStatus', handleUserOnline);
       socket.off('onlineUsers', handleOnlineUsers);
     };
@@ -1142,8 +1319,8 @@ const ChatWindow=() => {
 
                 {/* Action buttons */}
                 <div className="flex items-center space-x-3">
-                 
-                 
+
+
                 </div>
               </div>
             </div>
@@ -1332,7 +1509,7 @@ const ChatWindow=() => {
                 💬 Sistema de Chat Interno
               </h3>
               <p className="text-gray-600 mb-8 leading-relaxed">
-                 Comunícate con tu equipo de forma segura y eficiente
+                Comunícate con tu equipo de forma segura y eficiente
               </p>
 
               {/* Simplified feature highlights */}

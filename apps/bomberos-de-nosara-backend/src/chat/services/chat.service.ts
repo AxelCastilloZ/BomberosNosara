@@ -247,6 +247,47 @@ export class ChatService {
     return isParticipant? conversation:undefined;
   }
 
+  /**
+   * Mark all messages in a conversation as read for a specific user
+   * @param conversationId The ID of the conversation
+   * @param userId The ID of the user marking messages as read
+   */
+  async markMessagesAsRead(conversationId: number, userId: number): Promise<Message[]> {
+    // First verify the user has access to this conversation
+    const hasAccess = await this.userHasAccessToConversation(userId, conversationId);
+    if (!hasAccess) {
+      throw new ForbiddenException('You do not have access to this conversation');
+    }
+
+    // First get the messages that will be marked as read
+    const messagesToUpdate = await this.messageRepository.find({
+      where: {
+        conversation: { id: conversationId },
+        sender: { id: Not(userId) },
+        isRead: false
+      },
+      relations: ['sender']
+    });
+
+    if (messagesToUpdate.length === 0) {
+      return [];
+    }
+
+    // Mark messages as read in the database
+    await this.messageRepository
+      .createQueryBuilder()
+      .update(Message)
+      .set({ isRead: true })
+      .where('id IN (:...ids)', { ids: messagesToUpdate.map(m => m.id) })
+      .execute();
+
+    // Return the updated messages with isRead = true
+    return messagesToUpdate.map(msg => ({
+      ...msg,
+      isRead: true
+    }));
+  }
+
   async createGroupConversation(
     createGroupDto: CreateGroupConversationDto,
     currentUserId: number
