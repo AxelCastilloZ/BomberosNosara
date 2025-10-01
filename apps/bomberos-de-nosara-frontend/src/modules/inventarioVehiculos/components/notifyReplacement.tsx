@@ -1,28 +1,38 @@
 import React, { useState } from 'react';
-import { useVehiculos, useRegistrarReposicionVehiculo } from '../../../../hooks/useVehiculos';
+import type { NotifyReplacementProps } from '../types';
+import { useVehiculos, useRegistrarReposicionVehiculo } from '../hooks/useVehiculos';
+import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
 
-interface Props {
-  vehiculoId?: string;
-  onClose: () => void;
-}
-
-export default function NotifyReplacement({ vehiculoId, onClose }: Props) {
+export default function NotifyReplacement({ vehiculoId, onClose }: NotifyReplacementProps) {
   const { data: vehicles = [] } = useVehiculos();
   const registrarReposicion = useRegistrarReposicionVehiculo();
+  const { notifyError } = useCrudNotifications();
 
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<string | undefined>(vehiculoId);
   const [motivo, setMotivo] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
+  const isDisabled = !vehiculoSeleccionado || !motivo.trim();
+
   const handleSubmit = () => {
-    if (!vehiculoSeleccionado || !motivo.trim()) return;
+    if (isDisabled) return;
 
-    registrarReposicion.mutate({
-      id: vehiculoSeleccionado,
-      data: { motivo, observaciones },
-    });
-
-    onClose();
+    registrarReposicion.mutate(
+      {
+        id: vehiculoSeleccionado!,
+        data: { motivo, observaciones },
+      },
+      {
+        onSuccess: () => {
+          // Mostrar notificación de éxito (puedes personalizarla)
+          onClose();
+        },
+        onError: (error: any) => {
+          const message = error?.message || 'Error al solicitar reposición';
+          notifyError('solicitar reposición', message);
+        },
+      }
+    );
   };
 
   return (
@@ -37,9 +47,9 @@ export default function NotifyReplacement({ vehiculoId, onClose }: Props) {
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar vehículo</label>
             <select
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-gray-300 rounded px-3 py-2"
               onChange={(e) => setVehiculoSeleccionado(e.target.value)}
-              defaultValue=""
+              value={vehiculoSeleccionado ?? ''}
             >
               <option value="" disabled>
                 -- Seleccione --
@@ -57,7 +67,7 @@ export default function NotifyReplacement({ vehiculoId, onClose }: Props) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Motivo *</label>
           <input
             type="text"
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
             placeholder="Ej: Vehículo inoperable, daños irreparables..."
@@ -65,14 +75,14 @@ export default function NotifyReplacement({ vehiculoId, onClose }: Props) {
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones (opcional)</label>
           <textarea
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
             rows={3}
             placeholder="Notas adicionales sobre la situación"
-          ></textarea>
+          />
         </div>
       </div>
 
@@ -85,10 +95,10 @@ export default function NotifyReplacement({ vehiculoId, onClose }: Props) {
         </button>
         <button
           onClick={handleSubmit}
-          disabled={!vehiculoSeleccionado || !motivo.trim()}
+          disabled={isDisabled || registrarReposicion.isPending}
           className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
         >
-          Enviar
+          {registrarReposicion.isPending ? 'Enviando...' : 'Enviar'}
         </button>
       </div>
     </div>

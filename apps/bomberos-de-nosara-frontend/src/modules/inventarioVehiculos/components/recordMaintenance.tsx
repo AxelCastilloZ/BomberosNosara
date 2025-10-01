@@ -1,14 +1,19 @@
+// src/modules/inventarioVehiculos/components/RecordMaintenance.tsx
 import React, { useState } from 'react';
-import { useVehiculos, useRegistrarMantenimiento } from '../../../../hooks/useVehiculos';
 
-interface Props {
-  vehiculoId?: string;
-  onClose: () => void;
-}
+// Types del módulo
+import type { RecordMaintenanceProps } from '../types';
 
-export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
+// Hooks del módulo
+import { useVehiculos, useRegistrarMantenimiento } from '../hooks/useVehiculos';
+
+// Sistema de notificaciones
+import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
+
+export default function RecordMaintenance({ vehiculoId, onClose }: RecordMaintenanceProps) {
   const { data: vehicles = [] } = useVehiculos();
   const registrarMantenimiento = useRegistrarMantenimiento();
+  const { notifyCreated, notifyError } = useCrudNotifications();
 
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<string | undefined>(vehiculoId);
   const [fecha, setFecha] = useState('');
@@ -37,7 +42,14 @@ export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
         },
       },
       {
-        onSuccess: () => onClose(),
+        onSuccess: () => {
+          notifyCreated('Mantenimiento registrado');
+          onClose();
+        },
+        onError: (error: any) => {
+          const message = error?.message || 'Error al registrar mantenimiento';
+          notifyError('registrar mantenimiento', message);
+        }
       }
     );
   };
@@ -51,7 +63,7 @@ export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">Seleccionar vehículo</label>
           <select
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             onChange={(e) => setVehiculoSeleccionado(e.target.value)}
             value={vehiculoSeleccionado ?? ''}
           >
@@ -68,7 +80,7 @@ export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
           <input
             type="date"
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={fecha}
             onChange={(e) => setFecha(e.target.value)}
           />
@@ -78,7 +90,7 @@ export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Kilometraje</label>
           <input
             type="number"
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={kilometraje}
             onChange={(e) => {
               const val = e.target.value;
@@ -92,7 +104,7 @@ export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
           <input
             type="text"
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={descripcion}
             onChange={(e) => setDescripcion(e.target.value)}
             placeholder="Ej: Cambio de aceite"
@@ -103,7 +115,7 @@ export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Técnico responsable</label>
           <input
             type="text"
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={tecnico}
             onChange={(e) => setTecnico(e.target.value)}
             placeholder="Ej: Juan Pérez"
@@ -114,7 +126,7 @@ export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
           <label className="block text-sm font-medium text-gray-700 mb-1">Costo</label>
           <input
             type="number"
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={costo}
             onChange={(e) => {
               const val = e.target.value;
@@ -127,12 +139,12 @@ export default function RecordMaintenance({ vehiculoId, onClose }: Props) {
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">Observaciones (opcional)</label>
           <textarea
-            className="w-full border rounded px-3 py-2"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={observaciones}
             onChange={(e) => setObservaciones(e.target.value)}
             rows={3}
-            placeholder="Observaciones adicionales sobre el mantenimiento"
-          ></textarea>
+            placeholder="Observaciones adicionales..."
+          />
         </div>
       </div>
 

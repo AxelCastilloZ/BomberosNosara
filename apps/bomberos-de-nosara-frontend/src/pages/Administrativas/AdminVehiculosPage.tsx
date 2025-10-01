@@ -3,27 +3,41 @@ import { useState } from 'react';
 import {
   Truck, PlusCircle, Settings, ClipboardList, Wrench, ArrowLeft
 } from 'lucide-react';
-import { VehiculoView } from '../../types/vehiculos/vehiculoTypes';
-import { Vehicle } from '../../interfaces/Vehiculos/vehicle';
 
-// Componentes de vehículos
-import DashboardVehiculo from '../../components/ui/Administrativa/Vehiculos/dashboardVehiculo';
-import MantenimientoVehiculo from '../../components/ui/Administrativa/Vehiculos/MantenimientoVehiculo';
-import UpdateStatus from '../../components/ui/Administrativa/Vehiculos/updateStatus';
-import ScheduleMaintenance from '../../components/ui/Administrativa/Vehiculos/scheduleMaintenance';
-import RecordMaintenance from '../../components/ui/Administrativa/Vehiculos/recordMaintenance';
-import AddVehiculo from '../../components/ui/Administrativa/Vehiculos/addVehiculo';
+// Types del módulo
+import type { VehiculoView } from '../../modules/inventarioVehiculos/types';
+import type { Vehicle } from '../../types/vehiculo.types';
+
+// Componentes del módulo
+import DashboardVehiculo from '../../modules/inventarioVehiculos/components/dashboardVehiculo';
+import MantenimientoVehiculo from '../../modules/inventarioVehiculos/components/MantenimientoVehiculo';
+import UpdateStatus from '../../modules/inventarioVehiculos/components/updateStatus';
+import ScheduleMaintenance from '../../modules/inventarioVehiculos/components/scheduleMaintenance';
+import RecordMaintenance from '../../modules/inventarioVehiculos/components/recordMaintenance';
+import AddVehiculo from '../../modules/inventarioVehiculos/components/addVehiculo';
+import DetallesVehiculo from '../../modules/inventarioVehiculos/components/DetallesVehiculo';
+import EditVehiculo from '../../modules/inventarioVehiculos/components/EditVehiculo';
 
 export default function AdminVehiculosPage() {
   const [viewMode, setViewMode] = useState<VehiculoView>('dashboard');
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehicle | null>(null);
+
+  const volverAlDashboard = () => {
+    setVehiculoSeleccionado(null);
+    setViewMode('dashboard');
+  };
+
+  const volverALista = () => {
+    setVehiculoSeleccionado(null);
+    setViewMode('lista');
+  };
 
   return (
     <div className="min-h-screen px-6 py-8 w-full bg-[#f9fafb]">
       {/* Botón de volver - solo se muestra cuando no estamos en dashboard */}
       {viewMode !== 'dashboard' && (
         <button
-          onClick={() => setViewMode('dashboard')}
+          onClick={volverAlDashboard}
           className="flex items-center gap-2 mb-4 text-red-700 hover:underline transition-colors"
         >
           <ArrowLeft className="h-5 w-5" /> Volver al Dashboard
@@ -89,7 +103,7 @@ export default function AdminVehiculosPage() {
 
       {/* Vista de lista de vehículos */}
       {viewMode === 'lista' && (
-        <div className="bg-white border border-gray-200 shadow rounded-lg p-6">
+        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Lista de Vehículos</h2>
             <p className="text-gray-600">Administra todos los vehículos de la flota</p>
@@ -105,65 +119,86 @@ export default function AdminVehiculosPage() {
 
       {/* Vista de agregar vehículo */}
       {viewMode === 'agregar' && (
-        <div className="bg-white border border-gray-200 shadow rounded-lg p-6">
+        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Agregar Nuevo Vehículo</h2>
             <p className="text-gray-600">Registra un nuevo vehículo en la flota de bomberos</p>
           </div>
-          <AddVehiculo onSuccess={() => setViewMode('dashboard')} />
+          <AddVehiculo onSuccess={volverAlDashboard} />
         </div>
       )}
 
       {/* Vista de actualizar estado */}
       {viewMode === 'estado' && (
-        <div className="bg-white border border-gray-200 shadow rounded-lg p-6">
+        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Actualizar Estado de Vehículo</h2>
             <p className="text-gray-600">Modifica el estado operacional de los vehículos</p>
           </div>
           <UpdateStatus 
             vehiculo={vehiculoSeleccionado ?? undefined} 
-            onClose={() => setViewMode('dashboard')} 
+            onClose={volverAlDashboard} 
           />
         </div>
       )}
 
       {/* Vista de programar mantenimiento */}
       {viewMode === 'programar' && vehiculoSeleccionado && (
-        <div className="bg-white border border-gray-200 shadow rounded-lg p-6">
+        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Programar Mantenimiento</h2>
             <p className="text-gray-600">Programa mantenimiento para {vehiculoSeleccionado.placa}</p>
           </div>
           <ScheduleMaintenance 
             vehiculoId={vehiculoSeleccionado.id} 
-            onClose={() => setViewMode('dashboard')} 
+            onClose={volverAlDashboard} 
           />
         </div>
       )}
 
       {/* Vista de registrar mantenimiento */}
       {viewMode === 'registrar' && vehiculoSeleccionado && (
-        <div className="bg-white border border-gray-200 shadow rounded-lg p-6">
+        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Registrar Mantenimiento</h2>
             <p className="text-gray-600">Registra mantenimiento realizado para {vehiculoSeleccionado.placa}</p>
           </div>
           <RecordMaintenance 
             vehiculoId={vehiculoSeleccionado.id} 
-            onClose={() => setViewMode('dashboard')} 
+            onClose={volverAlDashboard} 
+          />
+        </div>
+      )}
+
+      {/* Vista de detalles del vehículo */}
+      {viewMode === 'detalles' && vehiculoSeleccionado && (
+        <div className="flex justify-center items-start">
+          <DetallesVehiculo 
+            vehiculo={vehiculoSeleccionado}
+            onClose={volverALista}
+          />
+        </div>
+      )}
+
+      {/* Vista de editar vehículo */}
+      {viewMode === 'editar' && vehiculoSeleccionado && (
+        <div className="flex justify-center items-start">
+          <EditVehiculo 
+            vehiculo={vehiculoSeleccionado}
+            onClose={volverALista}
+            onSuccess={volverALista}
           />
         </div>
       )}
 
       {/* Vista unificada de mantenimiento */}
       {viewMode === 'mantenimiento' && (
-        <div className="bg-white border border-gray-200 shadow rounded-lg p-6">
+        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Gestión de Mantenimiento</h2>
             <p className="text-gray-600">Centro unificado para todas las operaciones de mantenimiento</p>
           </div>
-          <MantenimientoVehiculo onBack={() => setViewMode('dashboard')} />
+          <MantenimientoVehiculo onBack={volverAlDashboard} />
         </div>
       )}
     </div>

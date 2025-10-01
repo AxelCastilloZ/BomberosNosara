@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { vehiculoService } from '../service/vehiculoService';
+import { vehiculoService } from '../services/vehiculoService';
 import type {
   Vehicle,
   MantenimientoData,
   MantenimientoProgramadoData,
   ReposicionData,
-} from '../interfaces/Vehiculos/vehicle';
+} from '../../../types/vehiculo.types';
 
 const VEHICULOS_KEY = ['vehiculos'] as const;
 const HISTORIAL_KEY = (id: string) => ['vehiculos', id, 'historial'] as const;
@@ -62,7 +62,12 @@ export const useRegistrarMantenimiento = () => {
   const qc = useQueryClient();
   return useMutation<any, Error, { id: string; data: MantenimientoData }>({
     mutationFn: ({ id, data }) => vehiculoService.registrarMantenimiento(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
+    onSuccess: (_, variables) => {
+      // Invalidar lista de vehículos
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
+      // Invalidar historial específico del vehículo
+      qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.id) });
+    },
   });
 };
 
@@ -70,10 +75,14 @@ export const useProgramarMantenimiento = () => {
   const qc = useQueryClient();
   return useMutation<any, Error, { id: string; data: MantenimientoProgramadoData }>({
     mutationFn: ({ id, data }) => vehiculoService.programarMantenimiento(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
+    onSuccess: (_, variables) => {
+      // Invalidar lista de vehículos (actualiza fechaProximoMantenimiento)
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
+      // Invalidar historial específico del vehículo
+      qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.id) });
+    },
   });
 };
-
 
 export const useHistorialVehiculo = (id?: string) => {
   return useQuery<any[]>({
