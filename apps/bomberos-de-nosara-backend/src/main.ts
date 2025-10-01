@@ -12,17 +12,16 @@ import { ServerOptions } from 'socket.io';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-
+ 
   // Crear directorios de uploads
   const uploadDir = join(process.cwd(), 'uploads');
   const donorsDir = join(uploadDir, 'donantes');
-
   if (!existsSync(uploadDir)) mkdirSync(uploadDir);
   if (!existsSync(donorsDir)) mkdirSync(donorsDir);
 
-  // CORS
+  
   const corsOrigins = [
-    'http://localhost:3000', 
+    'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
     process.env.FRONTEND_URL,
@@ -33,7 +32,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // WebSocket adapter
+  // WebSocket adapter con configuración CORS
   const webSocketAdapter = new (class extends IoAdapter {
     createIOServer(port: number, options?: ServerOptions): any {
       const server = super.createIOServer(port, {
@@ -59,18 +58,19 @@ async function bootstrap() {
     }),
   );
 
-  // Static assets
+  
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads',
   });
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
-  // Exception filters - ORDEN IMPORTANTE: específico primero, genérico después
+  
   app.useGlobalFilters(
-    new TypeOrmExceptionFilter(),  // Errores de base de datos
-    new AllExceptionsFilter()       // Cualquier otro error
+    new TypeOrmExceptionFilter(), 
+    new AllExceptionsFilter()    
   );
 
   await app.listen(3000);
 }
+
 bootstrap();
