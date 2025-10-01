@@ -123,4 +123,18 @@ export class ChatController {
       groupName: createGroupDto.groupName
     }, req.user.id);
   }
+
+  @Post('conversations/:conversationId/mark-read')
+  async markMessagesAsRead(
+    @Request() req: { user: User },
+    @Param('conversationId', ParseIntPipe) conversationId: number,
+    @Body() body: { userId: number }
+  ) {
+    if (body.userId !== req.user.id) {
+      throw new BadRequestException('User ID does not match authenticated user');
+    }
+
+    await this.chatService.markMessagesAsRead(conversationId, req.user.id);
+    return { success: true };
+  }
 }

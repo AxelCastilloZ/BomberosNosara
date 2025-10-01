@@ -1,5 +1,5 @@
-import { useMemo, type ReactNode } from 'react';
-import { Link } from '@tanstack/react-router';
+import { useMemo, type ReactNode, useCallback } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
 import {
   FaUserShield, FaUsers, FaFireExtinguisher, FaTruck,
   FaChartBar, FaComments, FaNewspaper, FaBook,
@@ -7,16 +7,18 @@ import {
 } from 'react-icons/fa';
 
 import { getUserRoles } from '../../service/auth';
+import { useChatNotifications } from '../../hooks/useChatNotifications';
 import { RoleEnum } from '../../types/role.enum';
+import { NotificationsDropdown } from '../../components/ui/Notifications/NotificationsDropdown';
 
-type DashboardItem = {
+type DashboardItem={
   icon: ReactNode;
   label: string;
   href: string;
   roles: RoleEnum[];
 };
 
-const ALL_ITEMS: Omit<DashboardItem, 'href'>[] = [
+const ALL_ITEMS: Omit<DashboardItem, 'href'>[]=[
   { icon: <FaUserShield size={24} />, label: 'Administrar Donantes', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
   { icon: <FaUsers size={24} />, label: 'Gestión de Usuarios', roles: [RoleEnum.SUPERUSER] },
   { icon: <FaFireExtinguisher size={24} />, label: 'Inventario de Equipo', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL] },
@@ -31,15 +33,40 @@ const ALL_ITEMS: Omit<DashboardItem, 'href'>[] = [
 ];
 
 export default function AdminDashboardPage() {
-  const userRoles = useMemo(() => getUserRoles(), []);
+  const userRoles=useMemo(() => getUserRoles(), []);
+  const navigate=useNavigate();
 
-  const items = useMemo(() => {
+  const {
+    unreadCount,
+    unreadMessages,
+    isDropdownOpen,
+    toggleDropdown,
+    markAsRead,
+    closeDropdown
+  }=useChatNotifications();
+
+  // Function to navigate to chat with specific conversation
+  const navigateToChat=useCallback((conversationId: string, messageId?: string) => {
+    const params=new URLSearchParams();
+    if (conversationId) {
+      params.set('conversation', conversationId);
+    }
+    if (messageId) {
+      params.set('messageId', messageId);
+    }
+    navigate({
+      to: '/admin/chat',
+      search: (prev: any) => ({ ...prev, ...Object.fromEntries(params) })
+    });
+  }, [navigate]);
+
+  const items=useMemo(() => {
     return ALL_ITEMS
       .filter(i => i.roles.some(r => userRoles.includes(r)))
       .map(i => {
         // 🚀 Caso especial: Material Interno
-        if (i.label === 'Material Interno') {
-          if (userRoles.includes(RoleEnum.SUPERUSER) || userRoles.includes(RoleEnum.ADMIN)) {
+        if (i.label==='Material Interno') {
+          if (userRoles.includes(RoleEnum.SUPERUSER)||userRoles.includes(RoleEnum.ADMIN)) {
             return { ...i, href: '/admin/material-interno' };
           }
           return { ...i, href: '/admin/material-voluntarios' };
@@ -79,14 +106,15 @@ export default function AdminDashboardPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-red-700">Panel Administrativo</h1>
           <div className="flex items-center space-x-4">
-            <Link
-              to="/admin/chat"
-              className="p-2 text-gray-600 hover:text-red-600 rounded-full hover:bg-gray-100 transition-colors duration-200"
-              aria-label="Ir al chat"
-              title="Ir al chat"
-            >
-              <FaCommentAlt className="w-5 h-5" />
-            </Link>
+            <NotificationsDropdown
+              unreadCount={unreadCount}
+              unreadMessages={unreadMessages}
+              isOpen={isDropdownOpen}
+              onToggle={toggleDropdown}
+              onMarkAsRead={markAsRead}
+              onClose={closeDropdown}
+              navigateToChat={navigateToChat}
+            />
           </div>
         </div>
       </nav>
