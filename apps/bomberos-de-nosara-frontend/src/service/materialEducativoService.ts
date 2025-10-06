@@ -1,35 +1,42 @@
+// service/materialEducativoService.ts
 import api from '../api/apiConfig';
 import { MaterialEducativo } from '../interfaces/MaterialEducativo/material.interface';
 
 export const materialService = {
-  // Obtener todos los materiales
-  getAll: async (): Promise<MaterialEducativo[]> => {
-    const res = await api.get('/material-educativo');
-    return res.data;
+  // Obtener materiales con paginación y filtros
+  getAll: async (
+    page: number,
+    limit: number,
+    search: string,
+    filter: string
+  ): Promise<{ data: MaterialEducativo[]; total: number }> => {
+    const res = await api.get('/material-educativo', {
+      params: { page, limit, search, filter },
+    });
+    return res.data; // ⚡ backend debe responder { data: [], total }
   },
 
-  // Subir nuevo material (con archivo)
+  // Subir nuevo material
   upload: async (formData: FormData) => {
-    // no pongas headers: Axios setea multipart con boundary
     return await api.post('/material-educativo', formData);
   },
 
-  // Actualizar info (sin cambiar archivo)
+  // Actualizar info (sin archivo)
   update: async (id: number, data: Partial<Omit<MaterialEducativo, 'id'>>) => {
     return await api.put(`/material-educativo/${id}`, data);
   },
 
-  // Actualizar con archivo (multipart)
+  // Actualizar con archivo
   updateWithFile: async (id: number, formData: FormData) => {
     return await api.put(`/material-educativo/${id}`, formData);
   },
 
-  // Eliminar material
+  // Eliminar
   delete: async (id: number) => {
     return await api.delete(`/material-educativo/${id}`);
   },
 
-  // Descargar material (con token) -> blob
+  // Descargar material
   download: async (id: number) => {
     return await api.get(`/material-educativo/${id}/download`, {
       responseType: 'blob',

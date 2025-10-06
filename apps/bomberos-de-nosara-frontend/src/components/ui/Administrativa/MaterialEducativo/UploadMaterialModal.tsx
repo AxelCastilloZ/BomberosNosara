@@ -8,7 +8,7 @@ interface Props {
 }
 
 const TITLE_MAX = 50;
-const DESC_MAX = 80;
+const DESC_MAX = 70;
 const ONE_FILE_MSG = 'Solo se puede seleccionar un archivo.';
 
 const isNonEmpty = (v?: string) => !!v && v.trim().length > 0;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 // Hooks
 import { useMaterialEducativo } from '../../../../hooks/useMaterialEducativo';
@@ -24,25 +24,33 @@ import type { MaterialEducativo } from '../../../../interfaces/MaterialEducativo
 function guessFilename(m: MaterialEducativo) {
   const ext = (m.url.split('.').pop() || 'bin').toLowerCase();
   const base = (m.titulo || 'material')
-    .replace(/[^\w\s.-]+/g, '') // quita caracteres raros
+    .replace(/[^\w\s.-]+/g, '')
     .trim()
-    .replace(/\s+/g, '_'); // reemplaza espacios por _
+    .replace(/\s+/g, '_');
   return `${base || 'material'}.${ext}`;
 }
 
 export default function MaterialGrid() {
-  const { materiales, isLoading, reload } = useMaterialEducativo();
+  // 🔹 Estados de filtros
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('');
-  const [showUpload, setShowUpload] = useState(false);
 
+  // 🔹 Estados de paginación
+  const [page, setPage] = useState(1);
+  const limit = 9;
+
+  const { data, isLoading, reload } = useMaterialEducativo(page, limit, search, filter);
+  const materiales = data?.data || [];
+  const total = data?.total || 0;
+  const totalPages = Math.ceil(total / limit) || 1;
+
+  const [showUpload, setShowUpload] = useState(false);
   const [editing, setEditing] = useState<MaterialEducativo | null>(null);
   const [toDelete, setToDelete] = useState<MaterialEducativo | null>(null);
 
-  // ✅ estados para notificaciones tipo toast
+  // ✅ notificaciones tipo toast
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
-  // ⏱️ autocierre de la notificación
   useEffect(() => {
     if (toast) {
       const timer = setTimeout(() => setToast(null), 7000);
@@ -67,23 +75,13 @@ export default function MaterialGrid() {
     reload();
   });
 
-  const filtered = useMemo(() => {
-    const term = search.toLowerCase();
-    return materiales.filter((m: MaterialEducativo) => {
-      const hitsText =
-        m.titulo.toLowerCase().includes(term) ||
-        m.descripcion.toLowerCase().includes(term);
-      const hitsType = filter === '' || m.tipo === filter;
-      return hitsText && hitsType;
-    });
-  }, [materiales, search, filter]);
-
-  if (isLoading)
+  if (isLoading) {
     return <p className="text-gray-700 text-center py-6">Cargando materiales...</p>;
+  }
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
-      {/* ✅ Notificación tipo toast */}
+      {/* ✅ Toast */}
       {toast && (
         <div
           className={`fixed top-4 right-4 px-4 py-3 rounded shadow-lg text-white flex items-center justify-between gap-4 z-50 ${
@@ -110,8 +108,14 @@ export default function MaterialGrid() {
 
       {/* Barra de filtros */}
       <MaterialFilterBar
-        onSearch={setSearch}
-        onFilter={setFilter}
+        onSearch={(term) => {
+          setSearch(term);
+          setPage(1);
+        }}
+        onFilter={(tipo) => {
+          setFilter(tipo);
+          setPage(1);
+        }}
         onUploadClick={() => setShowUpload(true)}
       />
 
@@ -127,29 +131,56 @@ export default function MaterialGrid() {
         }}
       />
 
-      {/* Grid de tarjetas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8">
-        {filtered.map((material: MaterialEducativo) => (
-          <MaterialCard
-            key={material.id}
-            material={material}
-            onEdit={setEditing}
-            onDelete={setToDelete}
-            onDownload={async () => {
-              try {
-                const res = await materialService.download(material.id);
-                const cd = res.headers?.['content-disposition'] as string | undefined;
-                const filename =
-                  filenameFromContentDisposition(cd) || guessFilename(material);
-                downloadBlob(res.data, filename);
-                setToast({ type: 'success', msg: '✅ Descarga realizada con éxito.' });
-              } catch (e: any) {
-                setToast({ type: 'error', msg: e?.message || '❌ Error al descargar el material.' });
-              }
-            }}
-          />
-        ))}
-      </div>
+      {/* Grid */}
+      {materiales.length === 0 ? (
+        <p className="text-center text-gray-600 mt-8">No hay materiales disponibles.</p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8">
+            {materiales.map((material) => (
+              <MaterialCard
+                key={material.id}
+                material={material}
+                onEdit={setEditing}
+                onDelete={setToDelete}
+                onDownload={async () => {
+                  try {
+                    const res = await materialService.download(material.id);
+                    const cd = res.headers?.['content-disposition'] as string | undefined;
+                    const filename =
+                      filenameFromContentDisposition(cd) || guessFilename(material);
+                    downloadBlob(res.data, filename);
+                    setToast({ type: 'success', msg: '✅ Descarga realizada con éxito.' });
+                  } catch (e: any) {
+                    setToast({ type: 'error', msg: e?.message || '❌ Error al descargar el material.' });
+                  }
+                }}
+              />
+            ))}
+          </div>
+
+          {/* Paginación */}
+          <div className="flex justify-end gap-2 mt-12 mb-12">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Anterior
+            </button>
+            <span className="px-2 py-1">
+              Página {page} de {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Siguiente
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Modales */}
       <EditMaterialModal

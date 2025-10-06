@@ -19,4 +19,7 @@ export class MaterialEducativo {
 
   @Column({ nullable: true })
   vistaPrevia?: string;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt!: Date;
 }

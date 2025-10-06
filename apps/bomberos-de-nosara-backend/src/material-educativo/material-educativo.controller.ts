@@ -10,6 +10,7 @@ import {
   ParseIntPipe,
   Delete,
   Res,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -32,8 +33,13 @@ export class MaterialEducativoController {
   constructor(private readonly service: MaterialEducativoService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  async findAll(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('search') search = '',
+    @Query('filter') filter = '',
+  ) {
+    return this.service.findAll(Number(page), Number(limit), search, filter);
   }
 
   @Post()
@@ -49,15 +55,16 @@ export class MaterialEducativoController {
           cb(null, uniqueName);
         },
       }),
-      // limits: { fileSize: 25 * 1024 * 1024 }, // opcional
     }),
   )
-  async create(@UploadedFile() archivo: Express.Multer.File, @Body() data: CreateMaterialDto) {
+  async create(
+    @UploadedFile() archivo: Express.Multer.File,
+    @Body() data: CreateMaterialDto,
+  ) {
     const archivoUrl = `/uploads/material/${archivo.filename}`;
     return this.service.create(data, archivoUrl);
   }
 
-  /** EDITAR: acepta JSON (solo metadatos) o multipart (metadatos + archivo) */
   @Put(':id')
   @UseInterceptors(
     FileInterceptor('archivo', {
@@ -78,23 +85,22 @@ export class MaterialEducativoController {
     @UploadedFile() archivo: Express.Multer.File,
     @Body() data: UpdateMaterialDto,
   ) {
-    const archivoUrl = archivo ? `/uploads/material/${archivo.filename}` : undefined;
+    const archivoUrl = archivo
+      ? `/uploads/material/${archivo.filename}`
+      : undefined;
     return this.service.update(id, data, archivoUrl);
   }
 
-  /** DESCARGA: fuerza descarga con Content-Disposition y respeta token (si usas guard) */
   @Get(':id/download')
   async download(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
     const mat = await this.service.findOneOrFail(id);
 
-    // mat.url => "/uploads/material/archivo.ext"
-    const relPath = mat.url.replace(/^\//, ''); // "uploads/material/archivo.ext"
+    const relPath = mat.url.replace(/^\//, '');
     const full = join(process.cwd(), relPath);
     if (!existsSync(full)) {
       return res.status(404).send('Archivo no encontrado');
     }
 
-    // nombre amigable basado en título + extensión original
     const ext = extname(full) || '.bin';
     const safeBase = (mat.titulo || 'material')
       .normalize('NFKD')
@@ -107,7 +113,6 @@ export class MaterialEducativoController {
     return res.sendFile(full);
   }
 
-  /** ELIMINAR: borra registro y archivo físico */
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);

@@ -27,48 +27,49 @@ export default function MaterialCard({
   onDownload?: (m: MaterialEducativo) => void;
 }) {
   return (
-    <div className="bg-white rounded-lg border shadow p-4 flex flex-col gap-2">
+    <div className="bg-white rounded-lg border shadow p-4 flex flex-col gap-3">
+      {/* Tipo */}
       <div className="flex items-center gap-2">
         {iconMap[material.tipo]}
         <span className="font-semibold">{material.tipo}</span>
       </div>
 
-      <h3 className="text-lg font-bold">{material.titulo}</h3>
-      <p className="text-sm text-gray-600">{material.descripcion}</p>
+      {/* Título y descripción */}
+      <h3 className="text-lg font-bold truncate">{material.titulo}</h3>
+      <p className="text-sm text-gray-600 line-clamp-2 break-words">
+        {material.descripcion}
+      </p>
 
-      <div className="mt-auto flex items-center justify-between gap-2">
-       <div className="flex gap-2">
-        <Button
-          className="bg-red-500 hover:bg-red-600 flex items-center gap-2"
+      {/* Botones */}
+      <div className="mt-auto flex flex-wrap gap-2">
+        {/* Descargar */}
+        <button
+          className="flex-1 min-w-[120px] bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded flex items-center justify-center gap-2 font-semibold"
           onClick={() => onDownload?.(material)}
-          title="Descargar"
-          aria-label={`Descargar ${material.titulo}`}
         >
-          <FaDownload /> Descargar
-        </Button>
+          <FaDownload /> <span className="hidden sm:inline">Descargar</span>
+        </button>
 
+        {/* Editar */}
         {onEdit && (
-          <Button
-            className="bg-amber-400 hover:bg-amber-500 flex items-center gap-2"
+          <button
+            className="flex-1 min-w-[100px] bg-amber-400 hover:bg-amber-500 text-white px-3 py-2 rounded flex items-center justify-center gap-2 font-semibold"
             onClick={() => onEdit(material)}
-            title="Editar"
-            aria-label={`Editar ${material.titulo}`}
           >
-            <FaPen /> Editar
-          </Button>
+            <FaPen /> <span className="hidden sm:inline">Editar</span>
+          </button>
         )}
 
+        {/* Eliminar */}
         {onDelete && (
-          <Button
-            className="bg-gray-600 hover:bg-gray-700 flex items-center gap-2"
+          <button
+            className="w-10 h-10 bg-gray-600 hover:bg-gray-700 text-white rounded flex items-center justify-center"
             onClick={() => onDelete(material)}
             title="Eliminar"
-            aria-label={`Eliminar ${material.titulo}`}
           >
-            <FaTrash /> Eliminar
-          </Button>
+            <FaTrash />
+          </button>
         )}
-      </div>
       </div>
     </div>
   );
