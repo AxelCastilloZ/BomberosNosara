@@ -1,5 +1,8 @@
 // src/modules/inventarioVehiculos/components/ScheduleMaintenance.tsx
-import React, { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useEffect } from 'react';
 
 // Types globales
 import type { Vehicle } from '../../../types/vehiculo.types';
@@ -13,40 +16,97 @@ import { useVehiculos, useProgramarMantenimiento } from '../hooks/useVehiculos';
 // Sistema de notificaciones
 import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
 
+// Schema de validación para programar mantenimiento
+const programarMantenimientoSchema = z.object({
+  vehiculoId: z.string()
+    .min(1, 'Debe seleccionar un vehículo'),
+
+  fechaProximoMantenimiento: z.string()
+    .min(1, 'La fecha es obligatoria')
+    .refine(
+      (date) => {
+        const inputDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return inputDate >= today;
+      },
+      'La fecha no puede ser anterior a hoy'
+    ),
+
+  tecnico: z.string()
+    .min(1, 'El técnico responsable es obligatorio')
+    .min(3, 'El nombre del técnico debe tener al menos 3 caracteres')
+    .max(100, 'El nombre del técnico no puede superar 100 caracteres')
+    .transform(val => val.trim()),
+
+  tipo: z.string()
+    .refine(
+      (val) => ['preventivo', 'correctivo', 'inspección'].includes(val),
+      'Tipo de mantenimiento inválido'
+    ),
+
+  prioridad: z.string()
+    .refine(
+      (val) => ['baja', 'media', 'alta'].includes(val),
+      'Prioridad inválida'
+    ),
+
+  observaciones: z.string()
+    .max(500, 'Las observaciones no pueden superar 500 caracteres')
+    .optional()
+    .or(z.literal('')),
+});
+
+type ProgramarMantenimientoFormData = z.input<typeof programarMantenimientoSchema>;
+
 export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }: ScheduleMaintenanceProps) {
   const { data: vehicles = [] } = useVehiculos();
   const programarMantenimiento = useProgramarMantenimiento();
   const { notifyCreated, notifyError } = useCrudNotifications();
 
-  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehicle | undefined>(undefined);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<ProgramarMantenimientoFormData>({
+    resolver: zodResolver(programarMantenimientoSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      vehiculoId: vehiculoId || '',
+      fechaProximoMantenimiento: fechaActual || '',
+      tecnico: '',
+      tipo: 'preventivo',
+      prioridad: 'media',
+      observaciones: '',
+    },
+  });
 
+  const selectedVehiculoId = watch('vehiculoId');
+  const observaciones = watch('observaciones');
+  const obsLen = (observaciones ?? '').length;
+
+  // Encontrar vehículo seleccionado para mostrar info
+  const vehiculoSeleccionado = vehicles.find((v) => v.id === selectedVehiculoId);
+
+  // Si viene vehiculoId como prop, establecerlo
   useEffect(() => {
-    if (!vehiculoSeleccionado && vehiculoId && vehicles.length) {
-      const found = vehicles.find((v) => v.id === vehiculoId);
-      if (found) setVehiculoSeleccionado(found);
+    if (vehiculoId && !selectedVehiculoId) {
+      setValue('vehiculoId', vehiculoId);
     }
-  }, [vehiculoId, vehicles, vehiculoSeleccionado]);
+  }, [vehiculoId, selectedVehiculoId, setValue]);
 
-  const [fecha, setFecha] = useState<string>(fechaActual ?? '');
-  const [tecnico, setTecnico] = useState<string>('');
-  const [tipo, setTipo] = useState<'preventivo' | 'correctivo' | 'inspección'>('preventivo');
-  const [prioridad, setPrioridad] = useState<'baja' | 'media' | 'alta'>('media');
-  const [observaciones, setObservaciones] = useState<string>('');
-
-  const isDisabled = !vehiculoSeleccionado || !fecha || !tecnico;
-
-  const handleSubmit = () => {
-    if (isDisabled) return;
-
+  const onSubmit = (data: ProgramarMantenimientoFormData) => {
     programarMantenimiento.mutate(
       {
-        id: vehiculoSeleccionado!.id,
+        id: data.vehiculoId,
         data: {
-          fechaProximoMantenimiento: fecha,
-          tecnico,
-          tipo,
-          prioridad,
-          observaciones,
+          fechaProximoMantenimiento: data.fechaProximoMantenimiento,
+          tecnico: data.tecnico,
+          tipo: data.tipo as 'preventivo' | 'correctivo' | 'inspección',
+          prioridad: data.prioridad as 'baja' | 'media' | 'alta',
+          observaciones: data.observaciones || undefined,
         },
       },
       { 
@@ -55,12 +115,15 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
           onClose();
         },
         onError: (error: any) => {
-          const message = error?.message || 'Error al programar mantenimiento';
+          const message = error?.message || error?.response?.data?.message || 'Error al programar mantenimiento';
           notifyError('programar mantenimiento', message);
         }
       }
     );
   };
+
+  // Fecha mínima (hoy)
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="max-w-4xl mx-auto bg-white border rounded-xl shadow p-6">
@@ -69,109 +132,174 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
         Completa los detalles para agendar un próximo mantenimiento
       </p>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Columna 1 */}
-        <div className="space-y-4">
-          {!vehiculoSeleccionado && (
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Columna 1 */}
+          <div className="space-y-4">
+            {/* Seleccionar vehículo - solo si no viene preseleccionado */}
+            {!vehiculoId && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Seleccionar vehículo <span className="text-red-500">*</span>
+                </label>
+                <select
+                  {...register('vehiculoId')}
+                  className={`w-full border rounded px-3 py-2 ${
+                    errors.vehiculoId ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                >
+                  <option value="">-- Seleccione --</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.placa} - {v.tipo}
+                    </option>
+                  ))}
+                </select>
+                {errors.vehiculoId && (
+                  <p className="text-red-600 text-sm mt-1">{errors.vehiculoId.message}</p>
+                )}
+              </div>
+            )}
+
+            {/* Mostrar info del vehículo si está preseleccionado */}
+            {vehiculoId && vehiculoSeleccionado && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-blue-900">Vehículo seleccionado</p>
+                <p className="text-sm text-blue-700 mt-1">
+                  {vehiculoSeleccionado.placa} - {vehiculoSeleccionado.tipo}
+                </p>
+              </div>
+            )}
+
+            {/* Técnico responsable */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Seleccionar vehículo</label>
-              <select
-                className="w-full border border-gray-300 rounded px-3 py-2"
-                onChange={(e) =>
-                  setVehiculoSeleccionado(vehicles.find((v) => v.id === e.target.value))
-                }
-                defaultValue=""
-              >
-                <option value="" disabled>-- Seleccione --</option>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.placa} - {v.tipo}
-                  </option>
-                ))}
-              </select>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Técnico responsable <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                {...register('tecnico')}
+                className={`w-full border rounded px-3 py-2 ${
+                  errors.tecnico ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Nombre del técnico"
+                maxLength={100}
+              />
+              {errors.tecnico && (
+                <p className="text-red-600 text-sm mt-1">{errors.tecnico.message}</p>
+              )}
             </div>
-          )}
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Técnico responsable</label>
-            <input
-              type="text"
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              value={tecnico}
-              onChange={(e) => setTecnico(e.target.value)}
-              placeholder="Nombre del técnico"
-            />
+            {/* Tipo de mantenimiento */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Tipo de mantenimiento <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register('tipo')}
+                className={`w-full border rounded px-3 py-2 ${
+                  errors.tipo ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="preventivo">Preventivo</option>
+                <option value="correctivo">Correctivo</option>
+                <option value="inspección">Inspección</option>
+              </select>
+              {errors.tipo && (
+                <p className="text-red-600 text-sm mt-1">{errors.tipo.message}</p>
+              )}
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo de mantenimiento</label>
-            <select
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              value={tipo}
-              onChange={(e) => setTipo(e.target.value as typeof tipo)}
-            >
-              <option value="preventivo">Preventivo</option>
-              <option value="correctivo">Correctivo</option>
-              <option value="inspección">Inspección</option>
-            </select>
+          {/* Columna 2 */}
+          <div className="space-y-4">
+            {/* Fecha de mantenimiento */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Fecha de mantenimiento <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                min={today}
+                {...register('fechaProximoMantenimiento')}
+                className={`w-full border rounded px-3 py-2 ${
+                  errors.fechaProximoMantenimiento ? 'border-red-500' : 'border-gray-300'
+                }`}
+              />
+              {errors.fechaProximoMantenimiento && (
+                <p className="text-red-600 text-sm mt-1">{errors.fechaProximoMantenimiento.message}</p>
+              )}
+            </div>
+
+            {/* Prioridad */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Prioridad <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register('prioridad')}
+                className={`w-full border rounded px-3 py-2 ${
+                  errors.prioridad ? 'border-red-500' : 'border-gray-300'
+                }`}
+              >
+                <option value="baja">Baja</option>
+                <option value="media">Media</option>
+                <option value="alta">Alta</option>
+              </select>
+              {errors.prioridad && (
+                <p className="text-red-600 text-sm mt-1">{errors.prioridad.message}</p>
+              )}
+            </div>
+
+            {/* Observaciones */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Observaciones (opcional)
+              </label>
+              <textarea
+                {...register('observaciones')}
+                className={`w-full border rounded px-3 py-2 ${
+                  errors.observaciones ? 'border-red-500' : 'border-gray-300'
+                }`}
+                rows={3}
+                maxLength={500}
+                placeholder="Notas adicionales..."
+              />
+              <div className="flex items-center justify-between mt-1">
+                {errors.observaciones && (
+                  <p className="text-red-600 text-sm">{errors.observaciones.message}</p>
+                )}
+                <span className={`text-xs ml-auto ${obsLen > 450 ? 'text-orange-500' : 'text-gray-500'}`}>
+                  {obsLen}/500 caracteres
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Columna 2 */}
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Fecha de mantenimiento</label>
-            <input
-              type="date"
-              min={new Date().toISOString().slice(0, 10)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Prioridad</label>
-            <select
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              value={prioridad}
-              onChange={(e) => setPrioridad(e.target.value as typeof prioridad)}
-            >
-              <option value="baja">Baja</option>
-              <option value="media">Media</option>
-              <option value="alta">Alta</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Observaciones (opcional)</label>
-            <textarea
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              rows={3}
-              value={observaciones}
-              onChange={(e) => setObservaciones(e.target.value)}
-              placeholder="Notas adicionales..."
-            />
-          </div>
+        {/* Acciones */}
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+            disabled={isSubmitting}
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={`px-4 py-2 text-white rounded transition-colors ${
+              isSubmitting
+                ? 'bg-red-600/60 cursor-not-allowed'
+                : 'bg-red-600 hover:bg-red-700'
+            }`}
+          >
+            {isSubmitting ? 'Guardando…' : 'Guardar'}
+          </button>
         </div>
-      </div>
-
-      {/* Acciones */}
-      <div className="mt-6 flex justify-end gap-3">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-        >
-          Cancelar
-        </button>
-        <button
-          onClick={handleSubmit}
-          disabled={isDisabled || programarMantenimiento.isPending}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
-        >
-          {programarMantenimiento.isPending ? 'Guardando…' : 'Guardar'}
-        </button>
-      </div>
+      </form>
     </div>
   );
 }

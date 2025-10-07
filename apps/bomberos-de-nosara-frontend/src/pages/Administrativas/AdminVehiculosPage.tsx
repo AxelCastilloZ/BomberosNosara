@@ -1,15 +1,23 @@
 // src/pages/Administrativas/AdminVehiculosPage.tsx
 import { useState } from 'react';
 import {
-  Truck, PlusCircle, Settings, ClipboardList, Wrench, ArrowLeft
+  Truck, 
+  PlusCircle, 
+  Settings, 
+  ClipboardList, 
+  Wrench, 
+  ArrowLeft,
+  Ambulance,
+  Car,
+  Bike,
 } from 'lucide-react';
 
-// Types del módulo
+// Types
 import type { VehiculoView } from '../../modules/inventarioVehiculos/types';
 import type { Vehicle } from '../../types/vehiculo.types';
 
 // Componentes del módulo
-import DashboardVehiculo from '../../modules/inventarioVehiculos/components/dashboardVehiculo';
+import VehiculoList from '../../modules/inventarioVehiculos/components/vehiculoList';
 import MantenimientoVehiculo from '../../modules/inventarioVehiculos/components/MantenimientoVehiculo';
 import UpdateStatus from '../../modules/inventarioVehiculos/components/updateStatus';
 import ScheduleMaintenance from '../../modules/inventarioVehiculos/components/scheduleMaintenance';
@@ -18,9 +26,14 @@ import AddVehiculo from '../../modules/inventarioVehiculos/components/addVehicul
 import DetallesVehiculo from '../../modules/inventarioVehiculos/components/DetallesVehiculo';
 import EditVehiculo from '../../modules/inventarioVehiculos/components/EditVehiculo';
 
+// Hook
+import { useVehiculos } from '../../modules/inventarioVehiculos/hooks/useVehiculos';
+
 export default function AdminVehiculosPage() {
   const [viewMode, setViewMode] = useState<VehiculoView>('dashboard');
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehicle | null>(null);
+
+  const { data: vehicles = [] } = useVehiculos();
 
   const volverAlDashboard = () => {
     setVehiculoSeleccionado(null);
@@ -32,9 +45,43 @@ export default function AdminVehiculosPage() {
     setViewMode('lista');
   };
 
+  // Helper para iconos de vehículos
+  const getVehicleIcon = (type: string, className = 'h-5 w-5'): React.ReactNode => {
+    const normalized = type.toLowerCase();
+    
+    if (normalized.includes('camión') || normalized.includes('sisterna')) 
+      return <Truck className={className} />;
+    if (normalized.includes('ambulancia')) 
+      return <Ambulance className={className} />;
+    if (normalized.includes('pickup')) 
+      return <Car className={className} />;
+    if (normalized.includes('moto')) 
+      return <Bike className={className} />;
+    
+    return <Wrench className={className} />;
+  };
+
+  // Helper para colores de estado
+  const getStatusColor = (status: string): string => {
+    switch (status) {
+      case 'en servicio': return 'bg-emerald-500';
+      case 'malo': return 'bg-amber-500';
+      case 'fuera de servicio': return 'bg-orange-500';
+      case 'dado de baja': return 'bg-red-500';
+      default: return 'bg-slate-300';
+    }
+  };
+
+  const cambiarVista = (nuevaVista: VehiculoView, vehiculo?: Vehicle) => {
+    if (vehiculo) {
+      setVehiculoSeleccionado(vehiculo);
+    }
+    setViewMode(nuevaVista);
+  };
+
   return (
     <div className="min-h-screen px-6 py-8 w-full bg-[#f9fafb]">
-      {/* Botón de volver - solo se muestra cuando no estamos en dashboard */}
+      {/* Botón de volver */}
       {viewMode !== 'dashboard' && (
         <button
           onClick={volverAlDashboard}
@@ -44,7 +91,7 @@ export default function AdminVehiculosPage() {
         </button>
       )}
 
-      {/* Vista principal - Dashboard */}
+      {/* Vista Dashboard Principal */}
       {viewMode === 'dashboard' && (
         <>
           <div className="flex items-center gap-4 mb-6">
@@ -58,7 +105,6 @@ export default function AdminVehiculosPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {/* Lista de vehículos */}
             <button 
               onClick={() => setViewMode('lista')} 
               className="bg-white border border-gray-200 p-6 rounded-lg hover:bg-gray-50 hover:shadow-md transition-all text-center group"
@@ -68,7 +114,6 @@ export default function AdminVehiculosPage() {
               <p className="text-sm text-gray-600 mt-1">Ver todos los vehículos registrados</p>
             </button>
 
-            {/* Agregar vehículo */}
             <button 
               onClick={() => setViewMode('agregar')} 
               className="bg-red-50 border border-red-200 p-6 rounded-lg hover:bg-red-100 hover:shadow-md transition-all text-center group"
@@ -78,17 +123,8 @@ export default function AdminVehiculosPage() {
               <p className="text-sm text-red-600 mt-1">Registrar nuevo vehículo en la flota</p>
             </button>
 
-            {/* Actualizar estado */}
-            <button 
-              onClick={() => setViewMode('estado')} 
-              className="bg-white border border-gray-200 p-6 rounded-lg hover:bg-gray-50 hover:shadow-md transition-all text-center group"
-            >
-              <Settings className="h-8 w-8 mx-auto text-gray-600 group-hover:text-red-600 transition-colors" />
-              <h3 className="mt-3 font-semibold text-gray-800 group-hover:text-red-700">Actualizar Estado</h3>
-              <p className="text-sm text-gray-600 mt-1">Cambiar estado operacional de vehículos</p>
-            </button>
+           
 
-            {/* Mantenimiento */}
             <button 
               onClick={() => setViewMode('mantenimiento')} 
               className="bg-white border border-gray-200 p-6 rounded-lg hover:bg-gray-50 hover:shadow-md transition-all text-center group"
@@ -101,23 +137,26 @@ export default function AdminVehiculosPage() {
         </>
       )}
 
-      {/* Vista de lista de vehículos */}
+      {/* Vista Lista de Vehículos */}
       {viewMode === 'lista' && (
         <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
             <h2 className="text-2xl font-bold text-gray-800">Lista de Vehículos</h2>
             <p className="text-gray-600">Administra todos los vehículos de la flota</p>
           </div>
-          <DashboardVehiculo
-            overrideModal={(vista, vehiculo) => {
-              setVehiculoSeleccionado(vehiculo ?? null);
-              setViewMode(vista);
-            }}
+          <VehiculoList
+            vehicles={vehicles}
+            onUpdateVehicle={() => {}}
+            getVehicleIcon={getVehicleIcon}
+            getStatusColor={getStatusColor}
+            onEstado={(vehiculo) => cambiarVista('estado', vehiculo)}
+            onVerDetalles={(vehiculo) => cambiarVista('detalles', vehiculo)}
+            onEditar={(vehiculo) => cambiarVista('editar', vehiculo)}
           />
         </div>
       )}
 
-      {/* Vista de agregar vehículo */}
+      {/* Vista Agregar Vehículo */}
       {viewMode === 'agregar' && (
         <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
@@ -128,7 +167,7 @@ export default function AdminVehiculosPage() {
         </div>
       )}
 
-      {/* Vista de actualizar estado */}
+      {/* Vista Actualizar Estado */}
       {viewMode === 'estado' && (
         <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
@@ -142,7 +181,7 @@ export default function AdminVehiculosPage() {
         </div>
       )}
 
-      {/* Vista de programar mantenimiento */}
+      {/* Vista Programar Mantenimiento */}
       {viewMode === 'programar' && vehiculoSeleccionado && (
         <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
@@ -156,7 +195,7 @@ export default function AdminVehiculosPage() {
         </div>
       )}
 
-      {/* Vista de registrar mantenimiento */}
+      {/* Vista Registrar Mantenimiento */}
       {viewMode === 'registrar' && vehiculoSeleccionado && (
         <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">
@@ -170,7 +209,7 @@ export default function AdminVehiculosPage() {
         </div>
       )}
 
-      {/* Vista de detalles del vehículo */}
+      {/* Vista Detalles del Vehículo */}
       {viewMode === 'detalles' && vehiculoSeleccionado && (
         <div className="flex justify-center items-start">
           <DetallesVehiculo 
@@ -180,7 +219,7 @@ export default function AdminVehiculosPage() {
         </div>
       )}
 
-      {/* Vista de editar vehículo */}
+      {/* Vista Editar Vehículo */}
       {viewMode === 'editar' && vehiculoSeleccionado && (
         <div className="flex justify-center items-start">
           <EditVehiculo 
@@ -191,7 +230,7 @@ export default function AdminVehiculosPage() {
         </div>
       )}
 
-      {/* Vista unificada de mantenimiento */}
+      {/* Vista Mantenimiento Unificado */}
       {viewMode === 'mantenimiento' && (
         <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
           <div className="mb-4">

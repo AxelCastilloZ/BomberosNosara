@@ -1,4 +1,3 @@
-
 import api from './../api/apiConfig';
 import axios from 'axios';
 import type { User, CreateUserDto, UpdateUserDto, ApiFieldError } from '../types/user';
@@ -90,6 +89,15 @@ function normalizeError(err: unknown, fallback = 'Error de usuarios'): ApiFieldE
 export async function getUsers(): Promise<User[]> {
   const { data } = await api.get<User[]>('/users');
   return data;
+}
+
+export async function getUserById(id: number): Promise<User> {
+  try {
+    const { data } = await api.get<User>(`/users/id/${id}`);  // ← CAMBIO AQUÍ
+    return data;
+  } catch (err) {
+    throw normalizeError(err, 'No se pudo obtener el usuario');
+  }
 }
 
 export async function createUser(dto: CreateUserDto): Promise<User> {

@@ -1,3 +1,6 @@
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useState } from 'react';
 import { Vehicle } from '../../../types/vehiculo.types';
 import { vehiculoService } from '../services/vehiculoService';
@@ -18,87 +21,118 @@ export interface EditVehiculoProps {
   onSuccess?: () => void;
 }
 
+// Schema de validación para edición (sin estadoInicial que es inmutable)
+const vehiculoEditSchema = z.object({
+  placa: z.string()
+    .min(1, 'La placa es obligatoria')
+    .min(3, 'La placa debe tener al menos 3 caracteres')
+    .max(50, 'La placa no puede superar 50 caracteres')
+    .transform(val => val.trim()),
+
+  tipo: z.string()
+    .min(1, 'Debe seleccionar un tipo de vehículo')
+    .refine(
+      (val) => [
+        'camión sisterna',
+        'carro ambulancia',
+        'pickup utilitario',
+        'moto',
+        'atv',
+        'jet ski',
+        'lancha rescate',
+        'dron reconocimiento'
+      ].includes(val),
+      'Tipo de vehículo inválido'
+    ),
+
+  fechaAdquisicion: z.string()
+    .min(1, 'La fecha de adquisición es obligatoria')
+    .refine(
+      (date) => {
+        const inputDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return inputDate <= today;
+      },
+      'La fecha de adquisición no puede ser futura'
+    ),
+  
+  kilometraje: z.coerce
+    .number()
+    .int('Debe ser un número entero, sin decimales')
+    .min(0, 'El kilometraje no puede ser negativo')
+    .max(999999, 'El kilometraje no puede superar 999,999 km'),
+
+  fotoUrl: z.string()
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (val) => !val || z.string().url().safeParse(val).success,
+      'Debe ser una URL válida'
+    ),
+
+  observaciones: z.string()
+    .optional()
+    .or(z.literal(''))
+    .refine(
+      (val) => !val || val.length <= 500,
+      'Las observaciones no pueden superar 500 caracteres'
+    ),
+});
+
+type VehiculoEditFormData = z.input<typeof vehiculoEditSchema>;
+
 export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehiculoProps) {
   const { notifyUpdated, notifyDeleted, notifyError } = useCrudNotifications();
 
-  // Estado del formulario
-  const [formData, setFormData] = useState({
-    placa: vehiculo.placa,
-    tipo: vehiculo.tipo,
-    estadoInicial: vehiculo.estadoInicial,
-    fechaAdquisicion: vehiculo.fechaAdquisicion,
-    kilometraje: vehiculo.kilometraje,
-    fotoUrl: vehiculo.fotoUrl || '',
-    observaciones: vehiculo.observaciones || '',
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<VehiculoEditFormData>({
+    resolver: zodResolver(vehiculoEditSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      placa: vehiculo.placa,
+      tipo: vehiculo.tipo,
+      fechaAdquisicion: vehiculo.fechaAdquisicion,
+      kilometraje: vehiculo.kilometraje,
+      fotoUrl: vehiculo.fotoUrl || '',
+      observaciones: vehiculo.observaciones || '',
+    },
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const vehicleIcon = getIconForType(formData.tipo, 'w-8 h-8');
+  const fotoUrl = watch('fotoUrl');
+  const observaciones = watch('observaciones');
+  const tipo = watch('tipo');
+  const obsLen = (observaciones ?? '').length;
 
-  // Handler para cambios en el formulario
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: name === 'kilometraje' ? Number(value) : value,
-    }));
-  };
-
-  // Validaciones
-  const validateForm = (): string | null => {
-    if (!formData.placa.trim()) return 'La placa es obligatoria';
-    if (formData.kilometraje < 0) return 'El kilometraje no puede ser negativo';
-    if (formData.fechaAdquisicion > getTodayISO()) {
-      return 'La fecha de adquisición no puede ser futura';
-    }
-    if (formData.observaciones.length > OBS_MAX) {
-      return `Las observaciones no pueden exceder ${OBS_MAX} caracteres`;
-    }
-    return null;
-  };
+  const vehicleIcon = getIconForType(tipo, 'w-8 h-8');
 
   // Handler para actualizar
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const error = validateForm();
-    if (error) {
-      notifyError('validación', error);
-      return;
-    }
-
-    setIsSubmitting(true);
+  const onSubmit = async (data: VehiculoEditFormData) => {
     try {
       // Construir objeto de actualización SIN estadoInicial (es inmutable)
-      const updateData: Partial<Vehicle> = {
-        placa: formData.placa,
-        tipo: formData.tipo,
-        fechaAdquisicion: formData.fechaAdquisicion,
-        kilometraje: formData.kilometraje,
+      const payload = {
+        placa: data.placa,
+        tipo: data.tipo,
+        fechaAdquisicion: data.fechaAdquisicion,
+        kilometraje: Number(data.kilometraje) || 0,
+        fotoUrl: data.fotoUrl || undefined,
+        observaciones: data.observaciones || undefined,
       };
 
-      // Solo incluir campos opcionales si tienen valor
-      if (formData.fotoUrl.trim()) {
-        updateData.fotoUrl = formData.fotoUrl;
-      }
-
-      if (formData.observaciones.trim()) {
-        updateData.observaciones = formData.observaciones;
-      }
-
-      await vehiculoService.update({ id: vehiculo.id, ...updateData });
+      await vehiculoService.update({ id: vehiculo.id, ...payload } as any);
       notifyUpdated('Vehículo');
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      notifyError('actualizar el vehículo', err.response?.data?.message);
-    } finally {
-      setIsSubmitting(false);
+      const message = err?.response?.data?.message || 'Error al actualizar el vehículo';
+      notifyError('actualizar el vehículo', message);
     }
   };
 
@@ -112,7 +146,8 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
       onSuccess?.();
       onClose();
     } catch (err: any) {
-      notifyError('eliminar el vehículo', err.response?.data?.message);
+      const message = err?.response?.data?.message || 'Error al eliminar el vehículo';
+      notifyError('eliminar el vehículo', message);
     } finally {
       setIsDeleting(false);
     }
@@ -143,7 +178,7 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
           {/* Placa */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -151,13 +186,15 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
             </label>
             <input
               type="text"
-              name="placa"
-              value={formData.placa}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              {...register('placa')}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                errors.placa ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Ej: ABC-123"
-              required
             />
+            {errors.placa && (
+              <p className="text-red-600 text-sm mt-1">{errors.placa.message}</p>
+            )}
           </div>
 
           {/* Tipo */}
@@ -166,11 +203,10 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
               Tipo de Vehículo <span className="text-red-500">*</span>
             </label>
             <select
-              name="tipo"
-              value={formData.tipo}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              required
+              {...register('tipo')}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                errors.tipo ? 'border-red-500' : 'border-gray-300'
+              }`}
             >
               {TIPO_OPTIONS.map(opt => (
                 <option key={opt.value} value={opt.value}>
@@ -178,6 +214,9 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
                 </option>
               ))}
             </select>
+            {errors.tipo && (
+              <p className="text-red-600 text-sm mt-1">{errors.tipo.message}</p>
+            )}
           </div>
 
           {/* Estado Inicial - DESHABILITADO */}
@@ -186,8 +225,7 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
               Estado Inicial
             </label>
             <select
-              name="estadoInicial"
-              value={formData.estadoInicial}
+              value={vehiculo.estadoInicial}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
               disabled
             >
@@ -204,13 +242,15 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
             </label>
             <input
               type="date"
-              name="fechaAdquisicion"
-              value={formData.fechaAdquisicion}
-              onChange={handleChange}
+              {...register('fechaAdquisicion')}
               max={getTodayISO()}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              required
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                errors.fechaAdquisicion ? 'border-red-500' : 'border-gray-300'
+              }`}
             />
+            {errors.fechaAdquisicion && (
+              <p className="text-red-600 text-sm mt-1">{errors.fechaAdquisicion.message}</p>
+            )}
           </div>
 
           {/* Kilometraje */}
@@ -220,15 +260,18 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
             </label>
             <input
               type="number"
-              name="kilometraje"
-              value={formData.kilometraje}
-              onChange={handleChange}
+              {...register('kilometraje', { valueAsNumber: true })}
               min="0"
+              max="999999"
               step="1"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                errors.kilometraje ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Ej: 15000"
-              required
             />
+            {errors.kilometraje && (
+              <p className="text-red-600 text-sm mt-1">{errors.kilometraje.message}</p>
+            )}
           </div>
 
           {/* Foto URL */}
@@ -239,16 +282,19 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
             </label>
             <input
               type="url"
-              name="fotoUrl"
-              value={formData.fotoUrl}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              {...register('fotoUrl')}
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 ${
+                errors.fotoUrl ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="https://ejemplo.com/imagen.jpg"
             />
-            {formData.fotoUrl && (
+            {errors.fotoUrl && (
+              <p className="text-red-600 text-sm mt-1">{errors.fotoUrl.message}</p>
+            )}
+            {fotoUrl && (
               <div className="mt-3">
                 <img
-                  src={formData.fotoUrl}
+                  src={fotoUrl}
                   alt="Vista previa"
                   className="max-w-xs h-32 object-cover rounded-lg border border-gray-200"
                   onError={(e) => {
@@ -265,17 +311,22 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
               Observaciones (opcional)
             </label>
             <textarea
-              name="observaciones"
-              value={formData.observaciones}
-              onChange={handleChange}
+              {...register('observaciones')}
               maxLength={OBS_MAX}
               rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+              className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none ${
+                errors.observaciones ? 'border-red-500' : 'border-gray-300'
+              }`}
               placeholder="Notas adicionales sobre el vehículo..."
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {formData.observaciones.length}/{OBS_MAX} caracteres
-            </p>
+            <div className="flex items-center justify-between mt-1">
+              {errors.observaciones && (
+                <p className="text-red-600 text-sm">{errors.observaciones.message}</p>
+              )}
+              <span className={`text-xs ml-auto ${obsLen > OBS_MAX * 0.9 ? 'text-orange-500' : 'text-gray-500'}`}>
+                {obsLen}/{OBS_MAX} caracteres
+              </span>
+            </div>
           </div>
 
           {/* Botones de acción */}
@@ -290,7 +341,11 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
             </button>
             <button
               type="submit"
-              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+              className={`flex-1 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                isSubmitting
+                  ? 'bg-red-600/60 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
               disabled={isSubmitting}
             >
               <Save className="w-5 h-5" />
@@ -357,7 +412,11 @@ export default function EditVehiculo({ vehiculo, onClose, onSuccess }: EditVehic
               </button>
               <button
                 onClick={handleDelete}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                className={`flex-1 text-white font-semibold py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                  isDeleting
+                    ? 'bg-red-600/60 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
                 disabled={isDeleting}
               >
                 <Trash2 className="w-4 h-4" />
