@@ -1,20 +1,32 @@
-import React from 'react';
+// src/modules/inventarioVehiculos/components/addVehiculo.tsx
 import { useForm } from 'react-hook-form';
-import type { Vehicle } from '../../../types/vehiculo.types';
-import type { AddVehicleProps, FormValues } from '../types';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { vehiculoCreateSchema, type VehiculoFormData } from '../../../components/common/schemas/vehiculos.validations';
 import { useAddVehiculo } from '../hooks/useVehiculos';
 import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
 import { TIPO_OPTIONS, ESTADO_OPTIONS, OBS_MAX, getTodayISO } from '../utils/vehiculoConstants';
 
-export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
+export default function AddVehiculo({ onSuccess }: { onSuccess?: () => void }) {
   const {
     register,
     handleSubmit,
     reset,
-    setError,
     watch,
     formState: { errors },
-  } = useForm<FormValues>({ mode: 'onChange' });
+  } = useForm<VehiculoFormData>({
+    resolver: zodResolver(vehiculoCreateSchema),
+    mode: 'onBlur',
+    defaultValues: {
+      placa: '',
+      tipo: '',
+      estadoInicial: '',
+      estadoActual: '',
+      fechaAdquisicion: '',
+      kilometraje: 0,
+      fotoUrl: '',
+      observaciones: '',
+    },
+  });
 
   const addVehiculo = useAddVehiculo();
   const { notifyCreated, notifyError } = useCrudNotifications();
@@ -22,26 +34,27 @@ export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
   const obsLen = (watch('observaciones') ?? '').length;
   const todayISO = getTodayISO();
 
-  const onSubmit = (data: FormValues) => {
-    const payload: FormValues = { ...data, placa: data.placa?.trim() };
-
-    addVehiculo.mutate(payload, {
+  const onSubmit = (data: VehiculoFormData) => {
+    // Preparar los datos en el formato que espera la API
+    const payload = {
+      placa: data.placa,
+      tipo: data.tipo,
+      estadoInicial: data.estadoInicial,
+      estadoActual: data.estadoActual,
+      fechaAdquisicion: data.fechaAdquisicion,
+      kilometraje: Number(data.kilometraje) || 0,
+      fotoUrl: data.fotoUrl || undefined,
+      observaciones: data.observaciones || undefined,
+    };
+    
+    addVehiculo.mutate(payload as any, {
       onSuccess: () => {
         notifyCreated('Vehículo');
         reset();
         onSuccess?.();
       },
       onError: (e: any) => {
-        const code = e?.code || e?.response?.data?.code;
         const message = e?.message || e?.response?.data?.message || 'Error al registrar vehículo';
-        
-        if (code === 'PLATE_EXISTS') {
-          setError('placa', { 
-            type: 'server', 
-            message: message || 'La placa ya está registrada' 
-          });
-        }
-        
         notifyError('crear vehículo', message);
       },
     });
@@ -49,11 +62,16 @@ export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      {/* Tipo de vehículo */}
       <div>
-        <label className="block text-sm font-medium mb-1">Tipo de vehículo</label>
+        <label className="block text-sm font-medium mb-1">
+          Tipo de vehículo <span className="text-red-500">*</span>
+        </label>
         <select
-          {...register('tipo', { required: 'El tipo es requerido' })}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          {...register('tipo')}
+          className={`w-full border rounded px-3 py-2 ${
+            errors.tipo ? 'border-red-500' : 'border-gray-300'
+          }`}
         >
           <option value="">-- Selecciona tipo --</option>
           {TIPO_OPTIONS.map((o) => (
@@ -62,39 +80,52 @@ export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
             </option>
           ))}
         </select>
-        {errors.tipo && <p className="text-red-600 text-sm mt-1">{errors.tipo.message as string}</p>}
+        {errors.tipo && <p className="text-red-600 text-sm mt-1">{errors.tipo.message}</p>}
       </div>
 
+      {/* Placa */}
       <div>
-        <label className="block text-sm font-medium mb-1">Placa</label>
+        <label className="block text-sm font-medium mb-1">
+          Placa <span className="text-red-500">*</span>
+        </label>
         <input
-          {...register('placa', {
-            required: 'La placa es requerida',
-            minLength: { value: 3, message: 'La placa debe tener al menos 3 caracteres' },
-          })}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          {...register('placa')}
+          className={`w-full border rounded px-3 py-2 ${
+            errors.placa ? 'border-red-500' : 'border-gray-300'
+          }`}
+          placeholder="Ej: ABC-123"
         />
-        {errors.placa && <p className="text-red-600 text-sm mt-1">{errors.placa.message as string}</p>}
+        {errors.placa && <p className="text-red-600 text-sm mt-1">{errors.placa.message}</p>}
       </div>
 
+      {/* Estado inicial */}
       <div>
-        <label className="block text-sm font-medium mb-1">Estado inicial</label>
+        <label className="block text-sm font-medium mb-1">
+          Estado inicial <span className="text-red-500">*</span>
+        </label>
         <select
-          {...register('estadoInicial', { required: 'El estado inicial es requerido' })}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          {...register('estadoInicial')}
+          className={`w-full border rounded px-3 py-2 ${
+            errors.estadoInicial ? 'border-red-500' : 'border-gray-300'
+          }`}
         >
           <option value="">-- Selecciona estado --</option>
           <option value="nuevo">Nuevo</option>
           <option value="usado">Usado</option>
         </select>
-        {errors.estadoInicial && <p className="text-red-600 text-sm mt-1">{errors.estadoInicial.message as string}</p>}
+        {errors.estadoInicial && <p className="text-red-600 text-sm mt-1">{errors.estadoInicial.message}</p>}
       </div>
 
+      {/* Estado actual */}
       <div>
-        <label className="block text-sm font-medium mb-1">Estado actual</label>
+        <label className="block text-sm font-medium mb-1">
+          Estado actual <span className="text-red-500">*</span>
+        </label>
         <select
-          {...register('estadoActual', { required: 'El estado actual es requerido' })}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          {...register('estadoActual')}
+          className={`w-full border rounded px-3 py-2 ${
+            errors.estadoActual ? 'border-red-500' : 'border-gray-300'
+          }`}
         >
           <option value="">-- Selecciona estado --</option>
           {ESTADO_OPTIONS.map((o) => (
@@ -103,86 +134,91 @@ export default function AddVehiculo({ onSuccess }: AddVehicleProps) {
             </option>
           ))}
         </select>
-        {errors.estadoActual && <p className="text-red-600 text-sm mt-1">{errors.estadoActual.message as string}</p>}
+        {errors.estadoActual && <p className="text-red-600 text-sm mt-1">{errors.estadoActual.message}</p>}
       </div>
 
+      {/* Fecha de adquisición */}
       <div>
-        <label className="block text-sm font-medium mb-1">Fecha de adquisición</label>
+        <label className="block text-sm font-medium mb-1">
+          Fecha de adquisición <span className="text-red-500">*</span>
+        </label>
         <input
           type="date"
           max={todayISO}
-          {...register('fechaAdquisicion', {
-            required: 'La fecha de adquisición es requerida',
-            validate: (value) => {
-              if (!value) return 'La fecha de adquisición es requerida';
-              return value <= todayISO || 'La fecha no puede ser mayor a hoy';
-            },
-          })}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          {...register('fechaAdquisicion')}
+          className={`w-full border rounded px-3 py-2 ${
+            errors.fechaAdquisicion ? 'border-red-500' : 'border-gray-300'
+          }`}
         />
         {errors.fechaAdquisicion && (
-          <p className="text-red-600 text-sm mt-1">{errors.fechaAdquisicion.message as string}</p>
+          <p className="text-red-600 text-sm mt-1">{errors.fechaAdquisicion.message}</p>
         )}
       </div>
 
+      {/* Kilometraje */}
       <div>
-        <label className="block text-sm font-medium mb-1">Kilometraje</label>
+        <label className="block text-sm font-medium mb-1">
+          Kilometraje <span className="text-red-500">*</span>
+        </label>
         <input
           type="number"
-          {...register('kilometraje', {
-            required: 'El kilometraje es requerido',
-            valueAsNumber: true,
-            min: { value: 0, message: 'El kilometraje no puede ser negativo' },
-            validate: (v) =>
-              (v !== undefined && v !== null && !Number.isNaN(v)) || 'Debe ser un número válido',
-          })}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          min="0"
+          max="999999"
+          step="1"
+          {...register('kilometraje', { valueAsNumber: true })}
+          className={`w-full border rounded px-3 py-2 ${
+            errors.kilometraje ? 'border-red-500' : 'border-gray-300'
+          }`}
+          placeholder="0"
         />
-        {errors.kilometraje && <p className="text-red-600 text-sm mt-1">{errors.kilometraje.message as string}</p>}
+        {errors.kilometraje && <p className="text-red-600 text-sm mt-1">{errors.kilometraje.message}</p>}
       </div>
 
+      {/* URL de foto */}
       <div className="md:col-span-2">
         <label className="block text-sm font-medium mb-1">URL de foto (opcional)</label>
         <input
-          {...register('fotoUrl', {
-            validate: (v) => !v || /^https?:\/\/.+/i.test(v) || 'Debe ser una URL válida (http/https)',
-          })}
-          className="w-full border border-gray-300 rounded px-3 py-2"
+          type="url"
+          {...register('fotoUrl')}
+          className={`w-full border rounded px-3 py-2 ${
+            errors.fotoUrl ? 'border-red-500' : 'border-gray-300'
+          }`}
+          placeholder="https://ejemplo.com/imagen.jpg"
         />
-        {errors.fotoUrl && <p className="text-red-600 text-sm mt-1">{errors.fotoUrl.message as string}</p>}
+        {errors.fotoUrl && <p className="text-red-600 text-sm mt-1">{errors.fotoUrl.message}</p>}
       </div>
 
+      {/* Observaciones */}
       <div className="md:col-span-2">
-        <label className="block text-sm font-medium mb-1" htmlFor="observaciones">
-          Observaciones (opcional)
-        </label>
-
+        <label className="block text-sm font-medium mb-1">Observaciones (opcional)</label>
         <textarea
-          id="observaciones"
-          className={`w-full border border-gray-300 rounded px-3 py-2 ${errors.observaciones ? 'ring-1 ring-red-500' : ''}`}
+          className={`w-full border rounded px-3 py-2 ${
+            errors.observaciones ? 'border-red-500' : 'border-gray-300'
+          }`}
           rows={3}
           maxLength={OBS_MAX}
-          {...register('observaciones', {
-            maxLength: { value: OBS_MAX, message: `Máximo ${OBS_MAX} caracteres` },
-          })}
+          {...register('observaciones')}
+          placeholder="Información adicional sobre el vehículo..."
         />
-
         <div className="mt-1 flex items-center justify-between">
-          {(obsLen >= OBS_MAX || !!errors.observaciones) ? (
-            <p className="text-red-600 text-sm">Máximo {OBS_MAX} caracteres</p>
-          ) : <span />}
-          <span className="text-xs text-slate-400">
+          {errors.observaciones && (
+            <p className="text-red-600 text-sm">{errors.observaciones.message}</p>
+          )}
+          <span className={`text-xs ml-auto ${obsLen > OBS_MAX * 0.9 ? 'text-orange-500' : 'text-slate-400'}`}>
             {obsLen}/{OBS_MAX}
           </span>
         </div>
       </div>
 
+      {/* Botón submit */}
       <div className="md:col-span-2 text-right">
         <button
           type="submit"
           disabled={addVehiculo.isPending}
-          className={`px-6 py-2 rounded text-white ${
-            addVehiculo.isPending ? 'bg-green-600/60' : 'bg-green-600 hover:bg-green-700'
+          className={`px-6 py-2 rounded text-white transition-colors ${
+            addVehiculo.isPending 
+              ? 'bg-green-600/60 cursor-not-allowed' 
+              : 'bg-green-600 hover:bg-green-700'
           }`}
         >
           {addVehiculo.isPending ? 'Guardando…' : 'Registrar vehículo'}

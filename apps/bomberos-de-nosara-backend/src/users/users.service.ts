@@ -10,7 +10,7 @@ import { In, Repository } from 'typeorm';
 
 import { ConfigService } from '@nestjs/config';
 import { Role } from '../roles/entities/role.entity';
-import { RoleEnum } from '../roles/role.enum'; // 👈 ajustá esta ruta
+import { RoleEnum } from '../roles/role.enum';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -32,15 +32,15 @@ export class UsersService {
     return roles
       .map((r) => {
         if (typeof r === 'string') return r;
-        if (typeof r === 'number') return String(r); // por si RoleEnum fuera numérico
-        return r?.name as unknown as string; // Role.name es RoleEnum
+        if (typeof r === 'number') return String(r);
+        return r?.name as unknown as string;
       })
       .filter(Boolean) as string[];
   }
 
   private hasSuperRole(roles?: RoleLike[]): boolean {
     const names = this.normalizeRoleNames(roles);
-    return names.includes(RoleEnum.SUPERUSER); // ✅ enum vs enum/string normalizado
+    return names.includes(RoleEnum.SUPERUSER);
   }
 
   /** Cuenta SUPERUSERs, con opción de excluir un userId (p.ej. el editado) */
@@ -48,14 +48,14 @@ export class UsersService {
     const qb = this.userRepo
       .createQueryBuilder('u')
       .leftJoin('u.roles', 'r')
-      .where('r.name = :name', { name: RoleEnum.SUPERUSER }); // ✅ enum
+      .where('r.name = :name', { name: RoleEnum.SUPERUSER });
 
     if (excludeUserId) qb.andWhere('u.id != :id', { id: excludeUserId });
     return qb.getCount();
   }
 
   private async fetchRolesByName(names: (RoleEnum | string)[]): Promise<Role[]> {
-    const wanted = names.map((n) => (typeof n === 'string' ? n : n)); // string enums ya son string
+    const wanted = names.map((n) => (typeof n === 'string' ? n : n));
     const entities = await this.roleRepo.find({ where: { name: In(wanted as any) } });
     if (entities.length !== wanted.length) {
       const found = new Set(entities.map((r) => r.name));
@@ -91,6 +91,23 @@ export class UsersService {
 
     if (role) qb.where('role.name = :role', { role });
     return qb.getMany();
+  }
+
+  /**
+   * NUEVO: Buscar usuario por ID
+   * Específico para auditoría y referencias por ID numérico
+   */
+  async findById(id: number): Promise<User> {
+    const user = await this.userRepo.findOne({ 
+      where: { id }, 
+      relations: ['roles'] 
+    });
+    
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    
+    return user;
   }
 
   async findByUsername(username: string): Promise<User | null> {
@@ -154,8 +171,6 @@ export class UsersService {
       }
     }
 
-    // === Elegí una de estas dos líneas ===
-    // await this.userRepo.softDelete(id); // 👈 Soft delete (recuperable)
-    await this.userRepo.delete(id);       // 👈 Hard delete (definitivo)
+    await this.userRepo.delete(id);
   }
 }

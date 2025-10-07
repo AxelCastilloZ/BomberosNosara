@@ -1,15 +1,17 @@
 // Enums para tipos y estados
-export type EstadoVehiculo = 'en servicio' | 'malo'
- | 'fuera de servicio' | 'dado de baja';
+export type EstadoVehiculo = 'en servicio' | 'malo' | 'fuera de servicio' | 'dado de baja';
 
-  
-export type TipoVehiculo = 'camión sisterna' | 'carro ambulancia' | 'pickup utilitario' | 'moto' |
- 'atv' | 'jet ski' | 'lancha rescate' | 'dron reconocimiento';
+export type TipoVehiculo = 
+  | 'camión sisterna' 
+  | 'carro ambulancia' 
+  | 'pickup utilitario' 
+  | 'moto'
+  | 'atv' 
+  | 'jet ski' 
+  | 'lancha rescate' 
+  | 'dron reconocimiento';
 
- 
 export type EstadoInicial = 'nuevo' | 'usado';
-
-
 
 // Interface principal del vehículo
 export interface Vehicle {
@@ -35,8 +37,9 @@ export interface Vehicle {
   // Información de auditoría
   createdAt?: string; // ISO date
   updatedAt?: string; // ISO date
-  createdBy?: string; // Nombre del usuario que creó
-  updatedBy?: string; // Nombre del usuario que actualizó
+  createdBy?: number; // ID del usuario que creó (CAMBIO: era string, ahora number)
+  updatedBy?: number; // ID del usuario que actualizó (CAMBIO: era string, ahora number)
+  deletedBy?: number | null; // ID del usuario que eliminó (NUEVO)
 }
 
 // Types para mantenimiento

@@ -1,4 +1,3 @@
-
 import {
   Controller,
   Get,
@@ -9,6 +8,7 @@ import {
   UseGuards,
   Param,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -32,6 +32,16 @@ export class UsersController {
   @Get()
   findAll(@Query('role') role?: string) {
     return this.usersService.findAll(role);
+  }
+
+  /**
+   * NUEVO ENDPOINT: Obtener usuario por ID numérico
+   * Específico para auditoría y referencias por ID
+   * GET /users/id/1
+   */
+  @Get('id/:id')
+  findById(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.findById(id);
   }
 
   /**
@@ -60,6 +70,7 @@ export class UsersController {
 
   /**
    * Buscar usuario por username
+   * MANTENER AL FINAL para no interferir con otras rutas
    */
   @Get(':username')
   findByUsername(@Param('username') username: string) {

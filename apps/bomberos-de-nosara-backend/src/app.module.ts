@@ -24,6 +24,8 @@ import { UsersModule } from './users/users.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
 import { VoluntariosModule } from './voluntarios/voluntarios.module';
+import { MobileModule } from './mobile/mobile.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
   imports: [
@@ -123,6 +125,10 @@ import { VoluntariosModule } from './voluntarios/voluntarios.module';
     VoluntariosModule,
 
     ChatModule,
+
+    MobileModule,
+
+    StatisticsModule,
   ],
 })
 export class AppModule {}

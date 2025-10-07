@@ -1,9 +1,17 @@
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { getUsers, createUser, updateUser, deleteUser, checkUnique } from '../../service/user';
+import { 
+  getUsers, 
+  getUserById,
+  createUser, 
+  updateUser, 
+  deleteUser, 
+  checkUnique 
+} from '../../service/user';
 import type { User, CreateUserDto, UpdateUserDto, ApiFieldError } from '../../types/user';
 
 export const USERS_KEY = ['users'] as const;
+const USER_BY_ID_KEY = (id: number) => ['users', id] as const;
 
 type EditPayload = { id: number; data: UpdateUserDto };
 type UniqueField = 'email' | 'username';
@@ -68,4 +76,18 @@ export function useUsers() {
     remove,
     validateUnique,
   };
+}
+
+/**
+ * Hook para obtener un usuario por ID
+ * Usado principalmente para auditoría y mostrar nombres de usuarios
+ */
+export function useUserById(id?: number) {
+  return useQuery<User>({
+    queryKey: id ? USER_BY_ID_KEY(id) : ['users', 'disabled'],
+    queryFn: () => getUserById(id as number),
+    enabled: !!id && id > 0,
+    staleTime: 1000 * 60 * 30, // 30 minutos
+    retry: 1,
+  });
 }

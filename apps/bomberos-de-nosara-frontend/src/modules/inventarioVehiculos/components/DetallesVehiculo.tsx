@@ -13,6 +13,7 @@ import {
   Clock,
   User,
 } from 'lucide-react';
+import { useUserById } from '../../../hooks/users/useUsers';
 
 export interface DetallesVehiculoProps {
   vehiculo: Vehicle;
@@ -23,6 +24,13 @@ export default function DetallesVehiculo({ vehiculo, onClose }: DetallesVehiculo
   const vehicleIcon = getIconForType(vehiculo.tipo, 'w-8 h-8');
   const EstadoIcon = getEstadoIcon(vehiculo.estadoActual);
   const estadoColor = getEstadoColorBase(vehiculo.estadoActual);
+
+  // Hooks para obtener información de usuarios
+  const { data: creator, isLoading: loadingCreator } = useUserById(vehiculo.createdBy);
+  const { data: updater, isLoading: loadingUpdater } = useUserById(vehiculo.updatedBy);
+
+  const creatorName = creator?.username || 'Usuario desconocido';
+  const updaterName = updater?.username || creatorName;
 
   return (
     <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -130,7 +138,11 @@ export default function DetallesVehiculo({ vehiculo, onClose }: DetallesVehiculo
                   {vehiculo.createdBy && (
                     <p className="text-gray-600 text-xs mt-1 flex items-center gap-1">
                       <User className="w-3 h-3" />
-                      por {vehiculo.createdBy}
+                      {loadingCreator ? (
+                        <span className="italic">Cargando...</span>
+                      ) : (
+                        <span>por {creatorName}</span>
+                      )}
                     </p>
                   )}
                 </div>
@@ -142,7 +154,11 @@ export default function DetallesVehiculo({ vehiculo, onClose }: DetallesVehiculo
                   {vehiculo.updatedBy && (
                     <p className="text-gray-600 text-xs mt-1 flex items-center gap-1">
                       <User className="w-3 h-3" />
-                      por {vehiculo.updatedBy}
+                      {loadingUpdater ? (
+                        <span className="italic">Cargando...</span>
+                      ) : (
+                        <span>por {updaterName}</span>
+                      )}
                     </p>
                   )}
                 </div>
