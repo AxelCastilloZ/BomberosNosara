@@ -368,4 +368,59 @@ export class ChatService {
       }
     }));
   }
+
+  async markAsRead(messageId: number, userId: number): Promise<Message> {
+    const message = await this.messageRepository.findOne({
+      where: { id: messageId },
+      relations: ['conversation', 'conversation.participants', 'sender']
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Verify user is a participant in the conversation
+    const isParticipant = message.conversation.participants.some(p => p.id === userId);
+    if (!isParticipant) {
+      throw new ForbiddenException('Not authorized to mark this message as read');
+    }
+
+    // Only mark as read if not already read and the user is not the sender
+    if (!message.isRead && message.sender.id !== userId) {
+      message.isRead = true;
+      return this.messageRepository.save(message);
+    }
+
+    return message;
+  }
+
+  async markAllAsRead(conversationId: number, userId: number): Promise<{ count: number }> {
+    // Verify user is a participant in the conversation
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+      relations: ['participants']
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const isParticipant = conversation.participants.some(p => p.id === userId);
+    if (!isParticipant) {
+      throw new ForbiddenException('Not authorized to mark messages as read in this conversation');
+    }
+
+    // Mark all unread messages in the conversation as read
+    const result = await this.messageRepository
+      .createQueryBuilder('message')
+      .innerJoin('message.sender', 'sender')
+      .update(Message)
+      .set({ isRead: true })
+      .where('message.conversationId = :conversationId', { conversationId })
+      .andWhere('sender.id != :userId', { userId })
+      .andWhere('message.isRead = false')
+      .execute();
+
+    return { count: result.affected || 0 };
+  }
 }

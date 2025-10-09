@@ -57,41 +57,85 @@ export const useChatNotifications=() => {
     }
   }, []);
 
-  const markAsRead=useCallback(async (messageId?: string) => {
+  const markAsRead=useCallback(async (messageId?: string, conversationId?: string) => {
+    if (!user?.id) return;
+
     try {
-      const messageIds=messageId ? [messageId] : unreadMessages.map(msg => msg.id);
-      if (messageIds.length===0) return;
+      if (messageId) {
+        // Mark single message as read
+        const response=await fetch(
+          `${import.meta.env.VITE_API_URL||''}/chat/messages/${messageId}/mark-read`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            credentials: 'include'
+          }
+        );
 
-      const response=await fetch(`${import.meta.env.VITE_API_URL||''}/chat/update-message-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          messageIds,
-          isRead: true
-        })
-      });
+        if (!response.ok) {
+          throw new Error('Failed to mark message as read');
+        }
 
-      if (!response.ok) {
-        throw new Error('Failed to update message status');
+        // Update local state to remove the read message
+        setUnreadMessages(prev => prev.filter(msg => msg.id!==messageId));
+      } else if (conversationId) {
+        // Mark all messages in conversation as read
+        const response=await fetch(
+          `${import.meta.env.VITE_API_URL||''}/chat/conversations/${conversationId}/mark-all-read`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            credentials: 'include'
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to mark all messages as read');
+        }
+
+        // Update local state to remove all messages from this conversation
+        setUnreadMessages(prev =>
+          prev.filter(msg => msg.conversationId!==conversationId)
+        );
+      } else {
+        // Fallback: mark all messages as read (for backward compatibility)
+        const messageIds=unreadMessages.map(msg => msg.id);
+        if (messageIds.length===0) return;
+
+        await Promise.all(
+          unreadMessages.map(msg =>
+            fetch(`${import.meta.env.VITE_API_URL||''}/chat/messages/${msg.id}/mark-read`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              credentials: 'include'
+            })
+          )
+        );
+
+        setUnreadMessages([]);
       }
 
-      setUnreadMessages(prev =>
-        messageId ? prev.filter(msg => msg.id!==messageId) : []
-      );
-
+      // Emit socket event to notify other clients
       if (socket) {
         socket.emit('markMessagesRead', {
-          messageIds,
-          userId: user?.id
+          messageId,
+          conversationId,
+          userId: user.id
         });
       }
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
-  }, [socket, unreadMessages, user?.id]);
+  }, [socket, unreadMessages, user]);
 
   const handleNewMessage=useCallback((message: any) => {
     const isNotFromCurrentUser=message.senderId!==user?.id;
@@ -163,7 +207,7 @@ export const useChatNotifications=() => {
           id: msg.id||`temp-${Date.now()}`,
           content: msg.content,
           senderId: msg.senderId,
-          senderName: msg.sender?.name||'Usuario',
+          senderName: msg.sender.username,
           timestamp: msg.createdAt? new Date(msg.createdAt):new Date(),
           conversationId: msg.conversationId||'direct'
         }));
@@ -180,7 +224,7 @@ export const useChatNotifications=() => {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!socket || !user?.id) return;
+    if (!socket||!user?.id) return;
 
     let isMounted=true;
     setIsLoading(true);
