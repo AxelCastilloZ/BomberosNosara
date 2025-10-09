@@ -321,4 +321,51 @@ export class ChatService {
 
     return this.conversationRepository.save(conversation);
   }
+
+  /**
+   * Get unread messages for all conversations of a user
+   * @param userId The ID of the user
+   * @returns Array of unread messages with conversation and sender details
+   */
+  async getUnreadMessages(userId: number): Promise<Array<{
+    id: number;
+    content: string;
+    createdAt: Date;
+    conversationId: number;
+    sender: {
+      id: number;
+      username: string;
+    };
+  }>> {
+    // Get all conversations for the user
+    const conversations = await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .innerJoin('conversation.participants', 'participant', 'participant.id = :userId', { userId })
+      .leftJoinAndSelect('conversation.messages', 'message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('message.sender.id != :userId', { userId })
+      .andWhere('message.isRead = :isRead', { isRead: false })
+      .select([
+        'message.id',
+        'message.content',
+        'message.createdAt',
+        'conversation.id',
+        'sender.id',
+        'sender.username'
+      ])
+      .orderBy('message.createdAt', 'DESC')
+      .getRawMany();
+
+    // Transform raw results to match the expected format
+    return conversations.map(msg => ({
+      id: msg.message_id,
+      content: msg.message_content,
+      createdAt: msg.message_createdAt,
+      conversationId: msg.conversation_id,
+      sender: {
+        id: msg.sender_id,
+        username: msg.sender_username
+      }
+    }));
+  }
 }

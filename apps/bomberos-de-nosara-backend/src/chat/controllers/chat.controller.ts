@@ -130,11 +130,16 @@ export class ChatController {
     @Param('conversationId', ParseIntPipe) conversationId: number,
     @Body() body: { userId: number }
   ) {
-    if (body.userId !== req.user.id) {
+    if (body.userId!==req.user.id) {
       throw new BadRequestException('User ID does not match authenticated user');
     }
 
     await this.chatService.markMessagesAsRead(conversationId, req.user.id);
     return { success: true };
+  }
+
+  @Get('unreadMessages')
+  async unreadMessages(@Request() req: { user: User }) {
+    return await this.chatService.getUnreadMessages(req.user.id);
   }
 }

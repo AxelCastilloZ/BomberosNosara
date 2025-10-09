@@ -12,36 +12,42 @@ export interface UnreadMessage {
 }
 
 export const useChatNotifications=() => {
-  const { socket, isConnected }=useSocket();
+  const { socket }=useSocket();
   const { user }=useAuth();
-  const [unreadMessages, setUnreadMessages] = useState<UnreadMessage[]>([]);
+  const [unreadMessages, setUnreadMessages]=useState<UnreadMessage[]>([]);
   const [isDropdownOpen, setIsDropdownOpen]=useState(false);
   const [isLoading, setIsLoading]=useState(true);
 
-  // Update unreadCount whenever unreadMessages changes
   const unreadCount=unreadMessages.length;
 
-  // Toggle dropdown visibility
   const toggleDropdown=useCallback(() => {
     setIsDropdownOpen(prev => !prev);
   }, []);
 
-  // Update messages in state and mark as read in the database
-  const updateUnreadMessages = useCallback(async (messages: UnreadMessage[]) => {
+  const updateUnreadMessages=useCallback(async (messages: UnreadMessage[]) => {
     try {
-      // Update local state
-      setUnreadMessages(messages);
-      
-      // If there are messages to mark as read, send to backend
-      if (messages.length > 0) {
-        await fetch(`${import.meta.env.VITE_API_URL||''}/api/chat/update-message-status`, {
+      setUnreadMessages(prevMessages => {
+        const existingMessages=new Map(prevMessages.map(msg => [msg.id, msg]));
+        const mergedMessages=[
+          ...messages,
+          ...prevMessages.filter(msg => !messages.some(m => m.id===msg.id))
+        ];
+
+        return mergedMessages
+          .sort((a, b) => new Date(b.timestamp).getTime()-new Date(a.timestamp).getTime())
+          .slice(0, 50);
+      });
+
+      if (messages.length>0) {
+        const uniqueMessageIds=Array.from(new Set(messages.map(msg => msg.id)));
+        await fetch(`${import.meta.env.VITE_API_URL||''}/chat/update-message-status`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify({
-            messageIds: messages.map(msg => msg.id),
+            messageIds: uniqueMessageIds,
             isRead: false
           })
         });
@@ -51,15 +57,12 @@ export const useChatNotifications=() => {
     }
   }, []);
 
-  // Mark messages as read
-  const markAsRead = useCallback(async (messageId?: string) => {
+  const markAsRead=useCallback(async (messageId?: string) => {
     try {
-      const messageIds = messageId 
-        ? [messageId]
-        : unreadMessages.map(msg => msg.id);
+      const messageIds=messageId ? [messageId] : unreadMessages.map(msg => msg.id);
+      if (messageIds.length===0) return;
 
-      // Update backend first
-      await fetch(`${import.meta.env.VITE_API_URL||''}/api/chat/update-message-status`, {
+      const response=await fetch(`${import.meta.env.VITE_API_URL||''}/chat/update-message-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -71,162 +74,177 @@ export const useChatNotifications=() => {
         })
       });
 
-      // Then update local state
-      setUnreadMessages(prev => 
-        messageId 
-          ? prev.filter(msg => msg.id !== messageId)
-          : []
+      if (!response.ok) {
+        throw new Error('Failed to update message status');
+      }
+
+      setUnreadMessages(prev =>
+        messageId ? prev.filter(msg => msg.id!==messageId) : []
       );
 
-      // Notify via socket if needed
       if (socket) {
-        socket.emit('markMessagesRead', { messageIds });
+        socket.emit('markMessagesRead', {
+          messageIds,
+          userId: user?.id
+        });
       }
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
-  }, [socket, unreadMessages]);
+  }, [socket, unreadMessages, user?.id]);
 
-  // Handle new message
-  const handleNewMessage = useCallback((message: any) => {
-    const isNotFromCurrentUser = message.senderId !== user?.id;
-    const isForCurrentUser = 
-      (message.recipientId && message.recipientId === user?.id) ||
-      (message.conversationId && message.recipients?.includes(user?.id));
+  const handleNewMessage=useCallback((message: any) => {
+    const isNotFromCurrentUser=message.senderId!==user?.id;
+    const isForCurrentUser=
+      (message.recipientId&&message.recipientId===user?.id)||
+      (message.conversationId&&message.recipients?.includes(user?.id))||
+      (message.role&&message.role===user?.role);
 
-    if (isNotFromCurrentUser && (isForCurrentUser || !message.recipientId)) {
+    if (isNotFromCurrentUser&&(isForCurrentUser||!message.recipientId)) {
+      const newMessage: UnreadMessage={
+        id: message.id||`temp-${Date.now()}`,
+        content: message.content,
+        senderId: message.senderId,
+        senderName: message.senderName||'Usuario',
+        timestamp: message.timestamp? new Date(message.timestamp):new Date(),
+        conversationId: message.conversationId||message.role
+      };
+
       setUnreadMessages(prev => {
-        // Check if we already have this message (in case of duplicates)
-        const messageExists = prev.some(msg => msg.id === message.id);
-        if (messageExists) return prev;
-
-        const newMessage = {
-          id: message.id || Date.now().toString(),
-          content: message.content,
-          senderId: message.senderId,
-          senderName: message.senderName || 'Usuario',
-          timestamp: message.timestamp ? new Date(message.timestamp) : new Date(),
-          conversationId: message.conversationId,
-          isGroup: !!message.conversationId
-        };
-
-        // Add new message and remove any duplicates for the same conversation
-        const updatedMessages = [
-          newMessage,
-          ...prev.filter(msg => 
-            !(msg.conversationId && 
-              msg.conversationId === message.conversationId && 
-              msg.senderId === message.senderId)
-          )
-        ].slice(0, 50); // Keep only the 50 most recent messages
-
-        // Update state and notify backend
-        updateUnreadMessages(updatedMessages);
-
-        // Show desktop notification if applicable
-        if (!isDropdownOpen && window.Notification && Notification.permission === 'granted') {
-          new Notification(`Nuevo mensaje de ${message.senderName || 'Usuario'}`,
-            {
-              body: message.content,
-              icon: '/favicon.ico'
-            }
-          );
-        }
-
-        return updatedMessages;
+        const filtered=prev.filter(msg =>
+          !(msg.id===newMessage.id||
+            (msg.conversationId===newMessage.conversationId&&
+              msg.senderId===newMessage.senderId))
+        );
+        return [newMessage, ...filtered].slice(0, 50);
       });
-    }
-  }, [user?.id, isDropdownOpen]);
 
-  // Fetch pending notifications from the server
-  const fetchPendingNotifications=useCallback(async () => {
+      if (!isDropdownOpen&&window.Notification&&Notification.permission==='granted') {
+        const notification=new Notification(
+          `Nuevo mensaje de ${message.senderName||'Usuario'}`,
+          {
+            body: message.content,
+            icon: '/favicon.ico',
+            tag: `msg-${message.id||message.senderId}-${Date.now()}`
+          }
+        );
+
+        notification.onclick=() => {
+          window.focus();
+          notification.close();
+        };
+      }
+    }
+  }, [user?.id, user?.role, isDropdownOpen]);
+
+  const fetchUnreadMessages=useCallback(async () => {
     if (!user?.id) return;
 
     try {
-      setIsLoading(true);
-      // Call your API to get unread messages
-      const response=await fetch(`${import.meta.env.VITE_API_URL||''}/api/chat/unread-messages`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
+      const response=await fetch(
+        `${import.meta.env.VITE_API_URL||''}/chat/unreadMessages`,
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include'
         }
-      });
+      );
 
-      if (response.ok) {
-        const data=await response.json();
-        const messages=data.messages||[];
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-        setUnreadMessages(messages);
+      const data=await response.json();
 
+      if (data&&Array.isArray(data)) {
+        const formattedMessages=data.map((msg: any) => ({
+          id: msg.id||`temp-${Date.now()}`,
+          content: msg.content,
+          senderId: msg.senderId,
+          senderName: msg.sender?.name||'Usuario',
+          timestamp: msg.createdAt? new Date(msg.createdAt):new Date(),
+          conversationId: msg.conversationId||'direct'
+        }));
+        setUnreadMessages(formattedMessages);
+      } else {
+        setUnreadMessages([]);
       }
     } catch (error) {
       console.error('Error fetching unread messages:', error);
+      setUnreadMessages([]);
     } finally {
       setIsLoading(false);
     }
   }, [user?.id]);
 
-  // Fetch initial unread messages
-  const fetchUnreadMessages = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL || ''}/api/chat/unread-messages`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadMessages(data.messages || []);
-      }
-    } catch (error) {
-      console.error('Error fetching unread messages:', error);
-    }
-  }, [user?.id]);
-
-  // Set up socket listeners and fetch initial notifications
   useEffect(() => {
     if (!socket || !user?.id) return;
 
-    // Fetch initial unread messages
-    fetchUnreadMessages();
+    let isMounted=true;
+    setIsLoading(true);
 
-    // Listen for new messages
-    const onNewMessage = (message: any) => {
+    if (window.Notification&&Notification.permission!=='granted'&&Notification.permission!=='denied') {
+      Notification.requestPermission();
+    }
+
+    const loadUnreadMessages=async () => {
+      try {
+        await fetchUnreadMessages();
+      } catch (error) {
+        console.error('Error loading unread messages:', error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadUnreadMessages();
+
+    const onNewMessage=(message: any) => {
+      if (!isMounted) return;
       handleNewMessage(message);
     };
 
-    // Listen for messages read confirmation
-    const onMessagesRead = (data: { messageIds: string[] }) => {
-      if (data.messageIds) {
-        setUnreadMessages(prev => 
-          prev.filter(msg => !data.messageIds.includes(msg.id))
-        );
-      }
+    const onMessagesRead=(data: { messageIds: string[], userId?: string|number }) => {
+      if (!isMounted||!data.messageIds||(data.userId&&data.userId!==user?.id)) return;
+      setUnreadMessages(prev => prev.filter(msg => !data.messageIds.includes(msg.id)));
+    };
+
+    const onMessageStatusUpdate=(data: { messageId: string, isRead: boolean }) => {
+      if (!isMounted||!data.isRead) return;
+      setUnreadMessages(prev => prev.filter(msg => msg.id!==data.messageId));
     };
 
     socket.on('newMessage', onNewMessage);
     socket.on('messagesRead', onMessagesRead);
+    socket.on('messageStatusUpdate', onMessageStatusUpdate);
 
-    // Cleanup
     return () => {
+      isMounted=false;
       socket.off('newMessage', onNewMessage);
       socket.off('messagesRead', onMessagesRead);
+      socket.off('messageStatusUpdate', onMessageStatusUpdate);
     };
   }, [socket, user?.id, handleNewMessage, fetchUnreadMessages]);
 
+  const hasUnreadMessages=useCallback((conversationId?: string) => {
+    if (!conversationId) return false;
+    return unreadMessages.some(msg => msg.conversationId===conversationId);
+  }, [unreadMessages]);
+
   return {
     unreadCount,
-    unreadMessages,
+    unreadMessages: [...unreadMessages].sort(
+      (a, b) => new Date(b.timestamp).getTime()-new Date(a.timestamp).getTime()
+    ),
     isDropdownOpen,
+    isLoading,
     toggleDropdown,
     markAsRead,
-    closeDropdown: () => setIsDropdownOpen(false)
+    closeDropdown: () => setIsDropdownOpen(false),
+    hasUnreadMessages
   };
 };

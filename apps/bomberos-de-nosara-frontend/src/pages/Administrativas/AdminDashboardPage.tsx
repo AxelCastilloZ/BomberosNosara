@@ -44,7 +44,7 @@ export default function AdminDashboardPage() {
     markAsRead,
     closeDropdown
   }=useChatNotifications();
-
+  console.log(unreadMessages)
   // Function to navigate to chat with specific conversation
   const navigateToChat=useCallback((conversationId: string, messageId?: string) => {
     const params=new URLSearchParams();
