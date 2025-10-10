@@ -38,6 +38,12 @@ export class NoticiaController {
     return this.noticiaService.findOne(id);
   }
 
+  //Endpoint para auditoría, ver todas las noticias eliminadas
+  @Get('deleted/all')
+  findAllDeleted() {
+    return this.noticiaService.findAllDeleted();
+  }
+
   @Put(':id')
   update(@Param('id') id: number, @Body() dto: UpdateNoticiaDto) {
     console.log(dto);

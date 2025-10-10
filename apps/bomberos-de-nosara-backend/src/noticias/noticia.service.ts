@@ -36,6 +36,9 @@ export class NoticiaService {
   ): Promise<{ data: Noticia[]; total: number; page: number; limit: number }> {
     const query = this.noticiaRepository.createQueryBuilder('noticia');
 
+    // Filtrar eliminadas (soft delete)
+    query.where('noticia.deletedAt IS NULL');
+
     if (search) {
       query.andWhere(
         '(noticia.titulo LIKE :search OR noticia.descripcion LIKE :search)',
@@ -84,8 +87,23 @@ export class NoticiaService {
         throw new BadRequestException('Error al eliminar la imagen');
       }
     }
-    const result = await this.noticiaRepository.delete(id);
-    if (result.affected === 0)
+    const result = await this.noticiaRepository.softDelete(id);
+    if (result.affected === 0) {
       throw new NotFoundException(`Noticia with ID ${id} not found`);
+    }
+    this.logger.log(
+      `Noticia con id: ${id} eliminada exitosamente (soft delete)`,
+    );
+  }
+
+  // Método para auditoría - ver noticias eliminadas
+  async findAllDeleted(): Promise<Noticia[]> {
+    return this.noticiaRepository
+      .find({
+        where: {},
+        withDeleted: true,
+        order: { deletedAt: 'DESC' },
+      })
+      .then((all) => all.filter((n) => n.deletedAt !== null));
   }
 }
