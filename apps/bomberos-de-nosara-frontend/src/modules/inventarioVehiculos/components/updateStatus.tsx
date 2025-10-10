@@ -1,13 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import type { Vehicle, EstadoVehiculo } from '../../../types/vehiculo.types';
 import type { UpdateStatusProps } from '../types';
 import { useVehiculos, useActualizarEstadoVehiculo, useDarDeBajaVehiculo } from '../hooks/useVehiculos';
 import { ESTADOS_DISPONIBLES } from '../utils/vehiculoConstants';
 
 export default function UpdateStatus({ vehiculo, onClose }: UpdateStatusProps) {
-  const { data: vehicles = [] } = useVehiculos();
+  const { data: vehiclesResponse = [] } = useVehiculos();
   const actualizarEstado = useActualizarEstadoVehiculo();
   const darDeBaja = useDarDeBajaVehiculo();
+
+  // Extraer el array de vehículos correctamente
+  const vehicles: Vehicle[] = useMemo(() => {
+    if (Array.isArray(vehiclesResponse)) {
+      return vehiclesResponse;
+    }
+    if (vehiclesResponse && 'data' in vehiclesResponse) {
+      return vehiclesResponse.data;
+    }
+    return [];
+  }, [vehiclesResponse]);
 
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehicle | undefined>(vehiculo);
   const [estado, setEstado] = useState<EstadoVehiculo | ''>(vehiculo?.estadoActual || '');

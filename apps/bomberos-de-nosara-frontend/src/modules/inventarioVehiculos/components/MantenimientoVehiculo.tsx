@@ -10,62 +10,59 @@ export default function MantenimientoVehiculo({ onBack }: MantenimientoVehiculoP
 
   const volver = () => setSubView('inicio');
 
+  if (subView === 'registrar') {
+    return <RecordMaintenance onClose={volver} />;
+  }
+
+  if (subView === 'programar') {
+    return <ScheduleMaintenance onClose={volver} />;
+  }
+
+  if (subView === 'historial') {
+    return <HistorialMantenimientos onClose={volver} />;
+  }
+
   return (
-    <div className="max-w-5xl mx-auto bg-white border border-gray-300 shadow rounded-lg p-6">
-      {subView === 'inicio' && (
-        <>
-          <h2 className="text-2xl font-bold text-red-800 mb-2">Mantenimiento de Vehículos</h2>
-          <p className="text-sm text-gray-600 mb-6">Selecciona una acción para continuar:</p>
+    <div className="max-w-6xl mx-auto">
+      <div className="mb-10">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Mantenimiento de Vehículos</h2>
+        <p className="text-gray-500">Selecciona una acción para continuar</p>
+      </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div
-              onClick={() => setSubView('registrar')}
-              className="cursor-pointer border border-gray-300 rounded-lg p-6 hover:shadow-md hover:border-red-500 transition"
-            >
-              <ClipboardList className="h-8 w-8 text-red-600 mb-2" />
-              <h3 className="text-lg font-semibold text-gray-800">Registrar</h3>
-              <p className="text-sm text-gray-600">Añadir mantenimiento ya realizado</p>
-            </div>
-
-            <div
-              onClick={() => setSubView('programar')}
-              className="cursor-pointer border border-gray-300 rounded-lg p-6 hover:shadow-md hover:border-red-500 transition"
-            >
-              <CalendarClock className="h-8 w-8 text-red-600 mb-2" />
-              <h3 className="text-lg font-semibold text-gray-800">Programar</h3>
-              <p className="text-sm text-gray-600">Agendar próximo mantenimiento</p>
-            </div>
-
-            <div
-              onClick={() => setSubView('historial')}
-              className="cursor-pointer border border-gray-300 rounded-lg p-6 hover:shadow-md hover:border-red-500 transition"
-            >
-              <History className="h-8 w-8 text-red-600 mb-2" />
-              <h3 className="text-lg font-semibold text-gray-800">Historial</h3>
-              <p className="text-sm text-gray-600">Ver registros anteriores</p>
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <button
+          onClick={() => setSubView('registrar')}
+          className="bg-white rounded-2xl p-10 hover:shadow-xl transition-all duration-300 group border border-gray-100"
+        >
+          <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-red-100 transition-colors">
+            <ClipboardList className="h-8 w-8 text-red-600" />
           </div>
-
-          <div className="flex justify-end mt-6">
-            <button
-              onClick={onBack}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-            >
-              Volver
-            </button>
-          </div>
-        </>
-      )}
-
-      {subView !== 'inicio' && (
-        <button onClick={volver} className="text-sm text-blue-600 hover:underline mb-4">
-          ← Volver al menú de mantenimiento
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Registrar</h3>
+          <p className="text-sm text-gray-500">Añadir mantenimiento realizado</p>
         </button>
-      )}
 
-      {subView === 'registrar' && <RecordMaintenance onClose={volver} />}
-      {subView === 'programar' && <ScheduleMaintenance onClose={volver} />}
-      {subView === 'historial' && <HistorialMantenimientos onClose={volver} />}
+        <button
+          onClick={() => setSubView('programar')}
+          className="bg-white rounded-2xl p-10 hover:shadow-xl transition-all duration-300 group border border-gray-100"
+        >
+          <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-red-100 transition-colors">
+            <CalendarClock className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Programar</h3>
+          <p className="text-sm text-gray-500">Agendar próximo mantenimiento</p>
+        </button>
+
+        <button
+          onClick={() => setSubView('historial')}
+          className="bg-white rounded-2xl p-10 hover:shadow-xl transition-all duration-300 group border border-gray-100"
+        >
+          <div className="bg-red-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-red-100 transition-colors">
+            <History className="h-8 w-8 text-red-600" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">Historial</h3>
+          <p className="text-sm text-gray-500">Ver registros anteriores</p>
+        </button>
+      </div>
     </div>
   );
 }

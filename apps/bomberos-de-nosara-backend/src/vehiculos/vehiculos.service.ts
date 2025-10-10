@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 
 import { Vehiculo } from './entities/vehiculo.entity';
 import { Mantenimiento } from './entities/mantenimiento-vehiculo.entity';
@@ -15,6 +15,8 @@ import { EditVehiculoDto } from './dto/edit-vehiculo.dto';
 import { MantenimientoVehiculoDto } from './dto/mantenimiento-vehiculo.dto';
 import { MantenimientoProgramadoVehiculoDto } from './dto/mantenimiento-programado-vehiculo.dto';
 import { ReposicionVehiculoDto } from './dto/reposicion-vehiculo.dto';
+import { PaginatedVehiculoQueryDto } from './dto/paginated-query.dto';
+import { PaginatedVehiculoResponseDto } from './dto/paginated-response.dto';
 import { EstadoVehiculo } from './enums/vehiculo-bomberil.enums';
 
 @Injectable()
@@ -109,6 +111,45 @@ export class VehiculosService {
     return this.vehiculoRepo.find();
   }
 
+  async findAllPaginated(query: PaginatedVehiculoQueryDto): Promise<PaginatedVehiculoResponseDto> {
+    const { page = 1, limit = 10, search, status, type } = query;
+
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (search) {
+      where.placa = Like(`%${search}%`);
+    }
+
+    if (status) {
+      where.estadoActual = status;
+    }
+
+    if (type) {
+      where.tipo = type;
+    }
+
+    const [data, total] = await this.vehiculoRepo.findAndCount({
+      where,
+      skip,
+      take: limit,
+      order: {
+        createdAt: 'DESC',
+      },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages,
+    };
+  }
+
   async findOne(id: string): Promise<Vehiculo> {
     const v = await this.vehiculoRepo.findOne({ where: { id } });
     if (!v) throw new NotFoundException('Vehículo no encontrado');
@@ -171,16 +212,18 @@ export class VehiculosService {
     return await this.vehiculoRepo.save(vehiculo);
   }
 
-  async updateEstado(id: string, estadoActual: Vehiculo['estadoActual']): Promise<Vehiculo> {
+  async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
     vehiculo.estadoActual = estadoActual;
+    vehiculo.updatedBy = userId;
     return this.vehiculoRepo.save(vehiculo);
   }
 
-  async darDeBaja(id: string, motivo: string): Promise<Vehiculo> {
+  async darDeBaja(id: string, motivo: string, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
     vehiculo.estadoActual = EstadoVehiculo.BAJA;
     vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | Baja: ${motivo}`.trim();
+    vehiculo.updatedBy = userId;
     return this.vehiculoRepo.save(vehiculo);
   }
 
@@ -189,26 +232,39 @@ export class VehiculosService {
   async softDelete(id: string, userId: number): Promise<{ message: string }> {
     const vehiculo = await this.findOne(id);
 
-    // Verificar que no tenga mantenimientos pendientes críticos
-    const mantenimientosPendientes = await this.mantenimientoRepo.count({
+    // Obtener todos los mantenimientos registrados
+    const mantenimientosRegistrados = await this.mantenimientoRepo.find({
       where: { vehiculo: { id } }
     });
 
-    if (mantenimientosPendientes > 0) {
-      throw new BadRequestException({
-        code: 'HAS_PENDING_MAINTENANCE',
-        message: 'No se puede eliminar un vehículo con mantenimientos pendientes',
-      });
+    // Eliminar en cascada todos los mantenimientos registrados
+    if (mantenimientosRegistrados.length > 0) {
+      for (const mantenimiento of mantenimientosRegistrados) {
+        mantenimiento.deletedBy = userId;
+        await this.mantenimientoRepo.save(mantenimiento);
+        await this.mantenimientoRepo.softDelete(mantenimiento.id);
+      }
     }
 
-    // Marcar como eliminado con auditoría
+    // Eliminar el vehículo (el campo fechaProximoMantenimiento se pierde con el soft delete)
     vehiculo.deletedBy = userId;
     await this.vehiculoRepo.save(vehiculo);
-
-    // Soft delete
     await this.vehiculoRepo.softDelete(id);
 
-    return { message: 'Vehículo eliminado correctamente' };
+    // Mensaje informativo
+    const detalles = [];
+    if (mantenimientosRegistrados.length > 0) {
+      detalles.push(`${mantenimientosRegistrados.length} mantenimiento(s) registrado(s)`);
+    }
+    if (vehiculo.fechaProximoMantenimiento) {
+      detalles.push('mantenimiento programado');
+    }
+
+    const mensaje = detalles.length > 0
+      ? `Vehículo eliminado correctamente junto con ${detalles.join(' y ')}`
+      : 'Vehículo eliminado correctamente';
+
+    return { message: mensaje };
   }
 
   async restore(id: string, userId: number): Promise<Vehiculo> {
@@ -228,48 +284,91 @@ export class VehiculosService {
       });
     }
 
-    // Restaurar
+    // Restaurar mantenimientos eliminados en cascada
+    const mantenimientosEliminados = await this.mantenimientoRepo.find({
+      where: { vehiculo: { id } },
+      withDeleted: true
+    });
+
+    const mantenimientosARestaurar = mantenimientosEliminados.filter(m => m.deletedAt);
+
+    if (mantenimientosARestaurar.length > 0) {
+      for (const mantenimiento of mantenimientosARestaurar) {
+        await this.mantenimientoRepo.restore(mantenimiento.id);
+        mantenimiento.updatedBy = userId;
+        mantenimiento.deletedBy = null;
+        await this.mantenimientoRepo.save(mantenimiento);
+      }
+    }
+
+    // Restaurar el vehículo
     await this.vehiculoRepo.restore(id);
 
-    // Actualizar auditoría
     vehiculo.updatedBy = userId;
     vehiculo.deletedBy = null;
-    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | RESTAURADO por usuario ${userId}`.trim();
+    
+    const mensajeRestauracion = mantenimientosARestaurar.length > 0
+      ? `RESTAURADO por usuario ${userId} junto con ${mantenimientosARestaurar.length} mantenimiento(s)`
+      : `RESTAURADO por usuario ${userId}`;
+    
+    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | ${mensajeRestauracion}`.trim();
 
     return await this.vehiculoRepo.save(vehiculo);
   }
 
   // ----------------- REPOSICIÓN -----------------
   
-  async registrarReposicion(id: string, dto: ReposicionVehiculoDto): Promise<Vehiculo> {
+  async registrarReposicion(id: string, dto: ReposicionVehiculoDto, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
     vehiculo.reposicionSolicitada = true;
     vehiculo.motivoReposicion = dto.motivo;
     vehiculo.observacionesReposicion = dto.observaciones;
+    vehiculo.updatedBy = userId;
     return this.vehiculoRepo.save(vehiculo);
   }
 
   // ----------------- MANTENIMIENTOS -----------------
   
-  async registrarMantenimiento(id: string, dto: MantenimientoVehiculoDto): Promise<Mantenimiento> {
+  async registrarMantenimiento(id: string, dto: MantenimientoVehiculoDto, userId: number): Promise<Mantenimiento> {
     const vehiculo = await this.findOne(id);
 
     vehiculo.kilometraje = dto.kilometraje;
     vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | Mantenimiento: ${dto.descripcion}`.trim();
+    vehiculo.updatedBy = userId;
     await this.vehiculoRepo.save(vehiculo);
 
     const registro = this.mantenimientoRepo.create({
       ...dto,
       fecha: new Date(dto.fecha),
       vehiculo,
+      createdBy: userId,
+      updatedBy: userId,
     });
     
     return this.mantenimientoRepo.save(registro);
   }
 
-  async programarMantenimiento(id: string, dto: MantenimientoProgramadoVehiculoDto): Promise<Vehiculo> {
+  async programarMantenimiento(id: string, dto: MantenimientoProgramadoVehiculoDto, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
     vehiculo.fechaProximoMantenimiento = new Date(dto.fechaProximoMantenimiento);
+    vehiculo.updatedBy = userId;
+    return this.vehiculoRepo.save(vehiculo);
+  }
+
+  async cancelarMantenimientoProgramado(id: string, userId: number): Promise<Vehiculo> {
+    const vehiculo = await this.findOne(id);
+    
+    if (!vehiculo.fechaProximoMantenimiento) {
+      throw new BadRequestException({
+        code: 'NO_SCHEDULED_MAINTENANCE',
+        message: 'El vehículo no tiene mantenimiento programado',
+      });
+    }
+
+    vehiculo.fechaProximoMantenimiento = undefined;
+    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | Mantenimiento programado cancelado`.trim();
+    vehiculo.updatedBy = userId;
+    
     return this.vehiculoRepo.save(vehiculo);
   }
 
@@ -278,6 +377,52 @@ export class VehiculosService {
       where: { vehiculo: { id } },
       order: { fecha: 'DESC' },
     });
+  }
+
+  // ----------------- MANTENIMIENTOS - SOFT DELETE Y RESTAURACIÓN -----------------
+
+  async softDeleteMantenimiento(id: string, userId: number): Promise<{ message: string }> {
+    const mantenimiento = await this.mantenimientoRepo.findOne({ where: { id } });
+    
+    if (!mantenimiento) {
+      throw new NotFoundException('Mantenimiento no encontrado');
+    }
+
+    // Marcar como eliminado con auditoría
+    mantenimiento.deletedBy = userId;
+    await this.mantenimientoRepo.save(mantenimiento);
+
+    // Soft delete
+    await this.mantenimientoRepo.softDelete(id);
+
+    return { message: 'Mantenimiento eliminado correctamente' };
+  }
+
+  async restoreMantenimiento(id: string, userId: number): Promise<Mantenimiento> {
+    const mantenimiento = await this.mantenimientoRepo.findOne({
+      where: { id },
+      withDeleted: true
+    });
+
+    if (!mantenimiento) {
+      throw new NotFoundException('Mantenimiento no encontrado');
+    }
+
+    if (!mantenimiento.deletedAt) {
+      throw new BadRequestException({
+        code: 'NOT_DELETED',
+        message: 'El mantenimiento no está eliminado',
+      });
+    }
+
+    // Restaurar
+    await this.mantenimientoRepo.restore(id);
+
+    // Actualizar auditoría
+    mantenimiento.updatedBy = userId;
+    mantenimiento.deletedBy = null;
+
+    return await this.mantenimientoRepo.save(mantenimiento);
   }
 
   // ----------------- UTILIDADES -----------------
