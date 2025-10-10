@@ -7,6 +7,7 @@ import {
   Delete,
   Param, 
   Body,
+  Query,
   UseGuards 
 } from '@nestjs/common';
 import { VehiculosService } from './vehiculos.service';
@@ -15,6 +16,7 @@ import { EditVehiculoDto } from './dto/edit-vehiculo.dto';
 import { MantenimientoVehiculoDto } from './dto/mantenimiento-vehiculo.dto';
 import { MantenimientoProgramadoVehiculoDto } from './dto/mantenimiento-programado-vehiculo.dto';
 import { ReposicionVehiculoDto } from './dto/reposicion-vehiculo.dto';
+import { PaginatedVehiculoQueryDto } from './dto/paginated-query.dto';
 import { EstadoVehiculo } from './enums/vehiculo-bomberil.enums';
 
 // Imports para autenticación y autorización
@@ -32,7 +34,12 @@ export class VehiculosController {
   // ================= OPERACIONES BÁSICAS CRUD =================
 
   @Get()
-  findAll() {
+  findAll(@Query() query: PaginatedVehiculoQueryDto) {
+    // Si viene algún parámetro de paginación o filtro, usa el método paginado
+    if (query.page || query.limit || query.search || query.status || query.type) {
+      return this.service.findAllPaginated(query);
+    }
+    // Si no viene nada, devuelve todos (para mantener compatibilidad)
     return this.service.findAll();
   }
 
@@ -113,8 +120,12 @@ export class VehiculosController {
   // ================= OPERACIONES ESPECIALES =================
 
   @Put(':id/estado')
-  updateEstadoLegacy(@Param('id') id: string, @Body('estadoActual') estado: string) {
-    return this.service.updateEstado(id, estado as any);
+  updateEstadoLegacy(
+    @Param('id') id: string, 
+    @Body('estadoActual') estado: string,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.updateEstado(id, estado as any, userId);
   }
 
   @Patch(':id/dar-de-baja')
@@ -135,8 +146,12 @@ export class VehiculosController {
   @Post(':id/reposicion')
   @UseGuards(RolesGuard)
   @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  registrarReposicion(@Param('id') id: string, @Body() dto: ReposicionVehiculoDto) {
-    return this.service.registrarReposicion(id, dto);
+  registrarReposicion(
+    @Param('id') id: string, 
+    @Body() dto: ReposicionVehiculoDto,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.registrarReposicion(id, dto, userId);
   }
 
   // ================= MANTENIMIENTOS =================
@@ -144,22 +159,66 @@ export class VehiculosController {
   @Put(':id/mantenimiento')
   registrarMantenimiento(
     @Param('id') id: string, 
-    @Body() dto: MantenimientoVehiculoDto | MantenimientoProgramadoVehiculoDto
+    @Body() dto: MantenimientoVehiculoDto | MantenimientoProgramadoVehiculoDto,
+    @GetUser('id') userId: number
   ) {
     if ('fechaProximoMantenimiento' in dto) {
-      return this.service.programarMantenimiento(id, dto as MantenimientoProgramadoVehiculoDto);
+      return this.service.programarMantenimiento(id, dto as MantenimientoProgramadoVehiculoDto, userId);
     } else {
-      return this.service.registrarMantenimiento(id, dto as MantenimientoVehiculoDto);
+      return this.service.registrarMantenimiento(id, dto as MantenimientoVehiculoDto, userId);
     }
   }
 
   @Post(':id/historial')
-  registrarMantenimientoHistorico(@Param('id') id: string, @Body() dto: MantenimientoVehiculoDto) {
-    return this.service.registrarMantenimiento(id, dto);
+  registrarMantenimientoHistorico(
+    @Param('id') id: string, 
+    @Body() dto: MantenimientoVehiculoDto,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.registrarMantenimiento(id, dto, userId);
   }
 
   @Get(':id/historial')
   obtenerHistorial(@Param('id') id: string) {
     return this.service.obtenerHistorial(id);
+  }
+
+  @Delete(':id/mantenimiento-programado')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  cancelarMantenimientoProgramado(
+    @Param('id') id: string,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.cancelarMantenimientoProgramado(id, userId);
+  }
+
+  // ================= MANTENIMIENTOS - SOFT DELETE Y RESTAURACIÓN =================
+
+  @Delete('mantenimiento/:id')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  softDeleteMantenimiento(
+    @Param('id') id: string,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.softDeleteMantenimiento(id, userId);
+  }
+
+  @Post('mantenimiento/:id/restore')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.SUPERUSER)
+  restoreMantenimiento(
+    @Param('id') id: string,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.restoreMantenimiento(id, userId);
+  }
+
+  // ================= UTILIDADES =================
+
+  @Get('placa/:placa/exists')
+  existsByPlaca(@Param('placa') placa: string) {
+    return this.service.existsByPlaca(placa);
   }
 }

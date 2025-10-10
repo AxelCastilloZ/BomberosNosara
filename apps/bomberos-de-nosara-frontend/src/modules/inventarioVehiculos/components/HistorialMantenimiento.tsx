@@ -1,158 +1,597 @@
 import React, { useMemo, useState } from 'react';
-import { Clock, Wrench, FileText, AlertCircle } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  FileText, 
+  Wrench, 
+  ChevronLeft, 
+  ChevronRight, 
+  Info,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  X,
+  Trash2,
+  RotateCcw,
+  AlertTriangle
+} from 'lucide-react';
 import type { HistorialMantenimientosProps, ItemHistorial } from '../types';
-import { useVehiculos, useHistorialVehiculo } from '../hooks/useVehiculos';
+import type { Vehicle } from '../../../types/vehiculo.types';
+import { 
+  useVehiculos, 
+  useHistorialVehiculo,
+  useCancelarMantenimientoProgramado,
+  useDeleteMantenimiento,
+  useRestoreMantenimiento
+} from '../hooks/useVehiculos';
 import { formatMoney, shortDate, formatTypeLabel } from '../utils/vehiculoHelpers';
+import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
+
+const ITEMS_PER_PAGE = 10;
+
+// Tipo extendido para incluir mantenimiento programado
+interface ExtendedHistorial {
+  id: string;
+  fecha: string;
+  descripcion: string;
+  tipo: 'completado' | 'programado';
+  isProgramado?: boolean;
+  tecnico?: string;
+  kilometraje?: number;
+  costo?: number;
+  observaciones?: string;
+  created_by?: number;
+  createdAt?: string | Date;
+  updated_by?: number;
+  updatedAt?: string | Date;
+  deleted_by?: number;
+  deletedAt?: string | Date | null;
+}
 
 export default function HistorialMantenimientos({ onClose }: HistorialMantenimientosProps) {
-  const { data: vehicles = [], isLoading: loadingVehiculos } = useVehiculos();
-
+  const { notifyDeleted, notifyError, notifyUpdated } = useCrudNotifications();
+  const { data: vehiclesResponse = [] } = useVehiculos();
   const [vehiculoId, setVehiculoId] = useState<string>('');
-  const { data: historial = [], isFetching, isError } = useHistorialVehiculo(vehiculoId);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [deleteModalItem, setDeleteModalItem] = useState<ExtendedHistorial | null>(null);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  
+  const { data: historial = [], isFetching } = useHistorialVehiculo(vehiculoId);
+  const cancelarMantenimiento = useCancelarMantenimientoProgramado();
+  const deleteMantenimiento = useDeleteMantenimiento();
+  const restoreMantenimiento = useRestoreMantenimiento();
 
-  const seleccionado = useMemo(
-    () => vehicles.find((v) => v.id === vehiculoId),
-    [vehicles, vehiculoId]
-  );
+  // Extraer el array de vehículos correctamente
+  const vehicles: Vehicle[] = useMemo(() => {
+    if (Array.isArray(vehiclesResponse)) {
+      return vehiclesResponse;
+    }
+    if (vehiclesResponse && 'data' in vehiclesResponse) {
+      return vehiclesResponse.data;
+    }
+    return [];
+  }, [vehiclesResponse]);
 
-  const historialOrdenado: ItemHistorial[] = useMemo(() => {
-    return [...(historial as ItemHistorial[])].sort(
-      (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
-    );
-  }, [historial]);
+  // Obtener el vehículo seleccionado para acceder a fechaProximoMantenimiento
+  const vehiculoSeleccionado = useMemo(() => {
+    return vehicles.find(v => v.id === vehiculoId);
+  }, [vehicles, vehiculoId]);
 
-  const total = useMemo(
-    () => historialOrdenado.reduce((acc, it) => acc + (Number(it.costo) || 0), 0),
+  // Combinar mantenimientos registrados + programado
+  const historialCompleto: ExtendedHistorial[] = useMemo(() => {
+    const registrados: ExtendedHistorial[] = (historial as ItemHistorial[]).map(item => ({
+      id: item.id,
+      fecha: item.fecha,
+      descripcion: item.descripcion,
+      tipo: 'completado' as const,
+      isProgramado: false,
+      tecnico: item.tecnico,
+      kilometraje: item.kilometraje,
+      costo: item.costo,
+      observaciones: item.observaciones,
+      created_by: item.created_by,
+      createdAt: item.createdAt,
+      updated_by: item.updated_by,
+      updatedAt: item.updatedAt,
+      deleted_by: item.deleted_by,
+      deletedAt: item.deletedAt,
+    }));
+
+    // Agregar mantenimiento programado si existe
+    if (vehiculoSeleccionado?.fechaProximoMantenimiento) {
+      const fechaProgramada = new Date(vehiculoSeleccionado.fechaProximoMantenimiento);
+      const hoy = new Date();
+      
+      // Solo mostrar si es fecha futura (pendiente)
+      if (fechaProgramada >= hoy) {
+        registrados.unshift({
+          id: `programado-${vehiculoId}`,
+          fecha: vehiculoSeleccionado.fechaProximoMantenimiento,
+          descripcion: 'Mantenimiento Programado',
+          tipo: 'programado' as const,
+          isProgramado: true,
+          tecnico: '—',
+          kilometraje: vehiculoSeleccionado.kilometraje || 0,
+          costo: 0,
+          observaciones: 'Pendiente de realizar',
+        });
+      }
+    }
+
+    return registrados;
+  }, [historial, vehiculoSeleccionado, vehiculoId]);
+
+  // Filtrar según showDeleted
+  const historialFiltrado = useMemo(() => {
+    if (showDeleted) {
+      return historialCompleto;
+    }
+    return historialCompleto.filter(item => !item.deletedAt);
+  }, [historialCompleto, showDeleted]);
+
+  const historialOrdenado = useMemo(() => {
+    return [...historialFiltrado].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  }, [historialFiltrado]);
+
+  const total = useMemo(() => 
+    historialOrdenado
+      .filter(item => !item.isProgramado && !item.deletedAt)
+      .reduce((acc, it) => acc + (Number(it.costo) || 0), 0), 
     [historialOrdenado]
   );
 
+  // Paginación
+  const totalPages = Math.ceil(historialOrdenado.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedHistorial = historialOrdenado.slice(startIndex, endIndex);
+
+  // Reset página cuando cambia el vehículo
+  const handleVehiculoChange = (newVehiculoId: string) => {
+    setVehiculoId(newVehiculoId);
+    setCurrentPage(1);
+  };
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  // Función para formatear fecha y hora legible
+  const formatDateTime = (dateString: string | Date) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Función para generar el contenido del tooltip
+  const getTooltipContent = (item: ExtendedHistorial) => {
+    if (item.isProgramado) {
+      return 'Mantenimiento pendiente de realizar';
+    }
+
+    const lines = [];
+    
+    if (item.created_by && item.createdAt) {
+      lines.push(`Creado por: Usuario ${item.created_by}`);
+      lines.push(`Fecha creación: ${formatDateTime(item.createdAt)}`);
+    }
+    
+    if (item.updated_by && item.updatedAt) {
+      lines.push(`Modificado por: Usuario ${item.updated_by}`);
+      lines.push(`Fecha modificación: ${formatDateTime(item.updatedAt)}`);
+    }
+    
+    if (item.deletedAt) {
+      lines.push(`Eliminado el: ${formatDateTime(item.deletedAt)}`);
+      if (item.deleted_by) {
+        lines.push(`Eliminado por: Usuario ${item.deleted_by}`);
+      }
+    }
+    
+    return lines.length > 0 ? lines.join('\n') : 'Sin información de auditoría';
+  };
+
+  // Handler para cancelar mantenimiento programado
+  const handleCancelarProgramado = async () => {
+    if (!vehiculoId) return;
+    
+    try {
+      await cancelarMantenimiento.mutateAsync(vehiculoId);
+      notifyUpdated('Mantenimiento programado cancelado');
+      setCancelModalOpen(false);
+    } catch (error: any) {
+      notifyError('cancelar el mantenimiento', error.message);
+    }
+  };
+
+  // Handler para eliminar mantenimiento
+  const handleDeleteMantenimiento = async (item: ExtendedHistorial) => {
+    if (!item.id || item.isProgramado) return;
+    
+    try {
+      await deleteMantenimiento.mutateAsync({ 
+        id: item.id, 
+        vehiculoId 
+      });
+      notifyDeleted('Mantenimiento');
+      setDeleteModalItem(null);
+    } catch (error: any) {
+      notifyError('eliminar el mantenimiento', error.message);
+    }
+  };
+
+  // Handler para restaurar mantenimiento
+  const handleRestoreMantenimiento = async (item: ExtendedHistorial) => {
+    if (!item.id || item.isProgramado) return;
+    
+    try {
+      await restoreMantenimiento.mutateAsync({ 
+        id: item.id, 
+        vehiculoId 
+      });
+      notifyUpdated('Mantenimiento restaurado');
+    } catch (error: any) {
+      notifyError('restaurar el mantenimiento', error.message);
+    }
+  };
+
+  const isLoading = cancelarMantenimiento.isPending || deleteMantenimiento.isPending || restoreMantenimiento.isPending;
+
   return (
-    <div className="max-w-6xl mx-auto bg-white border border-gray-200 shadow rounded-lg p-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-2">Historial de Mantenimientos</h2>
-      <p className="text-sm text-gray-600 mb-6">
-        Consulta los mantenimientos realizados por vehículo.
-      </p>
+    <div className="max-w-7xl mx-auto">
+      <button 
+        onClick={onClose} 
+        className="flex items-center gap-2 mb-8 text-red-600 hover:text-red-700 font-medium transition-colors"
+      >
+        <ArrowLeft className="h-5 w-5" /> Volver al menú de mantenimiento
+      </button>
 
-      {/* Selector de vehículo */}
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Vehículo</label>
-          <select
-            disabled={loadingVehiculos}
-            className="w-full border border-gray-300 rounded px-3 py-2"
-            value={vehiculoId}
-            onChange={(e) => setVehiculoId(e.target.value)}
-          >
-            <option value="">-- Seleccione un vehículo --</option>
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.placa} — {formatTypeLabel(v.tipo)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Resumen rápido */}
-        <div className="border border-gray-300 rounded p-3 bg-slate-50">
-          <div className="text-xs text-slate-500">Resumen</div>
-          <div className="text-sm flex items-center justify-between mt-1">
-            <span className="flex items-center gap-1">
-              <FileText className="w-4 h-4" /> Registros
-            </span>
-            <span className="font-semibold">{historialOrdenado.length}</span>
-          </div>
-          <div className="text-sm flex items-center justify-between mt-1">
-            <span className="flex items-center gap-1">
-              <Wrench className="w-4 h-4" /> Costo acumulado
-            </span>
-            <span className="font-semibold">{formatMoney(total)}</span>
-          </div>
-          {seleccionado && (
-            <div className="text-xs text-slate-500 mt-1">
-              {seleccionado.placa} • {formatTypeLabel(seleccionado.tipo)}
-            </div>
-          )}
-        </div>
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Historial de Mantenimientos</h2>
+        <p className="text-gray-500">Consulta los mantenimientos realizados y programados por vehículo</p>
       </div>
 
-      {/* Estados */}
-      {!vehiculoId && (
-        <div className="border border-gray-300 rounded bg-slate-50 p-4 text-slate-600 flex items-center gap-2">
-          <AlertCircle className="w-5 h-5" />
-          Selecciona un vehículo para ver su historial.
-        </div>
-      )}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+        <div className="flex items-start gap-6">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-900 mb-2">Vehículo</label>
+            <select
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+              value={vehiculoId}
+              onChange={(e) => handleVehiculoChange(e.target.value)}
+            >
+              <option value="">-- Seleccione un vehículo --</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>{v.placa} — {formatTypeLabel(v.tipo)}</option>
+              ))}
+            </select>
+          </div>
 
-      {vehiculoId && isFetching && (
-        <div className="border border-gray-300 rounded bg-slate-50 p-4 text-slate-600 flex items-center gap-2">
-          <Clock className="w-5 h-5 animate-pulse" />
-          Cargando historial…
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-xl p-4 min-w-[140px]">
+              <div className="flex items-center gap-2 text-gray-500 mb-1">
+                <FileText className="w-4 h-4" />
+                <span className="text-xs font-medium">Registros</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{historialOrdenado.filter(h => !h.isProgramado).length}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4 min-w-[140px]">
+              <div className="flex items-center gap-2 text-gray-500 mb-1">
+                <Wrench className="w-4 h-4" />
+                <span className="text-xs font-medium">Costo total</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{formatMoney(total)}</p>
+            </div>
+          </div>
         </div>
-      )}
 
-      {vehiculoId && isError && (
-        <div className="border border-gray-300 rounded bg-red-50 p-4 text-red-700">
-          Ocurrió un error al cargar el historial. Intenta nuevamente.
+        {vehiculoId && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showDeleted}
+                onChange={(e) => setShowDeleted(e.target.checked)}
+                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              Mostrar mantenimientos eliminados
+            </label>
+          </div>
+        )}
+      </div>
+
+      {!vehiculoId ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-16 text-center">
+          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">Selecciona un vehículo para ver su historial</p>
         </div>
-      )}
-
-      {/* Tabla */}
-      {vehiculoId && !isFetching && !isError && (
-        historialOrdenado.length > 0 ? (
-          <div className="overflow-auto border border-gray-300 rounded">
-            <table className="min-w-full text-sm">
-              <thead className="bg-slate-100 text-slate-700">
+      ) : isFetching ? (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-16 text-center">
+          <p className="text-gray-500">Cargando historial...</p>
+        </div>
+      ) : historialOrdenado.length > 0 ? (
+        <>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
                 <tr>
-                  <th className="text-left px-4 py-2">Fecha</th>
-                  <th className="text-left px-4 py-2">Descripción</th>
-                  <th className="text-left px-4 py-2">Técnico</th>
-                  <th className="text-right px-4 py-2">Kilometraje</th>
-                  <th className="text-right px-4 py-2">Costo</th>
-                  <th className="text-left px-4 py-2">Observaciones</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Estado</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Fecha</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Descripción</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Técnico</th>
+                  <th className="text-right px-6 py-4 text-sm font-semibold text-gray-700">Kilometraje</th>
+                  <th className="text-right px-6 py-4 text-sm font-semibold text-gray-700">Costo</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Observaciones</th>
+                  <th className="text-center px-6 py-4 text-sm font-semibold text-gray-700">Info</th>
+                  <th className="text-center px-6 py-4 text-sm font-semibold text-gray-700">Acciones</th>
                 </tr>
               </thead>
-              <tbody>
-                {historialOrdenado.map((item) => (
-                  <tr key={item.id} className="border-t">
-                    <td className="px-4 py-2">{shortDate(item.fecha)}</td>
-                    <td className="px-4 py-2">{item.descripcion}</td>
-                    <td className="px-4 py-2">{item.tecnico}</td>
-                    <td className="px-4 py-2 text-right">
-                      {Number(item.kilometraje || 0).toLocaleString()} km
+              <tbody className="divide-y divide-gray-100">
+                {paginatedHistorial.map((item) => (
+                  <tr 
+                    key={item.id} 
+                    className={`hover:bg-gray-50 group ${item.deletedAt ? 'bg-red-50' : ''}`}
+                  >
+                    {/* Estado */}
+                    <td className="px-6 py-4">
+                      {item.deletedAt ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                          <Trash2 className="w-3 h-3" />
+                          Eliminado
+                        </span>
+                      ) : item.isProgramado ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                          <Clock className="w-3 h-3" />
+                          Pendiente
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Completado
+                        </span>
+                      )}
                     </td>
-                    <td className="px-4 py-2 text-right">
-                      {formatMoney(Number(item.costo || 0))}
+
+                    <td className="px-6 py-4 text-sm text-gray-900">{shortDate(item.fecha)}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{item.descripcion}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{item.tecnico || '—'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 text-right">
+                      {item.isProgramado ? '—' : `${Number(item.kilometraje || 0).toLocaleString()} km`}
                     </td>
-                    <td className="px-4 py-2">{item.observaciones || '—'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900 text-right font-medium">
+                      {item.isProgramado ? '—' : formatMoney(Number(item.costo || 0))}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{item.observaciones || '—'}</td>
+                    
+                    {/* Info */}
+                    <td className="px-6 py-4 text-center">
+                      <div className="relative inline-block group/tooltip">
+                        <Info className="w-4 h-4 text-gray-400 hover:text-blue-600 cursor-help transition-colors mx-auto" />
+                        
+                        <div className="invisible group-hover/tooltip:visible opacity-0 group-hover/tooltip:opacity-100 transition-all duration-200 absolute z-10 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-pre-line min-w-[250px] shadow-xl">
+                          {getTooltipContent(item)}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-px">
+                            <div className="border-4 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* Acciones */}
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {item.isProgramado ? (
+                          <button
+                            onClick={() => setCancelModalOpen(true)}
+                            className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                            disabled={isLoading}
+                            title="Cancelar mantenimiento programado"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        ) : item.deletedAt ? (
+                          <button
+                            onClick={() => handleRestoreMantenimiento(item)}
+                            className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            disabled={isLoading}
+                            title="Restaurar mantenimiento"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteModalItem(item)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            disabled={isLoading}
+                            title="Eliminar mantenimiento"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-slate-50">
+              <tfoot className="bg-gray-50">
                 <tr>
-                  <td className="px-4 py-2 font-semibold" colSpan={4}>
-                    Total
-                  </td>
-                  <td className="px-4 py-2 text-right font-semibold">{formatMoney(total)}</td>
-                  <td className="px-4 py-2" />
+                  <td className="px-6 py-4 font-semibold text-gray-900" colSpan={5}>Total (solo completados)</td>
+                  <td className="px-6 py-4 text-right font-bold text-gray-900">{formatMoney(total)}</td>
+                  <td colSpan={3} />
                 </tr>
               </tfoot>
             </table>
           </div>
-        ) : (
-          <div className="border border-gray-300 rounded bg-slate-50 p-4 text-slate-600">
-            No hay registros de mantenimiento para este vehículo.
-          </div>
-        )
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-6 py-4">
+              <div className="text-sm text-gray-600">
+                Mostrando {startIndex + 1} - {Math.min(endIndex, historialOrdenado.length)} de {historialOrdenado.length} registros
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-lg border transition-colors ${
+                    currentPage === 1
+                      ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+
+                <div className="flex gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    const showPage = 
+                      page === 1 || 
+                      page === totalPages || 
+                      (page >= currentPage - 1 && page <= currentPage + 1);
+                    
+                    const showEllipsis = 
+                      (page === currentPage - 2 && currentPage > 3) ||
+                      (page === currentPage + 2 && currentPage < totalPages - 2);
+
+                    if (showEllipsis) {
+                      return <span key={page} className="px-3 py-2 text-gray-400">...</span>;
+                    }
+
+                    if (!showPage) return null;
+
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => goToPage(page)}
+                        className={`min-w-[40px] px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          currentPage === page
+                            ? 'bg-red-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className={`p-2 rounded-lg border transition-colors ${
+                    currentPage === totalPages
+                      ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-16 text-center">
+          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500">No hay registros para este vehículo</p>
+        </div>
       )}
 
-      <div className="flex justify-end mt-6">
-        <button
-          onClick={onClose}
-          className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-        >
-          Volver
-        </button>
-      </div>
+      {/* Modal para cancelar mantenimiento programado */}
+      {cancelModalOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-amber-100 p-3 rounded-full">
+                <Calendar className="w-6 h-6 text-amber-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">
+                Cancelar Mantenimiento
+              </h3>
+            </div>
+
+            <p className="text-gray-700 mb-6 leading-relaxed">
+              ¿Estás seguro de que deseas cancelar el mantenimiento programado para el{' '}
+              <span className="font-semibold">
+                {vehiculoSeleccionado?.fechaProximoMantenimiento && 
+                  new Date(vehiculoSeleccionado.fechaProximoMantenimiento).toLocaleDateString('es-CR')}
+              </span>?
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCancelModalOpen(false)}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors"
+                disabled={isLoading}
+              >
+                Volver
+              </button>
+              <button
+                onClick={handleCancelarProgramado}
+                className={`flex-1 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                  isLoading
+                    ? 'bg-amber-400 cursor-not-allowed'
+                    : 'bg-amber-600 hover:bg-amber-700'
+                }`}
+                disabled={isLoading}
+              >
+                <X className="w-4 h-4" />
+                {isLoading ? 'Cancelando...' : 'Cancelar Mantenimiento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para eliminar mantenimiento registrado */}
+      {deleteModalItem && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-red-100 p-3 rounded-full">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900">
+                Eliminar Mantenimiento
+              </h3>
+            </div>
+
+            <p className="text-gray-700 mb-6 leading-relaxed">
+              ¿Estás seguro de que deseas eliminar el mantenimiento{' '}
+              <span className="font-bold text-red-600">{deleteModalItem.descripcion}</span>{' '}
+              realizado el {shortDate(deleteModalItem.fecha)}?
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteModalItem(null)}
+                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors"
+                disabled={isLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleDeleteMantenimiento(deleteModalItem)}
+                className={`flex-1 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 ${
+                  isLoading
+                    ? 'bg-red-400 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+                disabled={isLoading}
+              >
+                <Trash2 className="w-4 h-4" />
+                {isLoading ? 'Eliminando...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
