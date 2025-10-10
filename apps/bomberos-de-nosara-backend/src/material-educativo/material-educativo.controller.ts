@@ -32,16 +32,19 @@ const MATERIAL_DIR = join(process.cwd(), 'uploads', 'material');
 export class MaterialEducativoController {
   constructor(private readonly service: MaterialEducativoService) {}
 
+  // ✅ Filtros: título, tipo, área
   @Get()
   async findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 10,
-    @Query('search') search = '',
-    @Query('filter') filter = '',
+    @Query('titulo') titulo = '',
+    @Query('tipo') tipo = '',
+    @Query('area') area = '',
   ) {
-    return this.service.findAll(Number(page), Number(limit), search, filter);
+    return this.service.findAll(Number(page), Number(limit), titulo, tipo, area);
   }
 
+  // ✅ Crear material
   @Post()
   @UseInterceptors(
     FileInterceptor('archivo', {
@@ -65,7 +68,17 @@ export class MaterialEducativoController {
     return this.service.create(data, archivoUrl);
   }
 
+  // ✅ Actualizar sin archivo (JSON)
   @Put(':id')
+  async updateJson(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: UpdateMaterialDto,
+  ) {
+    return this.service.update(id, data, undefined);
+  }
+
+  // ✅ Actualizar con archivo (multipart/form-data)
+  @Put(':id/file')
   @UseInterceptors(
     FileInterceptor('archivo', {
       storage: diskStorage({
@@ -80,17 +93,21 @@ export class MaterialEducativoController {
       }),
     }),
   )
-  async update(
+  async updateWithFile(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() archivo: Express.Multer.File,
     @Body() data: UpdateMaterialDto,
   ) {
-    const archivoUrl = archivo
-      ? `/uploads/material/${archivo.filename}`
-      : undefined;
+    // 👇 importante: convierte body JSON si viene como string (NestJS + multer bug)
+    if (typeof data === 'string') {
+      data = JSON.parse(data);
+    }
+
+    const archivoUrl = archivo ? `/uploads/material/${archivo.filename}` : undefined;
     return this.service.update(id, data, archivoUrl);
   }
 
+  // ✅ Descargar archivo
   @Get(':id/download')
   async download(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
     const mat = await this.service.findOneOrFail(id);
@@ -113,6 +130,7 @@ export class MaterialEducativoController {
     return res.sendFile(full);
   }
 
+  // ✅ Eliminar material
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.service.remove(id);

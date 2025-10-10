@@ -18,23 +18,31 @@ export class MaterialEducativoService {
     private readonly repo: Repository<MaterialEducativo>,
   ) {}
 
+  // ✅ Ahora busca solo por título y acepta 'titulo', 'tipo' y 'area' como filtros
   async findAll(
     page = 1,
     limit = 10,
-    search = '',
-    filter = '',
+    titulo = '',
+    tipo = '',
+    area = '',
   ): Promise<{ data: MaterialEducativo[]; total: number }> {
     const qb = this.repo.createQueryBuilder('m');
 
-    if (search) {
-      qb.andWhere(
-        '(LOWER(m.titulo) LIKE :term OR LOWER(m.descripcion) LIKE :term)',
-        { term: `%${search.toLowerCase()}%` },
-      );
+    // 🔍 Buscar solo por título
+    if (titulo && titulo.trim() !== '') {
+      qb.andWhere('LOWER(m.titulo) LIKE :titulo', {
+        titulo: `%${titulo.toLowerCase()}%`,
+      });
     }
 
-    if (filter) {
-      qb.andWhere('m.tipo = :filter', { filter });
+    // 🔹 Filtro por tipo (PDF, Imagen, etc.)
+    if (tipo && tipo.trim() !== '') {
+      qb.andWhere('m.tipo = :tipo', { tipo });
+    }
+
+    // 🆕 Filtro por área
+    if (area && area.trim() !== '') {
+      qb.andWhere('m.area = :area', { area });
     }
 
     const [data, total] = await qb
@@ -71,6 +79,7 @@ export class MaterialEducativoService {
     if (data.titulo !== undefined) material.titulo = data.titulo;
     if (data.descripcion !== undefined) material.descripcion = data.descripcion;
     if (data.tipo !== undefined) material.tipo = data.tipo;
+    if (data.area !== undefined) material.area = data.area;
 
     if (archivoUrl) {
       const ext = extname(archivoUrl).replace('.', '').toLowerCase();

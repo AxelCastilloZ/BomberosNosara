@@ -12,7 +12,8 @@ export const useMaterialEducativo = (
   page: number,
   limit: number,
   search: string,
-  filter: string
+  filter: string,
+  area: string
 ) => {
   const [data, setData] = useState<MaterialResponse>({ data: [], total: 0 });
   const [isLoading, setIsLoading] = useState(true);
@@ -20,8 +21,12 @@ export const useMaterialEducativo = (
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const res = await materialService.getAll(page, limit, search, filter);
-      setData(res); // ✅ { data: [], total: number }
+      // ✅ El hook ahora busca exclusivamente por título
+      const res = await materialService.getAll(page, limit, search, filter, area);
+      setData(res);
+    } catch (error) {
+      console.error('Error al obtener materiales:', error);
+      setData({ data: [], total: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -29,7 +34,7 @@ export const useMaterialEducativo = (
 
   useEffect(() => {
     fetchData();
-  }, [page, limit, search, filter]);
+  }, [page, limit, search, filter, area]);
 
   return { data, isLoading, reload: fetchData };
 };

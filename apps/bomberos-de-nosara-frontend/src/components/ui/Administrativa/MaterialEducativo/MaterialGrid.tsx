@@ -1,55 +1,57 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from "react";
+import { useMaterialEducativo } from "../../../../hooks/useMaterialEducativo";
+import { useUploadMaterial } from "../../../../hooks/useUploadMaterial";
+import { useUpdateMaterial } from "../../../../hooks/useUpdateMaterial";
+import { useDeleteMaterial } from "../../../../hooks/useDeleteMaterial";
+import MaterialCard from "./MaterialCard";
+import UploadMaterialModal from "./UploadMaterialModal";
+import EditMaterialModal from "./EditMaterialModal";
+import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import PreviewMaterialModal from "./PreviewMaterialModal";
+import { materialService } from "../../../../service/materialEducativoService";
+import { downloadBlob, filenameFromContentDisposition } from "../../../../utils/downloadBlob";
+import type { MaterialEducativo } from "../../../../interfaces/MaterialEducativo/material.interface";
 
-// Hooks
-import { useMaterialEducativo } from '../../../../hooks/useMaterialEducativo';
-import { useUploadMaterial } from '../../../../hooks/useUploadMaterial';
-import { useUpdateMaterial } from '../../../../hooks/useUpdateMaterial';
-import { useDeleteMaterial } from '../../../../hooks/useDeleteMaterial';
-
-// Componentes UI
-import MaterialCard from './MaterialCard';
-import MaterialFilterBar from './MaterialFilterBar';
-import UploadMaterialModal from './UploadMaterialModal';
-import EditMaterialModal from './EditMaterialModal';
-import ConfirmDeleteModal from './ConfirmDeleteModal';
-
-// Servicios y utilidades
-import { materialService } from '../../../../service/materialEducativoService';
-import { downloadBlob, filenameFromContentDisposition } from '../../../../utils/downloadBlob';
-
-// Tipos
-import type { MaterialEducativo } from '../../../../interfaces/MaterialEducativo/material.interface';
-
-// ✅ función para generar nombre de archivo si no viene del backend
 function guessFilename(m: MaterialEducativo) {
-  const ext = (m.url.split('.').pop() || 'bin').toLowerCase();
-  const base = (m.titulo || 'material')
-    .replace(/[^\w\s.-]+/g, '')
+  const ext = (m.url.split(".").pop() || "bin").toLowerCase();
+  const base = (m.titulo || "material")
+    .replace(/[^\w\s.-]+/g, "")
     .trim()
-    .replace(/\s+/g, '_');
-  return `${base || 'material'}.${ext}`;
+    .replace(/\s+/g, "_");
+  return `${base || "material"}.${ext}`;
 }
 
 export default function MaterialGrid() {
-  // 🔹 Estados de filtros
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('');
+  // 🔹 Filtros
+  const [area, setArea] = useState("");
 
-  // 🔹 Estados de paginación
+  // 🔹 Búsqueda con debounce
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // 🔹 Paginación
   const [page, setPage] = useState(1);
   const limit = 9;
 
-  const { data, isLoading, reload } = useMaterialEducativo(page, limit, search, filter);
+  const { data, isLoading, reload } = useMaterialEducativo(page, limit, debouncedSearch, "", area);
   const materiales = data?.data || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit) || 1;
 
+  // 🔹 Modales y estados
   const [showUpload, setShowUpload] = useState(false);
   const [editing, setEditing] = useState<MaterialEducativo | null>(null);
   const [toDelete, setToDelete] = useState<MaterialEducativo | null>(null);
-
-  // ✅ notificaciones tipo toast
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+  const [previewing, setPreviewing] = useState<MaterialEducativo | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   useEffect(() => {
     if (toast) {
@@ -59,25 +61,25 @@ export default function MaterialGrid() {
   }, [toast]);
 
   const { upload } = useUploadMaterial(async () => {
-    setToast({ type: 'success', msg: '✅ Material subido con éxito.' });
+    setToast({ type: "success", msg: "✅ Material subido con éxito." });
     reload();
   });
 
   const { update, updateWithFile, isUpdating } = useUpdateMaterial(async () => {
     setEditing(null);
-    setToast({ type: 'success', msg: '✅ Material actualizado con éxito.' });
+    setToast({ type: "success", msg: "✅ Material actualizado con éxito." });
     reload();
   });
 
   const { remove, isDeleting } = useDeleteMaterial(async () => {
     setToDelete(null);
-    setToast({ type: 'success', msg: '✅ Material eliminado con éxito.' });
+    setToast({ type: "success", msg: "✅ Material eliminado con éxito." });
     reload();
   });
 
-  if (isLoading) {
-    return <p className="text-gray-700 text-center py-6">Cargando materiales...</p>;
-  }
+  // ✅ Funciones memorizadas
+  const handleUploadClick = useCallback(() => setShowUpload(true), []);
+  const handleFilterArea = useCallback((a: string) => { setArea(a); setPage(1); }, []);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen relative">
@@ -85,7 +87,7 @@ export default function MaterialGrid() {
       {toast && (
         <div
           className={`fixed top-4 right-4 px-4 py-3 rounded shadow-lg text-white flex items-center justify-between gap-4 z-50 ${
-            toast.type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            toast.type === "success" ? "bg-green-600" : "bg-red-600"
           }`}
         >
           <span>{toast.msg}</span>
@@ -106,33 +108,57 @@ export default function MaterialGrid() {
         Accede a recursos esenciales para la formación y capacitación de Bomberos de Nosara.
       </p>
 
-      {/* Barra de filtros */}
-      <MaterialFilterBar
-        onSearch={(term) => {
-          setSearch(term);
-          setPage(1);
-        }}
-        onFilter={(tipo) => {
-          setFilter(tipo);
-          setPage(1);
-        }}
-        onUploadClick={() => setShowUpload(true)}
-      />
+      {/* 🔍 Barra de búsqueda y filtro */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
+        <div className="relative w-full sm:w-1/3">
+          <input
+            type="text"
+            placeholder="Buscar material por título..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full p-2 pl-10 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          />
+          <svg
+            className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <path
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 21l-6-6m2-5a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"
+            />
+          </svg>
+        </div>
 
-      <UploadMaterialModal
-        isOpen={showUpload}
-        onClose={() => setShowUpload(false)}
-        onSubmit={async (data) => {
-          try {
-            await upload(data);
-          } catch (e: any) {
-            setToast({ type: 'error', msg: e?.message || '❌ Error al subir el material.' });
-          }
-        }}
-      />
+        <select
+          className="border rounded p-2"
+          value={area}
+          onChange={(e) => handleFilterArea(e.target.value)}
+        >
+            <option value="">Todas las áreas</option>
+            <option value="Incendios Forestales">Incendios Forestales</option>
+            <option value="Incendios Industriales">Incendios Industriales</option>
+            <option value="Rescates">Rescates Verticales </option>
+            <option value="Rescate">Rescates Acuáticos </option>
+            <option value="Primeros Auxilios">Primeros Auxilios</option>
+            <option value="Reubicación de Animales">Reubicación de Animales</option>
+        </select>
+
+        <button
+          className="bg-red-500 text-white px-4 py-2 rounded"
+          onClick={handleUploadClick}
+        >
+          ➕ Subir Nuevo Material
+        </button>
+      </div>
 
       {/* Grid */}
-      {materiales.length === 0 ? (
+      {isLoading ? (
+        <p className="text-gray-700 text-center py-6">Cargando materiales...</p>
+      ) : materiales.length === 0 ? (
         <p className="text-center text-gray-600 mt-8">No hay materiales disponibles.</p>
       ) : (
         <>
@@ -143,16 +169,20 @@ export default function MaterialGrid() {
                 material={material}
                 onEdit={setEditing}
                 onDelete={setToDelete}
+                onPreview={setPreviewing}
                 onDownload={async () => {
                   try {
                     const res = await materialService.download(material.id);
-                    const cd = res.headers?.['content-disposition'] as string | undefined;
+                    const cd = res.headers?.["content-disposition"] as string | undefined;
                     const filename =
                       filenameFromContentDisposition(cd) || guessFilename(material);
                     downloadBlob(res.data, filename);
-                    setToast({ type: 'success', msg: '✅ Descarga realizada con éxito.' });
+                    setToast({ type: "success", msg: "✅ Descarga realizada con éxito." });
                   } catch (e: any) {
-                    setToast({ type: 'error', msg: e?.message || '❌ Error al descargar el material.' });
+                    setToast({
+                      type: "error",
+                      msg: e?.message || "❌ Error al descargar el material.",
+                    });
                   }
                 }}
               />
@@ -183,6 +213,18 @@ export default function MaterialGrid() {
       )}
 
       {/* Modales */}
+      <UploadMaterialModal
+        isOpen={showUpload}
+        onClose={() => setShowUpload(false)}
+        onSubmit={async (data) => {
+          try {
+            await upload(data);
+          } catch (e: any) {
+            setToast({ type: "error", msg: e?.message || "❌ Error al subir el material." });
+          }
+        }}
+      />
+
       <EditMaterialModal
         isOpen={!!editing}
         onClose={() => setEditing(null)}
@@ -191,18 +233,19 @@ export default function MaterialGrid() {
           try {
             await update(id, data);
           } catch (e: any) {
-            setToast({ type: 'error', msg: e?.message || '❌ Error al actualizar el material.' });
+            setToast({ type: "error", msg: e?.message || "❌ Error al actualizar el material." });
           }
         }}
         onSubmitWithFile={async (id, data) => {
           try {
             await updateWithFile(id, data);
           } catch (e: any) {
-            setToast({ type: 'error', msg: e?.message || '❌ Error al actualizar el material.' });
+            setToast({ type: "error", msg: e?.message || "❌ Error al actualizar el material." });
           }
         }}
         isSubmitting={isUpdating}
       />
+
       <ConfirmDeleteModal
         isOpen={!!toDelete}
         material={toDelete}
@@ -211,10 +254,27 @@ export default function MaterialGrid() {
           try {
             await remove(id);
           } catch (e: any) {
-            setToast({ type: 'error', msg: e?.message || '❌ Error al eliminar el material.' });
+            setToast({ type: "error", msg: e?.message || "❌ Error al eliminar el material." });
           }
         }}
         isSubmitting={isDeleting}
+      />
+
+      <PreviewMaterialModal
+        isOpen={!!previewing}
+        material={previewing}
+        onClose={() => setPreviewing(null)}
+        onDownload={async (m) => {
+          try {
+            const res = await materialService.download(m.id);
+            const cd = res.headers?.["content-disposition"] as string | undefined;
+            const filename = filenameFromContentDisposition(cd) || guessFilename(m);
+            downloadBlob(res.data, filename);
+            setToast({ type: "success", msg: "✅ Descarga realizada con éxito." });
+          } catch (e: any) {
+            setToast({ type: "error", msg: e?.message || "❌ Error al descargar el material." });
+          }
+        }}
       />
     </div>
   );
