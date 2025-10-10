@@ -3,15 +3,15 @@ import { Noticia } from "apps/bomberos-de-nosara-frontend/src/types/news";
 import { useState } from "react";
 import { z } from "zod";
 
-// 1. Esquema Zod
 const noticiaSchema = z.object({
   titulo: z
     .string()
-    .min(3, "El título debe tener al menos 3 caracteres")
-    .max(100, "El título no puede superar 100 caracteres"),
+    .min(5, "El título debe tener al menos 5 caracteres")
+    .max(60, "El título no puede superar 60 caracteres"),
   descripcion: z
     .string()
-    .min(10, "La descripción debe tener al menos 10 caracteres"),
+    .min(10, "La descripción debe tener al menos 10 caracteres")
+    .max(350, "La descripción no puede superar 350 caracteres"),
   url: z.string().optional(),
   fecha: z
     .string()
@@ -25,14 +25,14 @@ const noticiaSchema = z.object({
 // 2. Tipo inferido
 type NoticiaFormValues = z.infer<typeof noticiaSchema>;
 
-// 3. Props tipadas sin "any"
+// 3. Props tipadas
 interface Props {
   noticia: Noticia | null;
   onClose: () => void;
   onSave: (values: NoticiaFormValues, file?: File | null) => void;
 }
 
-// 4. Componente
+// 4. Componente principal
 export default function NoticiasForm({ noticia, onClose, onSave }: Props) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>(noticia?.url || "");
@@ -76,7 +76,6 @@ export default function NoticiasForm({ noticia, onClose, onSave }: Props) {
           }}
           className="space-y-4"
         >
-          {/* Título */}
           <form.Field
             name="titulo"
             validators={{
@@ -88,24 +87,52 @@ export default function NoticiasForm({ noticia, onClose, onSave }: Props) {
               },
             }}
           >
-            {(field) => (
-              <div>
-                <input
-                  placeholder="Título"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  className="w-full border p-2 rounded"
-                />
-                {field.state.meta.errors?.length > 0 && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {field.state.meta.errors.join(", ")}
-                  </p>
-                )}
-              </div>
-            )}
+            {(field) => {
+              const maxLength = 60;
+              const currentLength = field.state.value.length;
+              const isAtLimit = currentLength >= maxLength;
+
+              return (
+                <div>
+                  <input
+                    placeholder="Título"
+                    value={field.state.value}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= maxLength) {
+                        field.handleChange(val);
+                      }
+                    }}
+                    className={`w-full border p-2 rounded ${
+                      isAtLimit ? "border-red-500" : ""
+                    }`}
+                    maxLength={maxLength}
+                  />
+
+                  <div
+                    className={`text-right text-sm ${
+                      isAtLimit ? "text-red-600 font-semibold" : "text-gray-500"
+                    }`}
+                  >
+                    {currentLength}/{maxLength} caracteres
+                  </div>
+
+                  {field.state.meta.errors?.length > 0 && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
+                  )}
+
+                  {isAtLimit && field.state.meta.errors?.length === 0 && (
+                    <p className="text-red-600 text-sm mt-1">
+                      El título no puede superar {maxLength} caracteres
+                    </p>
+                  )}
+                </div>
+              );
+            }}
           </form.Field>
 
-          {/* Descripción */}
           <form.Field
             name="descripcion"
             validators={{
@@ -118,21 +145,50 @@ export default function NoticiasForm({ noticia, onClose, onSave }: Props) {
               },
             }}
           >
-            {(field) => (
-              <div>
-                <textarea
-                  placeholder="Descripción"
-                  value={field.state.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  className="w-full border p-2 rounded"
-                />
-                {field.state.meta.errors?.length > 0 && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {field.state.meta.errors.join(", ")}
-                  </p>
-                )}
-              </div>
-            )}
+            {(field) => {
+              const maxLength = 350;
+              const currentLength = field.state.value.length;
+              const isAtLimit = currentLength >= maxLength;
+
+              return (
+                <div>
+                  <textarea
+                    placeholder="Descripción"
+                    value={field.state.value}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val.length <= maxLength) {
+                        field.handleChange(val);
+                      }
+                    }}
+                    className={`w-full border p-2 rounded ${
+                      isAtLimit ? "border-red-500" : ""
+                    }`}
+                    maxLength={maxLength}
+                  />
+
+                  <div
+                    className={`text-right text-sm ${
+                      isAtLimit ? "text-red-600 font-semibold" : "text-gray-500"
+                    }`}
+                  >
+                    {currentLength}/{maxLength} caracteres
+                  </div>
+
+                  {field.state.meta.errors?.length > 0 && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {field.state.meta.errors.join(", ")}
+                    </p>
+                  )}
+
+                  {isAtLimit && field.state.meta.errors?.length === 0 && (
+                    <p className="text-red-600 text-sm mt-1">
+                      La descripción no puede superar {maxLength} caracteres
+                    </p>
+                  )}
+                </div>
+              );
+            }}
           </form.Field>
 
           {/* Imagen */}

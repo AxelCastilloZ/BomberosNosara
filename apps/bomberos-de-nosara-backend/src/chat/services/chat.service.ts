@@ -321,4 +321,106 @@ export class ChatService {
 
     return this.conversationRepository.save(conversation);
   }
+
+  /**
+   * Get unread messages for all conversations of a user
+   * @param userId The ID of the user
+   * @returns Array of unread messages with conversation and sender details
+   */
+  async getUnreadMessages(userId: number): Promise<Array<{
+    id: number;
+    content: string;
+    createdAt: Date;
+    conversationId: number;
+    sender: {
+      id: number;
+      username: string;
+    };
+  }>> {
+    // Get all conversations for the user
+    const conversations = await this.conversationRepository
+      .createQueryBuilder('conversation')
+      .innerJoin('conversation.participants', 'participant', 'participant.id = :userId', { userId })
+      .leftJoinAndSelect('conversation.messages', 'message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .where('message.sender.id != :userId', { userId })
+      .andWhere('message.isRead = :isRead', { isRead: false })
+      .select([
+        'message.id',
+        'message.content',
+        'message.createdAt',
+        'conversation.id',
+        'sender.id',
+        'sender.username'
+      ])
+      .orderBy('message.createdAt', 'DESC')
+      .getRawMany();
+
+    // Transform raw results to match the expected format
+    return conversations.map(msg => ({
+      id: msg.message_id,
+      content: msg.message_content,
+      createdAt: msg.message_createdAt,
+      conversationId: msg.conversation_id,
+      sender: {
+        id: msg.sender_id,
+        username: msg.sender_username
+      }
+    }));
+  }
+
+  async markAsRead(messageId: number, userId: number): Promise<Message> {
+    const message = await this.messageRepository.findOne({
+      where: { id: messageId },
+      relations: ['conversation', 'conversation.participants', 'sender']
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    // Verify user is a participant in the conversation
+    const isParticipant = message.conversation.participants.some(p => p.id === userId);
+    if (!isParticipant) {
+      throw new ForbiddenException('Not authorized to mark this message as read');
+    }
+
+    // Only mark as read if not already read and the user is not the sender
+    if (!message.isRead && message.sender.id !== userId) {
+      message.isRead = true;
+      return this.messageRepository.save(message);
+    }
+
+    return message;
+  }
+
+  async markAllAsRead(conversationId: number, userId: number): Promise<{ count: number }> {
+    // Verify user is a participant in the conversation
+    const conversation = await this.conversationRepository.findOne({
+      where: { id: conversationId },
+      relations: ['participants']
+    });
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const isParticipant = conversation.participants.some(p => p.id === userId);
+    if (!isParticipant) {
+      throw new ForbiddenException('Not authorized to mark messages as read in this conversation');
+    }
+
+    // Mark all unread messages in the conversation as read
+    const result = await this.messageRepository
+      .createQueryBuilder('message')
+      .innerJoin('message.sender', 'sender')
+      .update(Message)
+      .set({ isRead: true })
+      .where('message.conversationId = :conversationId', { conversationId })
+      .andWhere('sender.id != :userId', { userId })
+      .andWhere('message.isRead = false')
+      .execute();
+
+    return { count: result.affected || 0 };
+  }
 }
