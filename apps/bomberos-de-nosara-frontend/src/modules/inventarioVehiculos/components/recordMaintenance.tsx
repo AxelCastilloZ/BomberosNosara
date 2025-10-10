@@ -8,17 +8,79 @@ import type { Vehicle } from '../../../types/vehiculo.types';
 import { useVehiculos, useRegistrarMantenimiento } from '../hooks/useVehiculos';
 import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
 
+// Límites de caracteres
+const FIELD_LIMITS = {
+  descripcion: 200,
+  tecnico: 100,
+  observaciones: 500,
+} as const;
+
+// Schema con validaciones mejoradas
 const mantenimientoSchema = z.object({
-  vehiculoId: z.string().min(1, 'Debe seleccionar un vehículo'),
-  fecha: z.string().min(1, 'La fecha es obligatoria').refine(
-    (date) => new Date(date) <= new Date(),
-    'La fecha no puede ser futura'
-  ),
-  descripcion: z.string().min(5, 'Mínimo 5 caracteres').max(200).transform(val => val.trim()),
-  kilometraje: z.coerce.number().int().min(0).max(999999),
-  tecnico: z.string().min(3).max(100).transform(val => val.trim()),
-  costo: z.coerce.number().min(0).max(99999999),
-  observaciones: z.string().max(500).optional().or(z.literal('')),
+  vehiculoId: z.string()
+    .min(1, 'Debe seleccionar un vehículo'),
+
+  fecha: z.string()
+    .min(1, 'La fecha es obligatoria')
+    .refine(
+      (date) => {
+        const inputDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return inputDate <= today;
+      },
+      'La fecha no puede ser futura'
+    ),
+
+  descripcion: z.string()
+    .transform(val => val.trim())
+    .refine(
+      val => val.length > 0,
+      'La descripción es obligatoria y no puede contener solo espacios'
+    )
+    .refine(
+      val => val.length >= 5,
+      'La descripción debe tener al menos 5 caracteres'
+    )
+    .refine(
+      val => val.length <= FIELD_LIMITS.descripcion,
+      `La descripción no puede superar ${FIELD_LIMITS.descripcion} caracteres`
+    ),
+
+  kilometraje: z.coerce
+    .number()
+    .int('Debe ser un número entero')
+    .min(0, 'El kilometraje no puede ser negativo')
+    .max(999999, 'El kilometraje no puede superar 999,999 km'),
+
+  tecnico: z.string()
+    .transform(val => val.trim())
+    .refine(
+      val => val.length > 0,
+      'El técnico es obligatorio y no puede contener solo espacios'
+    )
+    .refine(
+      val => val.length >= 3,
+      'El nombre del técnico debe tener al menos 3 caracteres'
+    )
+    .refine(
+      val => val.length <= FIELD_LIMITS.tecnico,
+      `El nombre del técnico no puede superar ${FIELD_LIMITS.tecnico} caracteres`
+    ),
+
+  costo: z.coerce
+    .number()
+    .min(0, 'El costo no puede ser negativo')
+    .max(99999999, 'El costo no puede superar ₡99,999,999'),
+
+  observaciones: z.string()
+    .optional()
+    .or(z.literal(''))
+    .transform(val => val?.trim() || '')
+    .refine(
+      val => val.length <= FIELD_LIMITS.observaciones,
+      `Las observaciones no pueden superar ${FIELD_LIMITS.observaciones} caracteres`
+    ),
 });
 
 type MantenimientoFormData = z.input<typeof mantenimientoSchema>;
@@ -39,7 +101,12 @@ export default function RecordMaintenance({ vehiculoId, onClose }: RecordMainten
     return [];
   }, [vehiclesResponse]);
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<MantenimientoFormData>({
+  const { 
+    register, 
+    handleSubmit, 
+    watch, 
+    formState: { errors, isSubmitting } 
+  } = useForm<MantenimientoFormData>({
     resolver: zodResolver(mantenimientoSchema),
     mode: 'onBlur',
     defaultValues: {
@@ -53,8 +120,10 @@ export default function RecordMaintenance({ vehiculoId, onClose }: RecordMainten
     },
   });
 
-  const observaciones = watch('observaciones');
-  const obsLen = (observaciones ?? '').length;
+  // Watch para contadores de caracteres
+  const descripcionValue = watch('descripcion');
+  const tecnicoValue = watch('tecnico');
+  const observacionesValue = watch('observaciones');
 
   const onSubmit = (data: MantenimientoFormData) => {
     registrarMantenimiento.mutate(
@@ -75,7 +144,8 @@ export default function RecordMaintenance({ vehiculoId, onClose }: RecordMainten
           onClose();
         },
         onError: (error: any) => {
-          notifyError('registrar mantenimiento', error?.message || 'Error');
+          const message = error?.message || error?.response?.data?.message || 'Error al registrar mantenimiento';
+          notifyError('registrar mantenimiento', message);
         }
       }
     );
@@ -143,6 +213,8 @@ export default function RecordMaintenance({ vehiculoId, onClose }: RecordMainten
                 <input
                   type="number"
                   min="0"
+                  max="999999"
+                  step="1"
                   {...register('kilometraje', { valueAsNumber: true })}
                   className={`w-full border rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 ${
                     errors.kilometraje ? 'border-red-300 bg-red-50' : 'border-gray-200'
@@ -161,12 +233,16 @@ export default function RecordMaintenance({ vehiculoId, onClose }: RecordMainten
                 </label>
                 <input
                   type="text"
+                  maxLength={FIELD_LIMITS.descripcion}
                   {...register('descripcion')}
                   className={`w-full border rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 ${
                     errors.descripcion ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
                   placeholder="Cambio de aceite"
                 />
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {descripcionValue?.length || 0} / {FIELD_LIMITS.descripcion} caracteres
+                </p>
                 {errors.descripcion && <p className="text-red-600 text-sm mt-1.5">{errors.descripcion.message}</p>}
               </div>
 
@@ -176,12 +252,16 @@ export default function RecordMaintenance({ vehiculoId, onClose }: RecordMainten
                 </label>
                 <input
                   type="text"
+                  maxLength={FIELD_LIMITS.tecnico}
                   {...register('tecnico')}
                   className={`w-full border rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 ${
                     errors.tecnico ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
                   placeholder="Juan Pérez"
                 />
+                <p className="text-xs text-gray-500 mt-1.5">
+                  {tecnicoValue?.length || 0} / {FIELD_LIMITS.tecnico} caracteres
+                </p>
                 {errors.tecnico && <p className="text-red-600 text-sm mt-1.5">{errors.tecnico.message}</p>}
               </div>
             </div>
@@ -196,12 +276,13 @@ export default function RecordMaintenance({ vehiculoId, onClose }: RecordMainten
                 <input
                   type="number"
                   min="0"
+                  max="99999999"
                   step="0.01"
                   {...register('costo', { valueAsNumber: true })}
                   className={`w-full border rounded-xl px-4 py-3 pl-10 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 ${
                     errors.costo ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
-                  placeholder="0"
+                  placeholder="0.00"
                 />
               </div>
               {errors.costo && <p className="text-red-600 text-sm mt-1.5">{errors.costo.message}</p>}
@@ -213,14 +294,20 @@ export default function RecordMaintenance({ vehiculoId, onClose }: RecordMainten
                 Observaciones (opcional)
               </label>
               <textarea
+                maxLength={FIELD_LIMITS.observaciones}
                 {...register('observaciones')}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+                className={`w-full border rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                  errors.observaciones ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                }`}
                 rows={3}
                 placeholder="Notas adicionales..."
               />
-              <p className={`text-xs mt-1.5 ${obsLen > 450 ? 'text-orange-500' : 'text-gray-400'}`}>
-                {obsLen}/500 caracteres
+              <p className={`text-xs mt-1.5 ${
+                (observacionesValue?.length || 0) > 450 ? 'text-orange-500' : 'text-gray-500'
+              }`}>
+                {observacionesValue?.length || 0} / {FIELD_LIMITS.observaciones} caracteres
               </p>
+              {errors.observaciones && <p className="text-red-600 text-sm mt-1.5">{errors.observaciones.message}</p>}
             </div>
           </div>
         </div>
