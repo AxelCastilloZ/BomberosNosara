@@ -1,6 +1,6 @@
 import { RoleEnum } from '../../../../types/role.enum';
 
-export type Timeout = ReturnType<typeof setTimeout>;
+export type Timeout=ReturnType<typeof setTimeout>;
 
 export interface User {
   id: number;
@@ -42,8 +42,8 @@ export interface Conversation {
   id: number;
   participants: User[];
   messages: Message[];
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface RoleGroup {
