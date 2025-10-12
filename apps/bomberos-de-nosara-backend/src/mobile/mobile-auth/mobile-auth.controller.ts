@@ -28,7 +28,7 @@ export class MobileAuthController {
 
   @Post('login')
   async login(@Body() dto: LoginCitizenDto) {
-    return this.mobileAuthService.loginCitizen(dto.email, dto.password);
+    return this.mobileAuthService.loginCitizen(dto.username, dto.password);
   }
 
   @Post('complete-profile')

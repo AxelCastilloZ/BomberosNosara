@@ -1,6 +1,8 @@
 import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 import { MobileUsersService } from '../mobile-users/mobile-users.service';
+import { UsersService } from '../../users/users.service';
 import { CreateAnonymousDto } from './dto/create-anonymous.dto';
 import { DeviceLoginDto } from './dto/device-login.dto';
 import { CompleteProfileDto } from './dto/complete-profile.dto';
@@ -9,6 +11,7 @@ import { CompleteProfileDto } from './dto/complete-profile.dto';
 export class MobileAuthService {
   constructor(
     private readonly mobileUsersService: MobileUsersService,
+    private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -108,34 +111,60 @@ export class MobileAuthService {
     };
   }
 
-  // ========== LOGIN CIUDADANO (EMAIL/PASSWORD) ==========
+  // ========== LOGIN CIUDADANO/BOMBERO (USERNAME/PASSWORD) ==========
 
-  async loginCitizen(email: string, password: string) {
-    const mobileUser = await this.mobileUsersService.findByEmail(email);
+  async loginCitizen(username: string, password: string) {
+    // 1. Buscar primero en MobileUser (ciudadanos)
+    const mobileUser = await this.mobileUsersService.findByUsername(username);
     
-    if (!mobileUser) {
+    if (mobileUser) {
+      // Validar contraseña de MobileUser
+      const isValid = await this.mobileUsersService.validatePassword(mobileUser, password);
+      if (!isValid) {
+        throw new UnauthorizedException('Credenciales inválidas');
+      }
+
+      const token = this.generateToken(mobileUser);
+
+      return {
+        access_token: token,
+        user: {
+          id: mobileUser.id,
+          username: mobileUser.username,
+          email: mobileUser.email,
+          isAnonymous: mobileUser.isAnonymous,
+        },
+      };
+    }
+
+    // 2. Si no existe en MobileUser, buscar en User (bomberos)
+    const webUser = await this.usersService.findByUsername(username);
+    
+    if (!webUser) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const isValid = await this.mobileUsersService.validatePassword(mobileUser, password);
-    if (!isValid) {
+    // Validar contraseña de User (bomberos)
+    const isValidWebUser = await bcrypt.compare(password, webUser.password);
+    if (!isValidWebUser) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    const token = this.generateToken(mobileUser);
+    // Generar token para bombero
+    const token = this.generateTokenForWebUser(webUser);
 
     return {
       access_token: token,
       user: {
-        id: mobileUser.id,
-        username: mobileUser.username,
-        email: mobileUser.email,
-        isAnonymous: mobileUser.isAnonymous,
+        id: webUser.id,
+        username: webUser.username,
+        email: webUser.email,
+        isAnonymous: false,
       },
     };
   }
 
-  // ========== GENERAR TOKEN ==========
+  // ========== GENERAR TOKEN (MobileUser) ==========
 
   private generateToken(mobileUser: any) {
     const payload = {
@@ -144,7 +173,21 @@ export class MobileAuthService {
       roles: ['CITIZEN'],
       isAnonymous: mobileUser.isAnonymous,
       deviceId: mobileUser.deviceId,
-      isMobileUser: true, // Flag para distinguir de User web
+      isMobileUser: true,
+    };
+
+    return this.jwtService.sign(payload);
+  }
+
+  // ========== GENERAR TOKEN (User web - Bomberos) ==========
+
+  private generateTokenForWebUser(webUser: any) {
+    const payload = {
+      sub: webUser.id,
+      username: webUser.username,
+      roles: webUser.roles?.map((r: any) => r.name) || ['BOMBERO'],
+      isAnonymous: false,
+      isMobileUser: false,
     };
 
     return this.jwtService.sign(payload);

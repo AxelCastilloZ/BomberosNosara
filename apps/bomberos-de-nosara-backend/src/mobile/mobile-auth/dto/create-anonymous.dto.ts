@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsObject } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
 export class CreateAnonymousDto {
   @IsString()
@@ -6,11 +6,5 @@ export class CreateAnonymousDto {
   deviceId!: string;
 
   @IsOptional()
-  @IsObject()
-  deviceInfo?: {
-    platform: string;
-    model?: string;
-    osVersion?: string;
-    appVersion?: string;
-  };
+  deviceInfo?: any; // ← Sin validación estricta
 }
