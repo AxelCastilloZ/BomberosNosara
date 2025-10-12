@@ -87,6 +87,14 @@ export interface ItemHistorial {
   tecnico: string;
   costo: number;
   observaciones?: string;
+  
+  // Campos de auditoría
+  created_by?: number;
+  createdAt?: string | Date;
+  updated_by?: number;
+  updatedAt?: string | Date;
+  deleted_by?: number;
+  deletedAt?: string | Date;
 }
 
 // Constantes y opciones específicas del módulo

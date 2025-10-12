@@ -1,10 +1,96 @@
 // src/modules/inventarioVehiculos/components/addVehiculo.tsx
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { vehiculoCreateSchema, type VehiculoFormData } from '../../../components/common/schemas/vehiculos.validations';
+import { z } from 'zod';
 import { useAddVehiculo } from '../hooks/useVehiculos';
 import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
-import { TIPO_OPTIONS, ESTADO_OPTIONS, OBS_MAX, getTodayISO } from '../utils/vehiculoConstants';
+import { TIPO_OPTIONS, ESTADO_OPTIONS, getTodayISO } from '../utils/vehiculoConstants';
+
+// Límites de caracteres
+const FIELD_LIMITS = {
+  placa: 50,
+  fotoUrl: 500,
+} as const;
+
+// Schema con validaciones mejoradas
+const vehiculoCreateSchema = z.object({
+  placa: z.string()
+    .transform(val => val.trim())
+    .refine(
+      val => val.length > 0,
+      'La placa es obligatoria y no puede contener solo espacios'
+    )
+    .refine(
+      val => val.length >= 3,
+      'La placa debe tener al menos 3 caracteres'
+    )
+    .refine(
+      val => val.length <= 50,
+      'La placa no puede superar 50 caracteres'
+    ),
+
+  tipo: z.string()
+    .min(1, 'Debe seleccionar un tipo de vehículo'),
+
+  estadoInicial: z.string()
+    .min(1, 'El estado inicial es obligatorio'),
+
+  estadoActual: z.string()
+    .min(1, 'El estado actual es obligatorio'),
+
+  fechaAdquisicion: z.string()
+    .min(1, 'La fecha de adquisición es obligatoria')
+    .refine(
+      (date) => {
+        const inputDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return inputDate <= today;
+      },
+      'La fecha de adquisición no puede ser futura'
+    ),
+
+  kilometraje: z.coerce
+    .number()
+    .int('Debe ser un número entero')
+    .min(0, 'El kilometraje no puede ser negativo')
+    .max(999999, 'El kilometraje no puede superar 999,999 km'),
+
+  fotoUrl: z.string()
+    .optional()
+    .or(z.literal(''))
+    .transform(val => val?.trim() || '')
+    .refine(
+      (val) => !val || z.string().url().safeParse(val).success,
+      'Debe ser una URL válida'
+    ),
+}).refine(
+  (data) => {
+    // Validación: Si es nuevo, kilometraje debe ser 0
+    if (data.estadoInicial === 'nuevo' && data.kilometraje !== 0) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Un vehículo nuevo debe tener kilometraje de 0 km',
+    path: ['kilometraje'],
+  }
+).refine(
+  (data) => {
+    // Validación: Si es usado, kilometraje debe ser mayor a 0
+    if (data.estadoInicial === 'usado' && data.kilometraje === 0) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: 'Un vehículo usado debe tener kilometraje mayor a 0 km',
+    path: ['kilometraje'],
+  }
+);
+
+type VehiculoFormData = z.input<typeof vehiculoCreateSchema>;
 
 export default function AddVehiculo({ onSuccess }: { onSuccess?: () => void }) {
   const {
@@ -24,18 +110,18 @@ export default function AddVehiculo({ onSuccess }: { onSuccess?: () => void }) {
       fechaAdquisicion: '',
       kilometraje: 0,
       fotoUrl: '',
-      observaciones: '',
     },
   });
 
   const addVehiculo = useAddVehiculo();
   const { notifyCreated, notifyError } = useCrudNotifications();
 
-  const obsLen = (watch('observaciones') ?? '').length;
   const todayISO = getTodayISO();
+  const fotoUrlValue = watch('fotoUrl');
+  const placaValue = watch('placa');
+  const estadoInicialValue = watch('estadoInicial');
 
   const onSubmit = (data: VehiculoFormData) => {
-    // Preparar los datos en el formato que espera la API
     const payload = {
       placa: data.placa,
       tipo: data.tipo,
@@ -44,7 +130,6 @@ export default function AddVehiculo({ onSuccess }: { onSuccess?: () => void }) {
       fechaAdquisicion: data.fechaAdquisicion,
       kilometraje: Number(data.kilometraje) || 0,
       fotoUrl: data.fotoUrl || undefined,
-      observaciones: data.observaciones || undefined,
     };
     
     addVehiculo.mutate(payload as any, {
@@ -90,11 +175,15 @@ export default function AddVehiculo({ onSuccess }: { onSuccess?: () => void }) {
         </label>
         <input
           {...register('placa')}
+          maxLength={FIELD_LIMITS.placa}
           className={`w-full border rounded px-3 py-2 ${
             errors.placa ? 'border-red-500' : 'border-gray-300'
           }`}
           placeholder="Ej: ABC-123"
         />
+        <p className="text-xs text-gray-500 mt-1">
+          {placaValue?.length || 0} / {FIELD_LIMITS.placa} caracteres
+        </p>
         {errors.placa && <p className="text-red-600 text-sm mt-1">{errors.placa.message}</p>}
       </div>
 
@@ -169,8 +258,15 @@ export default function AddVehiculo({ onSuccess }: { onSuccess?: () => void }) {
           className={`w-full border rounded px-3 py-2 ${
             errors.kilometraje ? 'border-red-500' : 'border-gray-300'
           }`}
-          placeholder="0"
+          placeholder={estadoInicialValue === 'nuevo' ? '0' : 'Ej: 50000'}
         />
+        {estadoInicialValue && (
+          <p className="text-xs text-blue-600 mt-1">
+            {estadoInicialValue === 'nuevo' 
+              ? '⚠️ Vehículo nuevo debe tener 0 km' 
+              : '⚠️ Vehículo usado debe tener más de 0 km'}
+          </p>
+        )}
         {errors.kilometraje && <p className="text-red-600 text-sm mt-1">{errors.kilometraje.message}</p>}
       </div>
 
@@ -180,34 +276,16 @@ export default function AddVehiculo({ onSuccess }: { onSuccess?: () => void }) {
         <input
           type="url"
           {...register('fotoUrl')}
+          maxLength={FIELD_LIMITS.fotoUrl}
           className={`w-full border rounded px-3 py-2 ${
             errors.fotoUrl ? 'border-red-500' : 'border-gray-300'
           }`}
           placeholder="https://ejemplo.com/imagen.jpg"
         />
+        <p className="text-xs text-gray-500 mt-1">
+          {fotoUrlValue?.length || 0} / {FIELD_LIMITS.fotoUrl} caracteres
+        </p>
         {errors.fotoUrl && <p className="text-red-600 text-sm mt-1">{errors.fotoUrl.message}</p>}
-      </div>
-
-      {/* Observaciones */}
-      <div className="md:col-span-2">
-        <label className="block text-sm font-medium mb-1">Observaciones (opcional)</label>
-        <textarea
-          className={`w-full border rounded px-3 py-2 ${
-            errors.observaciones ? 'border-red-500' : 'border-gray-300'
-          }`}
-          rows={3}
-          maxLength={OBS_MAX}
-          {...register('observaciones')}
-          placeholder="Información adicional sobre el vehículo..."
-        />
-        <div className="mt-1 flex items-center justify-between">
-          {errors.observaciones && (
-            <p className="text-red-600 text-sm">{errors.observaciones.message}</p>
-          )}
-          <span className={`text-xs ml-auto ${obsLen > OBS_MAX * 0.9 ? 'text-orange-500' : 'text-slate-400'}`}>
-            {obsLen}/{OBS_MAX}
-          </span>
-        </div>
       </div>
 
       {/* Botón submit */}

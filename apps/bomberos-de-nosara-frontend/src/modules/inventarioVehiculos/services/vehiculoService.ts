@@ -1,4 +1,3 @@
-// src/modules/inventarioVehiculos/services/vehiculoService.ts
 import api from '../../../api/apiConfig';
 import type {
   MantenimientoProgramadoData,
@@ -38,6 +37,35 @@ export const vehiculoService = {
     }
   },
 
+  getAllPaginated: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    type?: string;
+  }): Promise<{
+    data: Vehicle[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> => {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.search) queryParams.append('search', params.search);
+      if (params.status && params.status !== 'all') queryParams.append('status', params.status);
+      if (params.type && params.type !== 'all') queryParams.append('type', params.type);
+
+      const res = await api.get(`/vehiculos?${queryParams.toString()}`);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
   create: async (vehiculo: Omit<Vehicle, 'id'>): Promise<Vehicle> => {
     try {
       const res = await api.post('/vehiculos', vehiculo);
@@ -50,7 +78,7 @@ export const vehiculoService = {
   update: async (vehiculo: Partial<Vehicle> & { id: string }): Promise<Vehicle> => {
     try {
       const { id, ...data } = vehiculo;
-      const res = await api.patch(`/vehiculos/${id}`, data); // ← CORREGIDO: PATCH
+      const res = await api.patch(`/vehiculos/${id}`, data);
       return res.data;
     } catch (err) {
       normalizeApiError(err);
@@ -66,9 +94,18 @@ export const vehiculoService = {
     }
   },
 
-  delete: async (id: string): Promise<{ success: true }> => {
+  delete: async (id: string): Promise<{ message: string }> => {
     try {
       const res = await api.delete(`/vehiculos/${id}`);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  restore: async (id: string): Promise<Vehicle> => {
+    try {
+      const res = await api.post(`/vehiculos/${id}/restore`);
       return res.data;
     } catch (err) {
       normalizeApiError(err);
@@ -104,9 +141,18 @@ export const vehiculoService = {
     }
   },
 
-  programarMantenimiento: async (id: string, data: MantenimientoProgramadoData): Promise<any> => {
+  programarMantenimiento: async (id: string, data: MantenimientoProgramadoData): Promise<Vehicle> => {
     try {
       const res = await api.put(`/vehiculos/${id}/mantenimiento`, data);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  cancelarMantenimientoProgramado: async (id: string): Promise<Vehicle> => {
+    try {
+      const res = await api.delete(`/vehiculos/${id}/mantenimiento-programado`);
       return res.data;
     } catch (err) {
       normalizeApiError(err);
@@ -116,6 +162,35 @@ export const vehiculoService = {
   getHistorial: async (id: string): Promise<any[]> => {
     try {
       const res = await api.get(`/vehiculos/${id}/historial`);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  // ---- Mantenimientos - Soft Delete y Restauración ----
+  deleteMantenimiento: async (id: string): Promise<{ message: string }> => {
+    try {
+      const res = await api.delete(`/vehiculos/mantenimiento/${id}`);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  restoreMantenimiento: async (id: string): Promise<any> => {
+    try {
+      const res = await api.post(`/vehiculos/mantenimiento/${id}/restore`);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  // ---- Utilidades ----
+  existsByPlaca: async (placa: string): Promise<{ exists: boolean }> => {
+    try {
+      const res = await api.get(`/vehiculos/placa/${placa}/exists`);
       return res.data;
     } catch (err) {
       normalizeApiError(err);

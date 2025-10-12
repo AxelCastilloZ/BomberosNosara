@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { Search, Filter, Eye, Edit, RefreshCw } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Search, Filter, Eye, Edit, RefreshCw, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Vehicle } from '../../../types/vehiculo.types';
-import type { VehicleListProps } from '../types';
 import { 
   TYPE_FILTER_OPTIONS, 
   STATUS_FILTER_OPTIONS, 
@@ -9,54 +8,93 @@ import {
 } from '../utils/vehiculoConstants';
 import { capitalize, getStatusLabel } from '../utils/vehiculoHelpers';
 import { getIconForType } from '../utils/vehiculoIcons';
+import { useVehiculos } from '../hooks/useVehiculos';
+
+interface VehiculoListProps {
+  getVehicleIcon: (type: string, className?: string) => React.ReactNode;
+  getStatusColor: (status: string) => string;
+  onEstado: (vehicle: Vehicle) => void;
+  onVerDetalles: (vehicle: Vehicle) => void;
+  onEditar: (vehicle: Vehicle) => void;
+}
 
 export default function VehiculoList({
-  vehicles,
-  onUpdateVehicle,
   getVehicleIcon,
   getStatusColor: getStatusColorProp,
   onEstado,
   onVerDetalles,
   onEditar,
-}: VehicleListProps) {
+}: VehiculoListProps) {
+  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
-  const filteredVehicles = vehicles.filter((vehicle) => {
-    const placa = (vehicle.placa ?? '').toLowerCase();
-    const estado = vehicle.estadoActual ?? '';
-    const tipo = vehicle.tipo ?? '';
+  const limit = 9; // 9 vehículos por página (3x3 grid)
 
-    const matchesSearch = placa.includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || estado === statusFilter;
-    const matchesType = typeFilter === 'all' || tipo === typeFilter;
-
-    return matchesSearch && matchesStatus && matchesType;
+  // Usar el hook con paginación
+  const { data: response, isLoading } = useVehiculos({
+    page,
+    limit,
+    search: searchTerm,
+    status: statusFilter,
+    type: typeFilter,
   });
+
+  // Determinar si la respuesta es paginada o no
+  const isPaginated = response && 'data' in response;
+  const vehicles = isPaginated ? response.data : (response as Vehicle[]) || [];
+  const total = isPaginated ? response.total : vehicles.length;
+  const totalPages = isPaginated ? response.totalPages : 1;
+
+  const handleSearch = (value: string) => {
+    setSearchTerm(value);
+    setPage(1);
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
+  const handleTypeFilter = (value: string) => {
+    setTypeFilter(value);
+    setPage(1);
+  };
+
+  const goToPage = (pageNum: number) => {
+    setPage(Math.max(1, Math.min(pageNum, totalPages)));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="text-center p-12">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+        <p className="mt-2 text-gray-600">Cargando vehículos...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Filtros - Mejorados responsive */}
+      {/* Filtros */}
       <div className="bg-white shadow p-4 rounded">
         <div className="flex flex-col gap-3">
-          {/* Búsqueda - ancho completo en móvil */}
           <div className="relative w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
             <input
               type="text"
               placeholder="Buscar por placa..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearch(e.target.value)}
               className="pl-10 w-full border border-slate-300 rounded p-2 text-sm"
             />
           </div>
 
-          {/* Filtros lado a lado en desktop, apilados en móvil */}
           <div className="flex flex-col sm:flex-row gap-3">
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => handleStatusFilter(e.target.value)}
               className="w-full sm:flex-1 border border-slate-300 rounded p-2 text-sm"
             >
               <option value="all">Todos los estados</option>
@@ -69,7 +107,7 @@ export default function VehiculoList({
 
             <select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
+              onChange={(e) => handleTypeFilter(e.target.value)}
               className="w-full sm:flex-1 border border-slate-300 rounded p-2 text-sm"
             >
               <option value="all">Todos los tipos</option>
@@ -83,15 +121,14 @@ export default function VehiculoList({
         </div>
       </div>
 
-      {/* Lista de Vehículos - Grid responsive */}
+      {/* Grid de Vehículos */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredVehicles.map((vehicle) => {
+        {vehicles.map((vehicle) => {
           const typeLabel = capitalize(vehicle.tipo ?? '');
           const icon = getIconForType(vehicle.tipo ?? '', 'h-6 w-6 text-slate-600');
 
           return (
             <div key={vehicle.id} className="border rounded shadow hover:shadow-lg transition-all bg-white">
-              {/* Header de la tarjeta */}
               <div className="p-4 border-b flex justify-between items-center">
                 <div className="flex gap-3 items-center min-w-0">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded flex items-center justify-center flex-shrink-0">
@@ -107,7 +144,6 @@ export default function VehiculoList({
                 </div>
               </div>
 
-              {/* Contenido de la tarjeta */}
               <div className="p-4 space-y-2">
                 {vehicle.estadoInicial && (
                   <div className="text-xs sm:text-sm font-medium text-slate-900">
@@ -130,7 +166,6 @@ export default function VehiculoList({
                   </div>
                 )}
                 
-                {/* Botones - 100% responsive */}
                 <div className="grid grid-cols-3 gap-2 pt-3">
                   <button
                     className="text-xs flex items-center justify-center gap-1 border rounded py-2 px-2 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium transition-colors"
@@ -166,7 +201,7 @@ export default function VehiculoList({
       </div>
 
       {/* Mensaje cuando no hay resultados */}
-      {filteredVehicles.length === 0 && (
+      {vehicles.length === 0 && !isLoading && (
         <div className="bg-white text-center p-8 sm:p-12 border rounded shadow">
           <Filter className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-slate-400 mb-4" />
           <h3 className="text-base sm:text-lg font-medium text-slate-900 mb-2">No se encontraron vehículos</h3>
@@ -174,44 +209,82 @@ export default function VehiculoList({
         </div>
       )}
 
-      {/* Footer con estadísticas - Totalmente responsive */}
-      <div className="bg-slate-50 border rounded p-3 sm:p-4 text-xs sm:text-sm">
-        <div className="flex flex-col gap-3">
-          {/* Total de vehículos */}
-          <div className="text-slate-600 text-center sm:text-left">
-            Mostrando <span className="font-semibold">{filteredVehicles.length}</span> de{' '}
-            <span className="font-semibold">{vehicles.length}</span> vehículos
+      {/* Paginación */}
+      {isPaginated && totalPages > 1 && (
+        <div className="flex items-center justify-between bg-white rounded-xl border border-gray-100 px-6 py-4">
+          <div className="text-sm text-gray-600">
+            Mostrando {(page - 1) * limit + 1} - {Math.min(page * limit, total)} de {total} vehículos
           </div>
           
-          {/* Estadísticas por estado - Grid responsive */}
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4 justify-center sm:justify-start">
-            <div className="text-slate-600">
-              En servicio:{' '}
-              <span className="font-semibold text-emerald-600">
-                {filteredVehicles.filter((v) => v.estadoActual === 'en servicio').length}
-              </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page === 1}
+              className={`p-2 rounded-lg border transition-colors ${
+                page === 1
+                  ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+
+            <div className="flex gap-1">
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => {
+                const showPage = 
+                  pageNum === 1 || 
+                  pageNum === totalPages || 
+                  (pageNum >= page - 1 && pageNum <= page + 1);
+                
+                const showEllipsis = 
+                  (pageNum === page - 2 && page > 3) ||
+                  (pageNum === page + 2 && page < totalPages - 2);
+
+                if (showEllipsis) {
+                  return <span key={pageNum} className="px-3 py-2 text-gray-400">...</span>;
+                }
+
+                if (!showPage) return null;
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => goToPage(pageNum)}
+                    className={`min-w-[40px] px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      page === pageNum
+                        ? 'bg-red-600 text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
             </div>
-            <div className="text-slate-600">
-              Malos:{' '}
-              <span className="font-semibold text-amber-600">
-                {filteredVehicles.filter((v) => v.estadoActual === 'malo').length}
-              </span>
-            </div>
-            <div className="text-slate-600">
-              Fuera:{' '}
-              <span className="font-semibold text-orange-600">
-                {filteredVehicles.filter((v) => v.estadoActual === 'fuera de servicio').length}
-              </span>
-            </div>
-            <div className="text-slate-600">
-              Baja:{' '}
-              <span className="font-semibold text-red-600">
-                {filteredVehicles.filter((v) => v.estadoActual === 'dado de baja').length}
-              </span>
-            </div>
+
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page === totalPages}
+              className={`p-2 rounded-lg border transition-colors ${
+                page === totalPages
+                  ? 'border-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Footer con estadísticas */}
+      {isPaginated && (
+        <div className="bg-slate-50 border rounded p-3 sm:p-4 text-xs sm:text-sm">
+          <div className="text-slate-600 text-center sm:text-left">
+            Total de <span className="font-semibold">{total}</span> vehículos en el sistema
+          </div>
+        </div>
+      )}
     </div>
   );
 }

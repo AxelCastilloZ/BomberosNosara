@@ -1,78 +1,42 @@
-// src/modules/inventarioVehiculos/components/ScheduleMaintenance.tsx
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useEffect } from 'react';
-
-// Types globales
-import type { Vehicle } from '../../../types/vehiculo.types';
-
-// Types del módulo
+import { useEffect, useMemo } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import type { ScheduleMaintenanceProps } from '../types';
-
-// Hooks del módulo
+import type { Vehicle } from '../../../types/vehiculo.types';
 import { useVehiculos, useProgramarMantenimiento } from '../hooks/useVehiculos';
-
-// Sistema de notificaciones
 import { useCrudNotifications } from '../../../hooks/useCrudNotifications';
 
-// Schema de validación para programar mantenimiento
 const programarMantenimientoSchema = z.object({
-  vehiculoId: z.string()
-    .min(1, 'Debe seleccionar un vehículo'),
-
-  fechaProximoMantenimiento: z.string()
-    .min(1, 'La fecha es obligatoria')
-    .refine(
-      (date) => {
-        const inputDate = new Date(date);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        return inputDate >= today;
-      },
-      'La fecha no puede ser anterior a hoy'
-    ),
-
-  tecnico: z.string()
-    .min(1, 'El técnico responsable es obligatorio')
-    .min(3, 'El nombre del técnico debe tener al menos 3 caracteres')
-    .max(100, 'El nombre del técnico no puede superar 100 caracteres')
-    .transform(val => val.trim()),
-
-  tipo: z.string()
-    .refine(
-      (val) => ['preventivo', 'correctivo', 'inspección'].includes(val),
-      'Tipo de mantenimiento inválido'
-    ),
-
-  prioridad: z.string()
-    .refine(
-      (val) => ['baja', 'media', 'alta'].includes(val),
-      'Prioridad inválida'
-    ),
-
-  observaciones: z.string()
-    .max(500, 'Las observaciones no pueden superar 500 caracteres')
-    .optional()
-    .or(z.literal('')),
+  vehiculoId: z.string().min(1, 'Debe seleccionar un vehículo'),
+  fechaProximoMantenimiento: z.string().min(1, 'La fecha es obligatoria'),
+  tecnico: z.string().min(3).max(100).transform(val => val.trim()),
+  tipo: z.string(),
+  prioridad: z.string(),
+  observaciones: z.string().max(500).optional().or(z.literal('')),
 });
 
 type ProgramarMantenimientoFormData = z.input<typeof programarMantenimientoSchema>;
 
 export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }: ScheduleMaintenanceProps) {
-  const { data: vehicles = [] } = useVehiculos();
+  const { data: vehiclesResponse = [] } = useVehiculos();
   const programarMantenimiento = useProgramarMantenimiento();
   const { notifyCreated, notifyError } = useCrudNotifications();
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<ProgramarMantenimientoFormData>({
+  // Extraer el array de vehículos correctamente
+  const vehicles: Vehicle[] = useMemo(() => {
+    if (Array.isArray(vehiclesResponse)) {
+      return vehiclesResponse;
+    }
+    if (vehiclesResponse && 'data' in vehiclesResponse) {
+      return vehiclesResponse.data;
+    }
+    return [];
+  }, [vehiclesResponse]);
+
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<ProgramarMantenimientoFormData>({
     resolver: zodResolver(programarMantenimientoSchema),
-    mode: 'onBlur',
     defaultValues: {
       vehiculoId: vehiculoId || '',
       fechaProximoMantenimiento: fechaActual || '',
@@ -87,14 +51,8 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
   const observaciones = watch('observaciones');
   const obsLen = (observaciones ?? '').length;
 
-  // Encontrar vehículo seleccionado para mostrar info
-  const vehiculoSeleccionado = vehicles.find((v) => v.id === selectedVehiculoId);
-
-  // Si viene vehiculoId como prop, establecerlo
   useEffect(() => {
-    if (vehiculoId && !selectedVehiculoId) {
-      setValue('vehiculoId', vehiculoId);
-    }
+    if (vehiculoId && !selectedVehiculoId) setValue('vehiculoId', vehiculoId);
   }, [vehiculoId, selectedVehiculoId, setValue]);
 
   const onSubmit = (data: ProgramarMantenimientoFormData) => {
@@ -104,8 +62,8 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
         data: {
           fechaProximoMantenimiento: data.fechaProximoMantenimiento,
           tecnico: data.tecnico,
-          tipo: data.tipo as 'preventivo' | 'correctivo' | 'inspección',
-          prioridad: data.prioridad as 'baja' | 'media' | 'alta',
+          tipo: data.tipo as any,
+          prioridad: data.prioridad as any,
           observaciones: data.observaciones || undefined,
         },
       },
@@ -115,174 +73,129 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
           onClose();
         },
         onError: (error: any) => {
-          const message = error?.message || error?.response?.data?.message || 'Error al programar mantenimiento';
-          notifyError('programar mantenimiento', message);
+          notifyError('programar mantenimiento', error?.message || 'Error');
         }
       }
     );
   };
 
-  // Fecha mínima (hoy)
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="max-w-4xl mx-auto bg-white border rounded-xl shadow p-6">
-      <h2 className="text-xl font-bold mb-1 text-gray-800">Programar mantenimiento</h2>
-      <p className="text-sm text-gray-500 mb-6">
-        Completa los detalles para agendar un próximo mantenimiento
-      </p>
+    <div className="max-w-4xl mx-auto">
+      <button 
+        onClick={onClose} 
+        className="flex items-center gap-2 mb-8 text-red-600 hover:text-red-700 font-medium transition-colors"
+      >
+        <ArrowLeft className="h-5 w-5" /> Volver al menú de mantenimiento
+      </button>
+
+      <div className="mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Programar mantenimiento</h2>
+        <p className="text-gray-500">Agenda el próximo mantenimiento del vehículo</p>
+      </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Columna 1 */}
-          <div className="space-y-4">
-            {/* Seleccionar vehículo - solo si no viene preseleccionado */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 mb-6">
+          <div className="space-y-6">
             {!vehiculoId && (
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Seleccionar vehículo <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Vehículo <span className="text-red-500">*</span>
                 </label>
                 <select
                   {...register('vehiculoId')}
-                  className={`w-full border rounded px-3 py-2 ${
-                    errors.vehiculoId ? 'border-red-500' : 'border-gray-300'
+                  className={`w-full border rounded-xl px-4 py-3 text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-red-500 ${
+                    errors.vehiculoId ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
                 >
-                  <option value="">-- Seleccione --</option>
+                  <option value="">-- Seleccione un vehículo --</option>
                   {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.placa} - {v.tipo}
-                    </option>
+                    <option key={v.id} value={v.id}>{v.placa} - {v.tipo}</option>
                   ))}
                 </select>
-                {errors.vehiculoId && (
-                  <p className="text-red-600 text-sm mt-1">{errors.vehiculoId.message}</p>
-                )}
+                {errors.vehiculoId && <p className="text-red-600 text-sm mt-1.5">{errors.vehiculoId.message}</p>}
               </div>
             )}
 
-            {/* Mostrar info del vehículo si está preseleccionado */}
-            {vehiculoId && vehiculoSeleccionado && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm font-medium text-blue-900">Vehículo seleccionado</p>
-                <p className="text-sm text-blue-700 mt-1">
-                  {vehiculoSeleccionado.placa} - {vehiculoSeleccionado.tipo}
-                </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Fecha <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  min={today}
+                  {...register('fechaProximoMantenimiento')}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
               </div>
-            )}
 
-            {/* Técnico responsable */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Técnico responsable <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                {...register('tecnico')}
-                className={`w-full border rounded px-3 py-2 ${
-                  errors.tecnico ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="Nombre del técnico"
-                maxLength={100}
-              />
-              {errors.tecnico && (
-                <p className="text-red-600 text-sm mt-1">{errors.tecnico.message}</p>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Técnico <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  {...register('tecnico')}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Nombre del técnico"
+                />
+              </div>
             </div>
 
-            {/* Tipo de mantenimiento */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Tipo de mantenimiento <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register('tipo')}
-                className={`w-full border rounded px-3 py-2 ${
-                  errors.tipo ? 'border-red-500' : 'border-gray-300'
-                }`}
-              >
-                <option value="preventivo">Preventivo</option>
-                <option value="correctivo">Correctivo</option>
-                <option value="inspección">Inspección</option>
-              </select>
-              {errors.tipo && (
-                <p className="text-red-600 text-sm mt-1">{errors.tipo.message}</p>
-              )}
-            </div>
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Tipo <span className="text-red-500">*</span>
+                </label>
+                <select
+                  {...register('tipo')}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="preventivo">Preventivo</option>
+                  <option value="correctivo">Correctivo</option>
+                  <option value="inspección">Inspección</option>
+                </select>
+              </div>
 
-          {/* Columna 2 */}
-          <div className="space-y-4">
-            {/* Fecha de mantenimiento */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Fecha de mantenimiento <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                min={today}
-                {...register('fechaProximoMantenimiento')}
-                className={`w-full border rounded px-3 py-2 ${
-                  errors.fechaProximoMantenimiento ? 'border-red-500' : 'border-gray-300'
-                }`}
-              />
-              {errors.fechaProximoMantenimiento && (
-                <p className="text-red-600 text-sm mt-1">{errors.fechaProximoMantenimiento.message}</p>
-              )}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Prioridad <span className="text-red-500">*</span>
+                </label>
+                <select
+                  {...register('prioridad')}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
+                >
+                  <option value="baja">Baja</option>
+                  <option value="media">Media</option>
+                  <option value="alta">Alta</option>
+                </select>
+              </div>
             </div>
 
-            {/* Prioridad */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Prioridad <span className="text-red-500">*</span>
-              </label>
-              <select
-                {...register('prioridad')}
-                className={`w-full border rounded px-3 py-2 ${
-                  errors.prioridad ? 'border-red-500' : 'border-gray-300'
-                }`}
-              >
-                <option value="baja">Baja</option>
-                <option value="media">Media</option>
-                <option value="alta">Alta</option>
-              </select>
-              {errors.prioridad && (
-                <p className="text-red-600 text-sm mt-1">{errors.prioridad.message}</p>
-              )}
-            </div>
-
-            {/* Observaciones */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-900 mb-2">
                 Observaciones (opcional)
               </label>
               <textarea
                 {...register('observaciones')}
-                className={`w-full border rounded px-3 py-2 ${
-                  errors.observaciones ? 'border-red-500' : 'border-gray-300'
-                }`}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"
                 rows={3}
-                maxLength={500}
                 placeholder="Notas adicionales..."
               />
-              <div className="flex items-center justify-between mt-1">
-                {errors.observaciones && (
-                  <p className="text-red-600 text-sm">{errors.observaciones.message}</p>
-                )}
-                <span className={`text-xs ml-auto ${obsLen > 450 ? 'text-orange-500' : 'text-gray-500'}`}>
-                  {obsLen}/500 caracteres
-                </span>
-              </div>
+              <p className={`text-xs mt-1.5 ${obsLen > 450 ? 'text-orange-500' : 'text-gray-400'}`}>
+                {obsLen}/500 caracteres
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Acciones */}
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors"
+            className="px-6 py-3 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium"
             disabled={isSubmitting}
           >
             Cancelar
@@ -290,13 +203,11 @@ export default function ScheduleMaintenance({ vehiculoId, fechaActual, onClose }
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`px-4 py-2 text-white rounded transition-colors ${
-              isSubmitting
-                ? 'bg-red-600/60 cursor-not-allowed'
-                : 'bg-red-600 hover:bg-red-700'
+            className={`px-6 py-3 text-white rounded-xl font-medium transition-colors ${
+              isSubmitting ? 'bg-red-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700'
             }`}
           >
-            {isSubmitting ? 'Guardando…' : 'Guardar'}
+            {isSubmitting ? 'Guardando…' : 'Programar'}
           </button>
         </div>
       </form>
