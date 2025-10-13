@@ -23,6 +23,11 @@ export class CreateEmergencyReportDto {
   @Min(-180)
   @Max(180)
   longitud: number;
+
+  // ✅ NUEVO: Para endpoint anónimo
+  @IsOptional()
+  @IsNumber()
+  mobileUserId?: number;
 }
 
 export class UpdateReportStatusDto {
