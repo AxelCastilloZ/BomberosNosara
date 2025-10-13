@@ -24,6 +24,7 @@ async function bootstrap() {
     'http://localhost:3000',
     'http://localhost:5173',
     'http://localhost:5174',
+    'http://192.168.100.5:8081',
     process.env.FRONTEND_URL,
   ].filter((origin): origin is string => Boolean(origin));
 
@@ -70,7 +71,7 @@ async function bootstrap() {
     new AllExceptionsFilter()    
   );
 
-  await app.listen(3000);
+  await app.listen(3000, '0.0.0.0');
 }
 
 bootstrap();

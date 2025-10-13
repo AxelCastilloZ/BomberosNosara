@@ -35,6 +35,7 @@ export class EmergencyReportsController {
     return this.reportsService.findOne(+id);
   }
 
+  // ✅ NUEVO: Endpoint para usuarios autenticados
   @UseGuards(JwtAuthGuard)
   @Post()
   create(
@@ -42,6 +43,16 @@ export class EmergencyReportsController {
     @GetUser('sub') mobileUserId: number,
   ) {
     return this.reportsService.create(createDto, mobileUserId);
+  }
+
+  // ✅ NUEVO: Endpoint para usuarios anónimos (sin autenticación)
+  @Post('anonymous')
+  createAnonymous(@Body() createDto: CreateEmergencyReportDto) {
+    // El mobileUserId viene en el DTO
+    if (!createDto.mobileUserId) {
+      throw new Error('mobileUserId is required for anonymous reports');
+    }
+    return this.reportsService.create(createDto, createDto.mobileUserId);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -92,6 +92,17 @@ export class MobileUsersService {
 
   // ========== COMPLETAR PERFIL ANÓNIMO ==========
 
+
+
+
+
+
+async findByUsername(username: string): Promise<MobileUser | null> {
+  return this.mobileUserRepo.findOne({ where: { username } });
+}
+
+
+
   async completeProfile(
     mobileUserId: number,
     email: string,

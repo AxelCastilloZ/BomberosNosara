@@ -4,12 +4,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MobileAuthService } from './mobile-auth.service';
 import { MobileAuthController } from './mobile-auth.controller';
 import { MobileUsersModule } from '../mobile-users/mobile-users.module';
+import { UsersModule } from '../../users/users.module'; // ← NUEVO
 import { GuardsModule } from '../../guards/guards.module';
 
 @Module({
   imports: [
     ConfigModule,
     MobileUsersModule,
+    UsersModule, // ← AGREGAR AQUÍ
     GuardsModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
