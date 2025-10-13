@@ -8,24 +8,22 @@ interface Props {
 }
 
 const TITLE_MAX = 50;
-const DESC_MAX = 80;
+const DESC_MAX = 70;
 const ONE_FILE_MSG = 'Solo se puede seleccionar un archivo.';
-
 const isNonEmpty = (v?: string) => !!v && v.trim().length > 0;
 
 export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props) {
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [tipo, setTipo] = useState<MaterialTipo>('PDF');
+  const [area, setArea] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
   const [archivoError, setArchivoError] = useState<string>('');
-  const [titleOver, setTitleOver] = useState(false);
-  const [descOver, setDescOver] = useState(false);
-
-  // 👇 nuevos estados para controlar si el campo fue tocado
+  const [areaTouched, setAreaTouched] = useState(false);
   const [titleTouched, setTitleTouched] = useState(false);
   const [descTouched, setDescTouched] = useState(false);
-
+  const [titleOver, setTitleOver] = useState(false);
+  const [descOver, setDescOver] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -52,12 +50,14 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
   const resetForm = () => {
     setTitulo('');
     setDescripcion('');
-    setTipo('Imagen');
+    setTipo('PDF');
+    setArea('');
     setArchivoError('');
     setTitleOver(false);
     setDescOver(false);
     setTitleTouched(false);
     setDescTouched(false);
+    setAreaTouched(false);
     clearFile();
   };
 
@@ -78,9 +78,10 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isNonEmpty(titulo) || !isNonEmpty(descripcion)) {
+    if (!isNonEmpty(titulo) || !isNonEmpty(descripcion) || !isNonEmpty(area)) {
       setTitleTouched(true);
       setDescTouched(true);
+      setAreaTouched(true);
       return;
     }
 
@@ -91,9 +92,10 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
     }
 
     const formData = new FormData();
-    formData.append('titulo', titulo);
-    formData.append('descripcion', descripcion);
+    formData.append('titulo', titulo.trim());
+    formData.append('descripcion', descripcion.trim());
     formData.append('tipo', tipo);
+    formData.append('area', area.trim());
     formData.append('archivo', archivo!);
 
     onSubmit(formData);
@@ -115,25 +117,22 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
             placeholder="Título"
             value={titulo}
             onChange={(e) => {
-              const next = e.target.value;
-              if (next.length > TITLE_MAX) setTitleOver(true);
-              else if (titleOver) setTitleOver(false);
-              setTitulo(next.slice(0, TITLE_MAX));
+              const next = e.target.value.slice(0, TITLE_MAX);
+              setTitulo(next);
             }}
-            onBlur={() => setTitleTouched(true)} // 👈 marca como tocado
+            onBlur={() => setTitleTouched(true)}
             className={`w-full border p-2 rounded ${
               (!isNonEmpty(titulo) && titleTouched) || titleOver
                 ? 'border-red-500'
                 : 'border-gray-300'
             }`}
-            aria-describedby="titulo-help"
           />
           <div className="flex justify-between text-xs mt-1">
-            <p id="titulo-help" className="text-red-600">
-              {titleOver
-                ? `No puedes superar ${TITLE_MAX} caracteres.`
-                : !isNonEmpty(titulo) && titleTouched
+            <p className="text-red-600">
+              {!isNonEmpty(titulo) && titleTouched
                 ? 'El título es obligatorio.'
+                : titleOver
+                ? `Máximo ${TITLE_MAX} caracteres.`
                 : ''}
             </p>
             <p
@@ -152,25 +151,22 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
             placeholder="Descripción"
             value={descripcion}
             onChange={(e) => {
-              const next = e.target.value;
-              if (next.length > DESC_MAX) setDescOver(true);
-              else if (descOver) setDescOver(false);
-              setDescripcion(next.slice(0, DESC_MAX));
+              const next = e.target.value.slice(0, DESC_MAX);
+              setDescripcion(next);
             }}
-            onBlur={() => setDescTouched(true)} // 👈 marca como tocado
+            onBlur={() => setDescTouched(true)}
             className={`w-full border p-2 rounded h-24 ${
               (!isNonEmpty(descripcion) && descTouched) || descOver
                 ? 'border-red-500'
                 : 'border-gray-300'
             }`}
-            aria-describedby="descripcion-help"
           />
           <div className="flex justify-between text-xs mt-1">
-            <p id="descripcion-help" className="text-red-600">
-              {descOver
-                ? `No puedes superar ${DESC_MAX} caracteres.`
-                : !isNonEmpty(descripcion) && descTouched
+            <p className="text-red-600">
+              {!isNonEmpty(descripcion) && descTouched
                 ? 'La descripción es obligatoria.'
+                : descOver
+                ? `Máximo ${DESC_MAX} caracteres.`
                 : ''}
             </p>
             <p
@@ -183,19 +179,40 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
           </div>
         </div>
 
+        {/* 🧭 ÁREA */}
+        <div>
+          <select
+            name="area"
+            className={`border rounded p-2 w-full ${
+              !isNonEmpty(area) && areaTouched ? 'border-red-500' : 'border-gray-300'
+            }`}
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            onBlur={() => setAreaTouched(true)}
+          >
+            <option value="">Seleccione área</option>
+            <option value="Incendios Forestales">Incendios Forestales</option>
+            <option value="Incendios Industriales">Incendios Industriales</option>
+            <option value="Rescates">Rescates Verticales </option>
+            <option value="Rescate">Rescates Acuáticos </option>
+            <option value="Primeros Auxilios">Primeros Auxilios</option>
+            <option value="Reubicación de Animales">Reubicación de Animales</option>
+          </select>
+          {!isNonEmpty(area) && areaTouched && (
+            <p className="text-red-600 text-xs mt-1">El área es obligatoria.</p>
+          )}
+        </div>
+
         {/* TIPO */}
         <select
           value={tipo}
           onChange={(e) => {
             const nuevoTipo = e.target.value as MaterialTipo;
             setTipo(nuevoTipo);
-
             if (archivo) {
               const err = validateFile(archivo, nuevoTipo);
               if (err) {
-                setArchivoError(
-                  `El archivo seleccionado no coincide con el tipo ${nuevoTipo}. Vuelve a seleccionarlo.`
-                );
+                setArchivoError(err);
                 clearFile();
               } else {
                 setArchivoError('');
@@ -220,38 +237,36 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
             onChange={(e) => {
               const files = e.target.files;
               if (!files || files.length === 0) return;
-
               if (files.length > 1) {
                 setArchivoError(ONE_FILE_MSG);
                 clearFile();
                 return;
               }
-
-              const file = files[0] || null;
+              const file = files[0];
               const err = validateFile(file, tipo);
               if (err) {
                 setArchivoError(err);
                 clearFile();
                 return;
               }
-              setArchivoError('');
               setArchivo(file);
+              setArchivoError('');
             }}
             accept={acceptMap[tipo]}
-            aria-invalid={!!archivoError}
             className={`w-full border rounded p-2 ${archivoError ? 'border-red-500' : ''}`}
           />
-          <div className="mt-1 text-xs" aria-live="polite">
+          <p className="text-xs mt-1 text-gray-500">
             {archivoError ? (
               <span className="text-red-600">{archivoError}</span>
             ) : (
-              <span className="text-gray-500">
-                {ONE_FILE_MSG} Tipos de formatos permitidos: {validExtensions[tipo].join(', ')}
-              </span>
+              <>
+                {ONE_FILE_MSG} Tipos: {validExtensions[tipo].join(', ')}
+              </>
             )}
-          </div>
+          </p>
         </div>
 
+        {/* BOTONES */}
         <div className="flex justify-end gap-2">
           <button
             type="button"
@@ -262,7 +277,7 @@ export default function UploadMaterialModal({ isOpen, onClose, onSubmit }: Props
           </button>
           <button
             type="submit"
-            disabled={!archivo}
+            disabled={!archivo || !isNonEmpty(area)}
             className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-60"
           >
             Subir

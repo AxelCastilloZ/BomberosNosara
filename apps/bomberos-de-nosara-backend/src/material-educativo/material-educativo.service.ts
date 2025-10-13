@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { MaterialEducativo } from './entities/material-educativo.entity';
 import { Repository } from 'typeorm';
@@ -14,8 +18,40 @@ export class MaterialEducativoService {
     private readonly repo: Repository<MaterialEducativo>,
   ) {}
 
-  async findAll(): Promise<MaterialEducativo[]> {
-    return this.repo.find();
+  // ✅ Ahora busca solo por título y acepta 'titulo', 'tipo' y 'area' como filtros
+  async findAll(
+    page = 1,
+    limit = 10,
+    titulo = '',
+    tipo = '',
+    area = '',
+  ): Promise<{ data: MaterialEducativo[]; total: number }> {
+    const qb = this.repo.createQueryBuilder('m');
+
+    // 🔍 Buscar solo por título
+    if (titulo && titulo.trim() !== '') {
+      qb.andWhere('LOWER(m.titulo) LIKE :titulo', {
+        titulo: `%${titulo.toLowerCase()}%`,
+      });
+    }
+
+    // 🔹 Filtro por tipo (PDF, Imagen, etc.)
+    if (tipo && tipo.trim() !== '') {
+      qb.andWhere('m.tipo = :tipo', { tipo });
+    }
+
+    // 🆕 Filtro por área
+    if (area && area.trim() !== '') {
+      qb.andWhere('m.area = :area', { area });
+    }
+
+    const [data, total] = await qb
+      .orderBy('m.createdAt', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return { data, total };
   }
 
   async findOneOrFail(id: number): Promise<MaterialEducativo> {
@@ -24,7 +60,11 @@ export class MaterialEducativoService {
     return mat;
   }
 
-  async create(data: CreateMaterialDto, archivoUrl: string, vistaPreviaUrl?: string) {
+  async create(
+    data: CreateMaterialDto,
+    archivoUrl: string,
+    vistaPreviaUrl?: string,
+  ) {
     const material = this.repo.create({
       ...data,
       url: archivoUrl,
@@ -33,13 +73,13 @@ export class MaterialEducativoService {
     return await this.repo.save(material);
   }
 
-  /** Actualiza metadatos; si llega archivoUrl, reemplaza archivo y borra el anterior */
   async update(id: number, data: UpdateMaterialDto, archivoUrl?: string) {
     const material = await this.findOneOrFail(id);
 
     if (data.titulo !== undefined) material.titulo = data.titulo;
     if (data.descripcion !== undefined) material.descripcion = data.descripcion;
     if (data.tipo !== undefined) material.tipo = data.tipo;
+    if (data.area !== undefined) material.area = data.area;
 
     if (archivoUrl) {
       const ext = extname(archivoUrl).replace('.', '').toLowerCase();
@@ -47,7 +87,9 @@ export class MaterialEducativoService {
       if (allowed.length && !allowed.includes(ext)) {
         this.safeRemoveByUrl(archivoUrl);
         throw new BadRequestException(
-          `El archivo .${ext} no es válido para el tipo "${material.tipo}". Permitidos: ${allowed.join(', ')}`
+          `El archivo .${ext} no es válido para el tipo "${material.tipo}". Permitidos: ${allowed.join(
+            ', ',
+          )}`,
         );
       }
       if (material.url) this.safeRemoveByUrl(material.url);
@@ -57,7 +99,6 @@ export class MaterialEducativoService {
     return await this.repo.save(material);
   }
 
-  /** Elimina registro y archivo físico */
   async remove(id: number) {
     const material = await this.findOneOrFail(id);
     if (material.url) this.safeRemoveByUrl(material.url);
@@ -77,13 +118,13 @@ export class MaterialEducativoService {
   }
 
   private safeRemoveByUrl(url: string) {
-    const rel = url.replace(/^\//, ''); // "uploads/material/archivo.ext"
+    const rel = url.replace(/^\//, '');
     const full = join(process.cwd(), rel);
     if (existsSync(full)) {
       try {
         unlinkSync(full);
       } catch {
-        // evitar romper la petición si hay problema al borrar
+        // no interrumpe si falla el borrado
       }
     }
   }

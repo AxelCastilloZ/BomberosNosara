@@ -1,14 +1,19 @@
-import type { ReactNode } from 'react';
-import { MaterialEducativo } from '../../../../interfaces/MaterialEducativo/material.interface';
-import { FaFilePdf, FaVideo, FaBookOpen, FaImage, FaPen, FaTrash, FaDownload } from 'react-icons/fa';
+import { useState, useEffect, useRef } from "react";
+import type { ReactNode } from "react";
+import { MaterialEducativo } from "../../../../interfaces/MaterialEducativo/material.interface";
+import {
+  FaFilePdf,
+  FaVideo,
+  FaBookOpen,
+  FaImage,
+  FaPen,
+  FaTrash,
+  FaDownload,
+  FaEye,
+  FaEllipsisH,
+} from "react-icons/fa";
 
-const Button = ({ children, className = '', ...props }: any) => (
-  <button className={`px-4 py-2 rounded text-white font-semibold ${className}`} {...props}>
-    {children}
-  </button>
-);
-
-const iconMap: Record<MaterialEducativo['tipo'], ReactNode> = {
+const iconMap: Record<MaterialEducativo["tipo"], ReactNode> = {
   PDF: <FaFilePdf className="text-red-600" />,
   Video: <FaVideo className="text-blue-500" />,
   Documento: <FaBookOpen className="text-green-500" />,
@@ -20,55 +25,106 @@ export default function MaterialCard({
   onEdit,
   onDelete,
   onDownload,
+  onPreview,
 }: {
   material: MaterialEducativo;
   onEdit?: (m: MaterialEducativo) => void;
   onDelete?: (m: MaterialEducativo) => void;
   onDownload?: (m: MaterialEducativo) => void;
+  onPreview?: (m: MaterialEducativo) => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  // 🔹 Cerrar el menú al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="bg-white rounded-lg border shadow p-4 flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        {iconMap[material.tipo]}
-        <span className="font-semibold">{material.tipo}</span>
+    <div className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between relative">
+      {/* Tipo y título */}
+      <div>
+        <div className="flex items-center gap-2 mb-2">
+          {iconMap[material.tipo]}
+          <span className="font-semibold text-gray-700">{material.tipo}</span>
+        </div>
+
+        <h3 className="text-lg font-bold text-gray-900 mb-1 truncate">
+          {material.titulo}
+        </h3>
+
+        <p className="text-sm text-gray-600 line-clamp-2">
+          {material.descripcion}
+        </p>
       </div>
 
-      <h3 className="text-lg font-bold">{material.titulo}</h3>
-      <p className="text-sm text-gray-600">{material.descripcion}</p>
-
-      <div className="mt-auto flex items-center justify-between gap-2">
-       <div className="flex gap-2">
-        <Button
-          className="bg-red-500 hover:bg-red-600 flex items-center gap-2"
-          onClick={() => onDownload?.(material)}
-          title="Descargar"
-          aria-label={`Descargar ${material.titulo}`}
+      {/* Botón principal y menú */}
+      <div className="mt-4 flex items-center justify-between">
+        {/* 👁️ Ver */}
+        <button
+          onClick={() => onPreview?.(material)}
+          className="flex items-center justify-center gap-2 text-gray-700 font-semibold border border-gray-300 rounded-md px-4 py-[6px] hover:bg-gray-50 hover:text-black transition w-full"
         >
-          <FaDownload /> Descargar
-        </Button>
+          <FaEye size={14} />
+          Ver
+        </button>
 
-        {onEdit && (
-          <Button
-            className="bg-amber-400 hover:bg-amber-500 flex items-center gap-2"
-            onClick={() => onEdit(material)}
-            title="Editar"
-            aria-label={`Editar ${material.titulo}`}
+        {/* Menú de 3 puntos */}
+        <div className="relative ml-2" ref={menuRef}>
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="p-2 rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition"
           >
-            <FaPen /> Editar
-          </Button>
-        )}
+            <FaEllipsisH size={15} />
+          </button>
 
-        {onDelete && (
-          <Button
-            className="bg-gray-600 hover:bg-gray-700 flex items-center gap-2"
-            onClick={() => onDelete(material)}
-            title="Eliminar"
-            aria-label={`Eliminar ${material.titulo}`}
-          >
-            <FaTrash /> Eliminar
-          </Button>
-        )}
-      </div>
+          {menuOpen && (
+            <div
+              className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-10 animate-fadeIn"
+            >
+              <button
+                onClick={() => {
+                  onDownload?.(material);
+                  setMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+              >
+                <FaDownload className="text-gray-500" /> Descargar
+              </button>
+
+              {onEdit && (
+                <button
+                  onClick={() => {
+                    onEdit(material);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <FaPen className="text-amber-500" /> Editar
+                </button>
+              )}
+
+              {onDelete && (
+                <button
+                  onClick={() => {
+                    onDelete(material);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
+                  <FaTrash /> Eliminar
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

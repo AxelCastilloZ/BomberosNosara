@@ -5,9 +5,10 @@ import type { MaterialTipo } from '../interfaces/MaterialEducativo/material.inte
 export const useUpdateMaterial = (onSuccess?: () => void) => {
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // ✅ Actualiza sin archivo
   const update = async (
     id: number,
-    data: { titulo: string; descripcion: string; tipo: MaterialTipo }
+    data: { titulo: string; descripcion: string; tipo: MaterialTipo; area: string }
   ) => {
     setIsUpdating(true);
     try {
@@ -18,9 +19,10 @@ export const useUpdateMaterial = (onSuccess?: () => void) => {
     }
   };
 
+  // ✅ Actualiza con archivo (FormData)
   const updateWithFile = async (
     id: number,
-    data: { titulo: string; descripcion: string; tipo: MaterialTipo; archivo: File }
+    data: { titulo: string; descripcion: string; tipo: MaterialTipo; area: string; archivo: File }
   ) => {
     setIsUpdating(true);
     try {
@@ -28,6 +30,7 @@ export const useUpdateMaterial = (onSuccess?: () => void) => {
       fd.append('titulo', data.titulo);
       fd.append('descripcion', data.descripcion);
       fd.append('tipo', data.tipo);
+      fd.append('area', data.area); // 👈 ahora sí se envía
       fd.append('archivo', data.archivo);
       await materialService.updateWithFile(id, fd);
       onSuccess?.();

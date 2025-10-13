@@ -7,4 +7,5 @@ export interface MaterialEducativo {
   tipo: MaterialTipo;
   url: string;
   vistaPrevia?: string; // Opcional para videos o imágenes
+  area?: string;
 }
