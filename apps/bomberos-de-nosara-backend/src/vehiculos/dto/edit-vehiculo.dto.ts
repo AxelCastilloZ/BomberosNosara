@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, IsEnum, IsUrl, IsDateString, MinLength, Max, Min, ValidateIf } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsEnum, IsDateString, MinLength, Max, Min, ValidateIf } from 'class-validator';
 import { EstadoVehiculo, TipoVehiculo } from '../enums/vehiculo-bomberil.enums';
 
 export class EditVehiculoDto {
@@ -18,11 +18,6 @@ export class EditVehiculoDto {
   observaciones?: string;
 
   @IsOptional()
-  @IsUrl({}, { message: 'La URL de la foto no es válida' })
-  fotoUrl?: string;
-
- 
-  @IsOptional()
   @IsString({ message: 'La placa debe ser texto válido' })
   @MinLength(1, { message: 'La placa no puede estar vacía' })
   placa?: string;
@@ -35,7 +30,7 @@ export class EditVehiculoDto {
   @IsDateString({}, { message: 'Fecha de adquisición no válida' })
   fechaAdquisicion?: string;
 
-  
+  // Validaciones condicionales según el estado
   @ValidateIf(o => o.estadoActual === EstadoVehiculo.MALO)
   @IsString({ message: 'Las observaciones son obligatorias cuando el estado es MALO' })
   @MinLength(10, { message: 'Describe el problema del vehículo (mínimo 10 caracteres)' })

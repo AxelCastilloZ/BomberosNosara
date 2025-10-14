@@ -22,9 +22,5 @@ export class CreateVehiculoDto {
 
   @IsOptional()
   @IsString()
-  fotoUrl?: string;
-
-  @IsOptional()
-  @IsString()
   observaciones?: string;
 }

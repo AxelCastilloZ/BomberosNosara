@@ -1,53 +1,62 @@
-// src/modules/inventarioVehiculos/types/index.ts
+import type { Vehiculo, TipoVehiculo, EstadoVehiculo } from '../../../types/vehiculo.types';
+import type { Mantenimiento } from '../../../types/mantenimiento.types';
 
-import type { Vehicle } from '../../../types/vehiculo.types';
+// ==================== NAVEGACIÓN ====================
 
-// Navegación específica del módulo
 export type VehiculoView =
   | 'inicio'
   | 'agregar'
   | 'estado'
   | 'programar'
   | 'registrar'
-  | 'reposicion'
   | 'mantenimiento'
   | 'lista'
   | 'dashboard'
   | 'detalles'
-  | 'editar';
+  | 'editar'
+  | 'historial';
 
-// Props de componentes específicos del módulo
+// ==================== PROPS DE COMPONENTES ====================
+
 export interface VehicleListProps {
-  vehicles: Vehicle[];
-  onUpdateVehicle: (id: string, updates: Partial<Vehicle>) => void;
+  vehicles: Vehiculo[];
+  onUpdateVehicle: (id: string, updates: Partial<Vehiculo>) => void;
   getVehicleIcon: (type: string, className?: string) => React.ReactNode;
   getStatusColor: (status: string) => string;
-  onEstado: (vehiculo: Vehicle) => void;
-  onVerDetalles: (vehiculo: Vehicle) => void;
-  onEditar: (vehiculo: Vehicle) => void;
+  onEstado: (vehiculo: Vehiculo) => void;
+  onVerDetalles: (vehiculo: Vehiculo) => void;
+  onEditar: (vehiculo: Vehiculo) => void;
 }
 
 export interface UpdateStatusProps {
-  vehiculo?: Vehicle;
+  vehiculo?: Vehiculo;
   onClose: () => void;
 }
 
 export interface ScheduleMaintenanceProps {
-  vehiculoId?: string;
-  fechaActual?: string;
+  vehiculoId: string;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
 export interface RecordMaintenanceProps {
-  vehiculoId?: string;
+  vehiculoId: string;
   onClose: () => void;
+  onSuccess?: () => void;
+}
+
+export interface CompletarMantenimientoProps {
+  mantenimientoId: string;
+  onClose: () => void;
+  onSuccess?: () => void;
 }
 
 export interface DashboardVehiculoProps {
-  overrideModal?: (modalKey: VehiculoView, vehiculo?: Vehicle) => void;
+  overrideModal?: (modalKey: VehiculoView, vehiculo?: Vehiculo) => void;
 }
 
 export interface AddVehicleProps {
+  onClose: () => void;
   onSuccess?: () => void;
 }
 
@@ -59,56 +68,91 @@ export interface HistorialMantenimientosProps {
   onClose: () => void;
 }
 
-export interface NotifyReplacementProps {
-  vehiculoId?: string;
-  onClose: () => void;
-}
-
 export interface DetallesVehiculoProps {
-  vehiculo: Vehicle;
+  vehiculo: Vehiculo;
   onClose: () => void;
 }
 
 export interface EditVehiculoProps {
-  vehiculo: Vehicle;
+  vehiculo: Vehiculo;
   onClose: () => void;
   onSuccess?: () => void;
 }
 
-// Types específicos para formularios
-export type FormValues = Omit<Vehicle, 'id'>;
+// ==================== TYPES PARA FORMULARIOS ====================
 
-// Types para el historial (específico del módulo)
-export interface ItemHistorial {
-  id: string;
-  fecha: string;
-  descripcion: string;
+// Para el formulario de crear vehículo
+export interface CreateVehicleFormValues {
+  placa: string;
+  tipo: TipoVehiculo;
+  estadoInicial: 'nuevo' | 'usado';
+  estadoActual: EstadoVehiculo;
+  fechaAdquisicion: string;
   kilometraje: number;
-  tecnico: string;
-  costo: number;
   observaciones?: string;
-  
-  // Campos de auditoría
-  created_by?: number;
-  createdAt?: string | Date;
-  updated_by?: number;
-  updatedAt?: string | Date;
-  deleted_by?: number;
-  deletedAt?: string | Date;
 }
 
-// Constantes y opciones específicas del módulo
-export interface TipoOption {
-  value: Vehicle['tipo'];
+// Para el formulario de editar vehículo
+export interface EditVehicleFormValues {
+  placa?: string;
+  tipo?: TipoVehiculo;
+  fechaAdquisicion?: string;
+  kilometraje?: number;
+  estadoActual?: EstadoVehiculo;
+  observaciones?: string;
+  observacionesProblema?: string; // Si estadoActual = MALO
+  motivoBaja?: string; // Si estadoActual = BAJA
+}
+
+// ==================== TYPES PARA MANTENIMIENTOS ====================
+
+export type MantenimientoItem = Mantenimiento;
+
+// ==================== OPCIONES PARA SELECTS ====================
+
+export interface TipoVehiculoOption {
+  value: TipoVehiculo;
   label: string;
 }
 
-export interface EstadoOption {
-  value: Vehicle['estadoActual'];
+export interface EstadoVehiculoOption {
+  value: EstadoVehiculo;
   label: string;
 }
 
 export interface FilterOption {
   label: string;
   value: string;
+}
+
+// ==================== TYPES PARA FILTROS ====================
+
+export interface VehiculoFilters {
+  search?: string;
+  status?: EstadoVehiculo;
+  type?: TipoVehiculo;
+}
+
+export interface MantenimientoFiltersLocal {
+  fechaInicio?: string;
+  fechaFin?: string;
+  estado?: string;
+  vehiculoId?: string;
+}
+
+// ==================== TYPES PARA TABS ====================
+
+export type HistorialTab = 'por-periodo' | 'por-vehiculo';
+
+export interface TabPorPeriodoProps {
+  mantenimientos: Mantenimiento[];
+  isLoading?: boolean;
+}
+
+export interface TabPorVehiculoProps {
+  vehiculos: Vehiculo[];
+  onSelectVehiculo: (vehiculoId: string) => void;
+  selectedVehiculoId?: string;
+  mantenimientos: Mantenimiento[];
+  isLoading?: boolean;
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { JwtModule } from '@nestjs/jwt';
+import { ScheduleModule } from '@nestjs/schedule'; // ← NUEVO
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -75,6 +76,10 @@ import { StatisticsModule } from './statistics/statistics.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
 
     EventEmitterModule.forRoot(),
+
+    // ==================== NUEVO: Schedule Module ====================
+    ScheduleModule.forRoot(),
+    // ================================================================
 
     JwtModule.registerAsync({
       global: true,

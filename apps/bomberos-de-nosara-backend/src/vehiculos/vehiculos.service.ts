@@ -1,23 +1,23 @@
 import {
   Injectable,
   NotFoundException,
-  ConflictException,
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 
 import { Vehiculo } from './entities/vehiculo.entity';
 import { Mantenimiento } from './entities/mantenimiento-vehiculo.entity';
 
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
 import { EditVehiculoDto } from './dto/edit-vehiculo.dto';
-import { MantenimientoVehiculoDto } from './dto/mantenimiento-vehiculo.dto';
-import { MantenimientoProgramadoVehiculoDto } from './dto/mantenimiento-programado-vehiculo.dto';
-import { ReposicionVehiculoDto } from './dto/reposicion-vehiculo.dto';
+import { ProgramarMantenimientoDto } from './dto/programar-mantenimiento.dto';
+import { CompletarMantenimientoDto } from './dto/completar-mantenimiento.dto';
 import { PaginatedVehiculoQueryDto } from './dto/paginated-query.dto';
 import { PaginatedVehiculoResponseDto } from './dto/paginated-response.dto';
 import { EstadoVehiculo } from './enums/vehiculo-bomberil.enums';
+import { EstadoMantenimiento } from './enums/mantenimiento.enums';
+import { RegistrarMantenimientoDto } from './dto/registrar-matenimiento.dto';
 
 @Injectable()
 export class VehiculosService {
@@ -28,7 +28,7 @@ export class VehiculosService {
     private readonly mantenimientoRepo: Repository<Mantenimiento>,
   ) {}
 
-  // ----------------- Helpers -----------------
+  // ==================== HELPERS ====================
 
   private ensurePastOrToday(dateStr: string, field = 'fechaAdquisicion') {
     const d = new Date(dateStr);
@@ -40,7 +40,11 @@ export class VehiculosService {
       });
     }
     const today = new Date();
-    if (d > new Date(today.toISOString().slice(0, 10))) {
+    today.setHours(0, 0, 0, 0);
+    const inputDate = new Date(d);
+    inputDate.setHours(0, 0, 0, 0);
+    
+    if (inputDate > today) {
       throw new BadRequestException({
         code: 'DATE_IN_FUTURE',
         field,
@@ -105,7 +109,7 @@ export class VehiculosService {
     }
   }
 
-  // ----------------- CRUD BÁSICO -----------------
+  // ==================== CRUD BÁSICO VEHÍCULOS ====================
   
   async findAll(): Promise<Vehiculo[]> {
     return this.vehiculoRepo.find();
@@ -160,8 +164,6 @@ export class VehiculosService {
     return this.vehiculoRepo.find({ withDeleted: true });
   }
 
-  // ----------------- CREAR -----------------
-  
   async create(dto: CreateVehiculoDto, userId: number): Promise<Vehiculo> {
     const fechaAdq = this.ensurePastOrToday(dto.fechaAdquisicion, 'fechaAdquisicion');
 
@@ -176,8 +178,6 @@ export class VehiculosService {
     return await this.vehiculoRepo.save(entity);
   }
 
-  // ----------------- ACTUALIZAR -----------------
-  
   async edit(id: string, dto: EditVehiculoDto, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
 
@@ -227,44 +227,20 @@ export class VehiculosService {
     return this.vehiculoRepo.save(vehiculo);
   }
 
-  // ----------------- SOFT DELETE Y RESTAURACIÓN -----------------
+  // ==================== SOFT DELETE Y RESTAURACIÓN ====================
 
   async softDelete(id: string, userId: number): Promise<{ message: string }> {
     const vehiculo = await this.findOne(id);
 
-    // Obtener todos los mantenimientos registrados
-    const mantenimientosRegistrados = await this.mantenimientoRepo.find({
-      where: { vehiculo: { id } }
-    });
-
-    // Eliminar en cascada todos los mantenimientos registrados
-    if (mantenimientosRegistrados.length > 0) {
-      for (const mantenimiento of mantenimientosRegistrados) {
-        mantenimiento.deletedBy = userId;
-        await this.mantenimientoRepo.save(mantenimiento);
-        await this.mantenimientoRepo.softDelete(mantenimiento.id);
-      }
-    }
-
-    // Eliminar el vehículo (el campo fechaProximoMantenimiento se pierde con el soft delete)
+    // CAMBIO CRÍTICO: Ya NO eliminamos mantenimientos en cascada
+    // Los mantenimientos persisten para reportes de costos
     vehiculo.deletedBy = userId;
     await this.vehiculoRepo.save(vehiculo);
     await this.vehiculoRepo.softDelete(id);
 
-    // Mensaje informativo
-    const detalles = [];
-    if (mantenimientosRegistrados.length > 0) {
-      detalles.push(`${mantenimientosRegistrados.length} mantenimiento(s) registrado(s)`);
-    }
-    if (vehiculo.fechaProximoMantenimiento) {
-      detalles.push('mantenimiento programado');
-    }
-
-    const mensaje = detalles.length > 0
-      ? `Vehículo eliminado correctamente junto con ${detalles.join(' y ')}`
-      : 'Vehículo eliminado correctamente';
-
-    return { message: mensaje };
+    return { 
+      message: 'Vehículo eliminado correctamente. Los mantenimientos registrados se mantienen para reportes de costos.' 
+    };
   }
 
   async restore(id: string, userId: number): Promise<Vehiculo> {
@@ -284,102 +260,303 @@ export class VehiculosService {
       });
     }
 
-    // Restaurar mantenimientos eliminados en cascada
-    const mantenimientosEliminados = await this.mantenimientoRepo.find({
-      where: { vehiculo: { id } },
-      withDeleted: true
-    });
-
-    const mantenimientosARestaurar = mantenimientosEliminados.filter(m => m.deletedAt);
-
-    if (mantenimientosARestaurar.length > 0) {
-      for (const mantenimiento of mantenimientosARestaurar) {
-        await this.mantenimientoRepo.restore(mantenimiento.id);
-        mantenimiento.updatedBy = userId;
-        mantenimiento.deletedBy = null;
-        await this.mantenimientoRepo.save(mantenimiento);
-      }
-    }
-
-    // Restaurar el vehículo
+    // CAMBIO: Ya no restauramos mantenimientos (nunca se eliminaron)
     await this.vehiculoRepo.restore(id);
 
     vehiculo.updatedBy = userId;
     vehiculo.deletedBy = null;
-    
-    const mensajeRestauracion = mantenimientosARestaurar.length > 0
-      ? `RESTAURADO por usuario ${userId} junto con ${mantenimientosARestaurar.length} mantenimiento(s)`
-      : `RESTAURADO por usuario ${userId}`;
-    
-    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | ${mensajeRestauracion}`.trim();
+    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | RESTAURADO por usuario ${userId}`.trim();
 
     return await this.vehiculoRepo.save(vehiculo);
   }
 
-  // ----------------- REPOSICIÓN -----------------
-  
-  async registrarReposicion(id: string, dto: ReposicionVehiculoDto, userId: number): Promise<Vehiculo> {
-    const vehiculo = await this.findOne(id);
-    vehiculo.reposicionSolicitada = true;
-    vehiculo.motivoReposicion = dto.motivo;
-    vehiculo.observacionesReposicion = dto.observaciones;
-    vehiculo.updatedBy = userId;
-    return this.vehiculoRepo.save(vehiculo);
-  }
+  // ==================== MANTENIMIENTOS - PROGRAMAR ====================
 
-  // ----------------- MANTENIMIENTOS -----------------
-  
-  async registrarMantenimiento(id: string, dto: MantenimientoVehiculoDto, userId: number): Promise<Mantenimiento> {
-    const vehiculo = await this.findOne(id);
+  async programarMantenimiento(
+    vehiculoId: string, 
+    dto: ProgramarMantenimientoDto, 
+    userId: number
+  ): Promise<Mantenimiento> {
+    const vehiculo = await this.findOne(vehiculoId);
 
-    vehiculo.kilometraje = dto.kilometraje;
-    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | Mantenimiento: ${dto.descripcion}`.trim();
-    vehiculo.updatedBy = userId;
-    await this.vehiculoRepo.save(vehiculo);
+    // Validar que la fecha no sea en el pasado
+    const fechaMantenimiento = new Date(dto.fecha);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    fechaMantenimiento.setHours(0, 0, 0, 0);
 
-    const registro = this.mantenimientoRepo.create({
-      ...dto,
-      fecha: new Date(dto.fecha),
-      vehiculo,
-      createdBy: userId,
-      updatedBy: userId,
-    });
-    
-    return this.mantenimientoRepo.save(registro);
-  }
-
-  async programarMantenimiento(id: string, dto: MantenimientoProgramadoVehiculoDto, userId: number): Promise<Vehiculo> {
-    const vehiculo = await this.findOne(id);
-    vehiculo.fechaProximoMantenimiento = new Date(dto.fechaProximoMantenimiento);
-    vehiculo.updatedBy = userId;
-    return this.vehiculoRepo.save(vehiculo);
-  }
-
-  async cancelarMantenimientoProgramado(id: string, userId: number): Promise<Vehiculo> {
-    const vehiculo = await this.findOne(id);
-    
-    if (!vehiculo.fechaProximoMantenimiento) {
+    if (fechaMantenimiento < hoy) {
       throw new BadRequestException({
-        code: 'NO_SCHEDULED_MAINTENANCE',
-        message: 'El vehículo no tiene mantenimiento programado',
+        code: 'INVALID_DATE',
+        message: 'La fecha del mantenimiento no puede ser en el pasado',
       });
     }
 
-    vehiculo.fechaProximoMantenimiento = undefined;
-    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | Mantenimiento programado cancelado`.trim();
-    vehiculo.updatedBy = userId;
-    
-    return this.vehiculoRepo.save(vehiculo);
+    const mantenimiento = this.mantenimientoRepo.create({
+      vehiculoId: vehiculo.id,
+      vehiculo,
+      fecha: fechaMantenimiento,
+      descripcion: dto.descripcion,
+      observaciones: dto.observaciones,
+      estado: EstadoMantenimiento.PENDIENTE,
+      createdBy: userId,
+      updatedBy: userId,
+    });
+
+    return await this.mantenimientoRepo.save(mantenimiento);
   }
 
-  async obtenerHistorial(id: string): Promise<Mantenimiento[]> {
+  // ==================== MANTENIMIENTOS - REGISTRAR ====================
+
+  async registrarMantenimiento(
+    vehiculoId: string,
+    dto: RegistrarMantenimientoDto,
+    userId: number
+  ): Promise<Mantenimiento> {
+    const vehiculo = await this.findOne(vehiculoId);
+
+   
+    const fechaMantenimiento = new Date(dto.fecha);
+    const hoy = new Date();
+    hoy.setHours(23, 59, 59, 999);
+    fechaMantenimiento.setHours(0, 0, 0, 0);
+
+    if (fechaMantenimiento > hoy) {
+      throw new BadRequestException({
+        code: 'INVALID_DATE',
+        message: 'No puedes registrar un mantenimiento con fecha futura. Usa programar mantenimiento.',
+      });
+    }
+
+    // Validar que el kilometraje no sea menor al actual del vehículo
+    if (dto.kilometraje < vehiculo.kilometraje) {
+      throw new BadRequestException({
+        code: 'INVALID_KILOMETRAJE',
+        message: `El kilometraje (${dto.kilometraje} km) no puede ser menor al actual del vehículo (${vehiculo.kilometraje} km)`,
+      });
+    }
+
+    // Crear mantenimiento directamente como COMPLETADO
+    const mantenimiento = this.mantenimientoRepo.create({
+      vehiculoId: vehiculo.id,
+      vehiculo,
+      fecha: fechaMantenimiento,
+      descripcion: dto.descripcion,
+      kilometraje: dto.kilometraje,
+      tecnico: dto.tecnico,
+      costo: dto.costo,
+      observaciones: dto.observaciones,
+      estado: EstadoMantenimiento.COMPLETADO,
+      createdBy: userId,
+      updatedBy: userId,
+    });
+
+    // Actualizar el kilometraje del vehículo
+    vehiculo.kilometraje = dto.kilometraje;
+    vehiculo.updatedBy = userId;
+    await this.vehiculoRepo.save(vehiculo);
+
+    return await this.mantenimientoRepo.save(mantenimiento);
+  }
+
+  // ==================== MANTENIMIENTOS - COMPLETAR ====================
+
+  async completarMantenimiento(
+    mantenimientoId: string,
+    dto: CompletarMantenimientoDto,
+    userId: number
+  ): Promise<Mantenimiento> {
+    const mantenimiento = await this.mantenimientoRepo.findOne({
+      where: { id: mantenimientoId },
+      relations: ['vehiculo'],
+    });
+
+    if (!mantenimiento) {
+      throw new NotFoundException('Mantenimiento no encontrado');
+    }
+
+    // Solo se puede completar si está EN_REVISION o PENDIENTE
+    if (![EstadoMantenimiento.EN_REVISION, EstadoMantenimiento.PENDIENTE].includes(mantenimiento.estado)) {
+      throw new BadRequestException({
+        code: 'INVALID_STATE',
+        message: 'Solo se pueden completar mantenimientos en estado PENDIENTE o EN_REVISION',
+      });
+    }
+
+    // Actualizar el mantenimiento con todos los datos
+    mantenimiento.kilometraje = dto.kilometraje;
+    mantenimiento.tecnico = dto.tecnico;
+    mantenimiento.costo = dto.costo;
+    mantenimiento.observaciones = dto.observaciones ?? mantenimiento.observaciones;
+    mantenimiento.estado = EstadoMantenimiento.COMPLETADO;
+    mantenimiento.updatedBy = userId;
+
+    // Actualizar el kilometraje del vehículo
+    const vehiculo = mantenimiento.vehiculo;
+    vehiculo.kilometraje = dto.kilometraje;
+    vehiculo.updatedBy = userId;
+    await this.vehiculoRepo.save(vehiculo);
+
+    return await this.mantenimientoRepo.save(mantenimiento);
+  }
+
+  // ==================== MANTENIMIENTOS - CAMBIAR ESTADO ====================
+
+  async cambiarEstadoMantenimiento(
+    mantenimientoId: string,
+    nuevoEstado: EstadoMantenimiento,
+    userId: number
+  ): Promise<Mantenimiento> {
+    const mantenimiento = await this.mantenimientoRepo.findOne({
+      where: { id: mantenimientoId },
+    });
+
+    if (!mantenimiento) {
+      throw new NotFoundException('Mantenimiento no encontrado');
+    }
+
+    // Validar transición de estado
+    if (nuevoEstado === EstadoMantenimiento.COMPLETADO) {
+      throw new BadRequestException({
+        code: 'USE_COMPLETAR_ENDPOINT',
+        message: 'Para completar un mantenimiento usa el endpoint de completar',
+      });
+    }
+
+    mantenimiento.estado = nuevoEstado;
+    mantenimiento.updatedBy = userId;
+
+    return await this.mantenimientoRepo.save(mantenimiento);
+  }
+
+  // ==================== MANTENIMIENTOS - CONSULTAS ====================
+
+  async obtenerHistorial(vehiculoId: string): Promise<Mantenimiento[]> {
+    // Incluye mantenimientos aunque el vehículo esté eliminado
     return this.mantenimientoRepo.find({
-      where: { vehiculo: { id } },
+      where: { vehiculoId },
       order: { fecha: 'DESC' },
+      relations: ['vehiculo'],
+      withDeleted: true, // Incluye vehículos eliminados
     });
   }
 
-  // ----------------- MANTENIMIENTOS - SOFT DELETE Y RESTAURACIÓN -----------------
+
+
+  async obtenerTodosMantenimientos(): Promise<Mantenimiento[]> {
+  return this.mantenimientoRepo.find({
+    relations: ['vehiculo'],
+    order: { fecha: 'DESC' },
+    withDeleted: true, // Incluye vehículos eliminados
+  });
+}
+
+  async obtenerMantenimientosPendientes(): Promise<Mantenimiento[]> {
+    return this.mantenimientoRepo.find({
+      where: { estado: EstadoMantenimiento.PENDIENTE },
+      relations: ['vehiculo'],
+      order: { fecha: 'ASC' },
+    });
+  }
+
+  async obtenerMantenimientosParaNotificar(): Promise<Mantenimiento[]> {
+    // Mantenimientos pendientes cuya fecha es mañana
+    const manana = new Date();
+    manana.setDate(manana.getDate() + 1);
+    manana.setHours(0, 0, 0, 0);
+
+    const pasadoManana = new Date(manana);
+    pasadoManana.setDate(pasadoManana.getDate() + 1);
+
+    return this.mantenimientoRepo.find({
+      where: {
+        estado: EstadoMantenimiento.PENDIENTE,
+        fecha: MoreThanOrEqual(manana) && LessThanOrEqual(pasadoManana),
+      },
+      relations: ['vehiculo'],
+    });
+  }
+
+  async obtenerMantenimientosDelDia(): Promise<Mantenimiento[]> {
+    // Mantenimientos pendientes cuya fecha es HOY
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+
+    const manana = new Date(hoy);
+    manana.setDate(manana.getDate() + 1);
+
+    return this.mantenimientoRepo.find({
+      where: {
+        estado: EstadoMantenimiento.PENDIENTE,
+        fecha: MoreThanOrEqual(hoy) && LessThanOrEqual(manana),
+      },
+      relations: ['vehiculo'],
+    });
+  }
+
+  async obtenerProximoMantenimiento(vehiculoId: string): Promise<Mantenimiento | null> {
+    return this.mantenimientoRepo.findOne({
+      where: {
+        vehiculoId,
+        estado: EstadoMantenimiento.PENDIENTE,
+      },
+      order: { fecha: 'ASC' },
+    });
+  }
+
+  // ==================== REPORTES DE COSTOS ====================
+
+  async obtenerCostosMensuales(mes: number, anio: number): Promise<{
+    total: number;
+    mantenimientos: Mantenimiento[];
+  }> {
+    const inicioMes = new Date(anio, mes - 1, 1);
+    const finMes = new Date(anio, mes, 0, 23, 59, 59);
+
+    // Solo mantenimientos COMPLETADOS cuentan para costos
+    const mantenimientos = await this.mantenimientoRepo.find({
+      where: {
+        estado: EstadoMantenimiento.COMPLETADO,
+        fecha: MoreThanOrEqual(inicioMes) && LessThanOrEqual(finMes),
+      },
+      relations: ['vehiculo'],
+      withDeleted: true, // Incluye mantenimientos de vehículos eliminados
+      order: { fecha: 'DESC' },
+    });
+
+    const total = mantenimientos.reduce((sum, m) => sum + Number(m.costo || 0), 0);
+
+    return { total, mantenimientos };
+  }
+
+  async obtenerCostosPorVehiculo(vehiculoId: string, mes?: number, anio?: number): Promise<{
+    total: number;
+    mantenimientos: Mantenimiento[];
+  }> {
+    const where: any = {
+      vehiculoId,
+      estado: EstadoMantenimiento.COMPLETADO,
+    };
+
+    if (mes && anio) {
+      const inicioMes = new Date(anio, mes - 1, 1);
+      const finMes = new Date(anio, mes, 0, 23, 59, 59);
+      where.fecha = MoreThanOrEqual(inicioMes) && LessThanOrEqual(finMes);
+    }
+
+    const mantenimientos = await this.mantenimientoRepo.find({
+      where,
+      relations: ['vehiculo'],
+      withDeleted: true,
+      order: { fecha: 'DESC' },
+    });
+
+    const total = mantenimientos.reduce((sum, m) => sum + Number(m.costo || 0), 0);
+
+    return { total, mantenimientos };
+  }
+
+  // ==================== MANTENIMIENTOS - SOFT DELETE Y RESTAURACIÓN ====================
 
   async softDeleteMantenimiento(id: string, userId: number): Promise<{ message: string }> {
     const mantenimiento = await this.mantenimientoRepo.findOne({ where: { id } });
@@ -388,11 +565,8 @@ export class VehiculosService {
       throw new NotFoundException('Mantenimiento no encontrado');
     }
 
-    // Marcar como eliminado con auditoría
     mantenimiento.deletedBy = userId;
     await this.mantenimientoRepo.save(mantenimiento);
-
-    // Soft delete
     await this.mantenimientoRepo.softDelete(id);
 
     return { message: 'Mantenimiento eliminado correctamente' };
@@ -415,17 +589,15 @@ export class VehiculosService {
       });
     }
 
-    // Restaurar
     await this.mantenimientoRepo.restore(id);
 
-    // Actualizar auditoría
     mantenimiento.updatedBy = userId;
     mantenimiento.deletedBy = null;
 
     return await this.mantenimientoRepo.save(mantenimiento);
   }
 
-  // ----------------- UTILIDADES -----------------
+  // ==================== UTILIDADES ====================
   
   async existsByPlaca(placa: string): Promise<{ exists: boolean }> {
     const count = await this.vehiculoRepo.count({ where: { placa } });
