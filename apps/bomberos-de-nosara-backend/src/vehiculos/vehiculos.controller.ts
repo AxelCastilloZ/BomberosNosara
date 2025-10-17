@@ -50,17 +50,69 @@ export class VehiculosController {
     return this.service.findAllWithDeleted();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
-  }
-
   @Post()
   create(
     @Body() dto: CreateVehiculoDto,
     @GetUser('id') userId: number
   ) {
     return this.service.create(dto, userId);
+  }
+
+  // ==================== MANTENIMIENTOS - CONSULTAS ESPECÍFICAS (SIN PARÁMETROS) ====================
+  // IMPORTANTE: Estas rutas deben ir ANTES de las rutas con :id para evitar conflictos
+
+  @Get('mantenimientos/todos')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerTodosMantenimientos() {
+    return this.service.obtenerTodosMantenimientos();
+  }
+
+  @Get('mantenimientos/pendientes')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerMantenimientosPendientes() {
+    return this.service.obtenerMantenimientosPendientes();
+  }
+
+  @Get('mantenimientos/del-dia')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerMantenimientosDelDia() {
+    return this.service.obtenerMantenimientosDelDia();
+  }
+
+  @Get('mantenimientos/notificar')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerMantenimientosParaNotificar() {
+    return this.service.obtenerMantenimientosParaNotificar();
+  }
+
+  // ==================== REPORTES DE COSTOS (RUTAS ESPECÍFICAS) ====================
+
+  @Get('reportes/costos-mensuales')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerCostosMensuales(
+    @Query('mes') mes: string,
+    @Query('anio') anio: string
+  ) {
+    return this.service.obtenerCostosMensuales(Number(mes), Number(anio));
+  }
+
+  // ==================== UTILIDADES (RUTAS ESPECÍFICAS) ====================
+
+  @Get('placa/:placa/exists')
+  existsByPlaca(@Param('placa') placa: string) {
+    return this.service.existsByPlaca(placa);
+  }
+
+  // ==================== RUTAS CON :id (DEBEN IR DESPUÉS DE LAS ESPECÍFICAS) ====================
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
   }
 
   @Patch(':id')
@@ -71,8 +123,6 @@ export class VehiculosController {
   ) {
     return this.service.edit(id, dto, userId);
   }
-
-  // ==================== SOFT DELETE Y RESTAURACIÓN ====================
 
   @Delete(':id')
   @UseGuards(RolesGuard)
@@ -99,22 +149,10 @@ export class VehiculosController {
   @Patch(':id/estado')
   async updateEstado(
     @Param('id') id: string,
-    @Body() body: { 
-      estadoActual: EstadoVehiculo; 
-      observaciones?: string;
-      observacionesProblema?: string;
-      motivoBaja?: string;
-    },
+    @Body() body: { estadoActual: EstadoVehiculo },
     @GetUser('id') userId: number
   ) {
-    const editDto: EditVehiculoDto = {
-      estadoActual: body.estadoActual,
-      observaciones: body.observaciones,
-      observacionesProblema: body.observacionesProblema,
-      motivoBaja: body.motivoBaja
-    };
-
-    return this.service.edit(id, editDto, userId);
+    return this.service.updateEstado(id, body.estadoActual, userId);
   }
 
   @Patch(':id/dar-de-baja')
@@ -128,7 +166,7 @@ export class VehiculosController {
     return this.service.darDeBaja(id, motivo, userId);
   }
 
-  // ==================== MANTENIMIENTOS - PROGRAMAR ====================
+  // ==================== MANTENIMIENTOS - PROGRAMAR/REGISTRAR ====================
 
   @Post(':id/mantenimientos/programar')
   programarMantenimiento(
@@ -139,8 +177,6 @@ export class VehiculosController {
     return this.service.programarMantenimiento(vehiculoId, dto, userId);
   }
 
-  // ==================== MANTENIMIENTOS - REGISTRAR ====================
-
   @Post(':id/mantenimientos/registrar')
   registrarMantenimiento(
     @Param('id') vehiculoId: string, 
@@ -150,81 +186,19 @@ export class VehiculosController {
     return this.service.registrarMantenimiento(vehiculoId, dto, userId);
   }
 
-  // ==================== MANTENIMIENTOS - COMPLETAR ====================
-
-  @Patch('mantenimientos/:mantenimientoId/completar')
-  completarMantenimiento(
-    @Param('mantenimientoId') mantenimientoId: string,
-    @Body() dto: CompletarMantenimientoDto,
-    @GetUser('id') userId: number
-  ) {
-    return this.service.completarMantenimiento(mantenimientoId, dto, userId);
-  }
-
-  // ==================== MANTENIMIENTOS - CAMBIAR ESTADO ====================
-
-  @Patch('mantenimientos/:mantenimientoId/estado')
-  @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  cambiarEstadoMantenimiento(
-    @Param('mantenimientoId') mantenimientoId: string,
-    @Body('estado') estado: EstadoMantenimiento,
-    @GetUser('id') userId: number
-  ) {
-    return this.service.cambiarEstadoMantenimiento(mantenimientoId, estado, userId);
-  }
-
-  // ==================== MANTENIMIENTOS - CONSULTAS ====================
+  // ==================== MANTENIMIENTOS - CONSULTAS POR VEHÍCULO ====================
 
   @Get(':id/mantenimientos/historial')
   obtenerHistorial(@Param('id') vehiculoId: string) {
     return this.service.obtenerHistorial(vehiculoId);
   }
 
-  @Get('mantenimientos/todos')
-@UseGuards(RolesGuard)
-@Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-obtenerTodosMantenimientos() {
-  return this.service.obtenerTodosMantenimientos();
-}
-
   @Get(':id/mantenimientos/proximo')
   obtenerProximoMantenimiento(@Param('id') vehiculoId: string) {
     return this.service.obtenerProximoMantenimiento(vehiculoId);
   }
 
-  @Get('mantenimientos/pendientes')
-  @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  obtenerMantenimientosPendientes() {
-    return this.service.obtenerMantenimientosPendientes();
-  }
-
-  @Get('mantenimientos/del-dia')
-  @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  obtenerMantenimientosDelDia() {
-    return this.service.obtenerMantenimientosDelDia();
-  }
-
-  @Get('mantenimientos/notificar')
-  @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  obtenerMantenimientosParaNotificar() {
-    return this.service.obtenerMantenimientosParaNotificar();
-  }
-
-  // ==================== REPORTES DE COSTOS ====================
-
-  @Get('reportes/costos-mensuales')
-  @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  obtenerCostosMensuales(
-    @Query('mes') mes: string,
-    @Query('anio') anio: string
-  ) {
-    return this.service.obtenerCostosMensuales(Number(mes), Number(anio));
-  }
+  // ==================== REPORTES DE COSTOS POR VEHÍCULO ====================
 
   @Get(':id/reportes/costos')
   @UseGuards(RolesGuard)
@@ -239,6 +213,28 @@ obtenerTodosMantenimientos() {
       mes ? Number(mes) : undefined,
       anio ? Number(anio) : undefined
     );
+  }
+
+  // ==================== MANTENIMIENTOS - COMPLETAR/CAMBIAR ESTADO ====================
+
+  @Patch('mantenimientos/:mantenimientoId/completar')
+  completarMantenimiento(
+    @Param('mantenimientoId') mantenimientoId: string,
+    @Body() dto: CompletarMantenimientoDto,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.completarMantenimiento(mantenimientoId, dto, userId);
+  }
+
+  @Patch('mantenimientos/:mantenimientoId/estado')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  cambiarEstadoMantenimiento(
+    @Param('mantenimientoId') mantenimientoId: string,
+    @Body('estado') estado: EstadoMantenimiento,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.cambiarEstadoMantenimiento(mantenimientoId, estado, userId);
   }
 
   // ==================== MANTENIMIENTOS - SOFT DELETE Y RESTAURACIÓN ====================
@@ -261,12 +257,5 @@ obtenerTodosMantenimientos() {
     @GetUser('id') userId: number
   ) {
     return this.service.restoreMantenimiento(id, userId);
-  }
-
-  // ==================== UTILIDADES ====================
-
-  @Get('placa/:placa/exists')
-  existsByPlaca(@Param('placa') placa: string) {
-    return this.service.existsByPlaca(placa);
   }
 }

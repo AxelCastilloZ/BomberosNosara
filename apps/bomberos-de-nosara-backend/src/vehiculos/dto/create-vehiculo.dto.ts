@@ -20,7 +20,4 @@ export class CreateVehiculoDto {
   @IsNumber()
   kilometraje!: number;
 
-  @IsOptional()
-  @IsString()
-  observaciones?: string;
 }

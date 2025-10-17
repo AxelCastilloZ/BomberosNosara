@@ -1,20 +1,22 @@
-import type { Vehiculo, TipoVehiculo, EstadoVehiculo } from '../../../types/vehiculo.types';
+// src/modules/inventarioVehiculos/types/index.ts
+
+import type { Vehiculo, TipoVehiculo, EstadoVehiculo, EstadoInicial } from '../../../types/vehiculo.types';
 import type { Mantenimiento } from '../../../types/mantenimiento.types';
 
-// ==================== NAVEGACIÓN ====================
+// ==================== NAVEGACIÓN Y VISTAS ====================
 
 export type VehiculoView =
-  | 'inicio'
-  | 'agregar'
-  | 'estado'
-  | 'programar'
-  | 'registrar'
-  | 'mantenimiento'
-  | 'lista'
-  | 'dashboard'
-  | 'detalles'
-  | 'editar'
-  | 'historial';
+  | 'inicio'           // Dashboard principal
+  | 'agregar'          // Crear vehículo
+  | 'detalles'         // Ver detalles completos
+  | 'editar'           // Editar vehículo
+  | 'estado'           // Cambiar estado (incluye dar de baja)
+  | 'programar'        // Programar mantenimiento
+  | 'registrar'        // Registrar mantenimiento directo
+  | 'completar'        // Completar mantenimiento
+  | 'historial'        // Ver historial completo
+  | 'lista'            // Lista de vehículos
+  | 'dashboard';       // Dashboard con estadísticas
 
 // ==================== PROPS DE COMPONENTES ====================
 
@@ -28,71 +30,76 @@ export interface VehicleListProps {
   onEditar: (vehiculo: Vehiculo) => void;
 }
 
-export interface UpdateStatusProps {
-  vehiculo?: Vehiculo;
-  onClose: () => void;
-}
-
-export interface ScheduleMaintenanceProps {
-  vehiculoId: string;
-  onClose: () => void;
-  onSuccess?: () => void;
-}
-
-export interface RecordMaintenanceProps {
-  vehiculoId: string;
-  onClose: () => void;
-  onSuccess?: () => void;
-}
-
-export interface CompletarMantenimientoProps {
-  mantenimientoId: string;
-  onClose: () => void;
-  onSuccess?: () => void;
-}
-
 export interface DashboardVehiculoProps {
   overrideModal?: (modalKey: VehiculoView, vehiculo?: Vehiculo) => void;
 }
 
+// ==================== PROPS DE MODALES ====================
+
 export interface AddVehicleProps {
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
-}
-
-export interface MantenimientoVehiculoProps {
-  onBack: () => void;
-}
-
-export interface HistorialMantenimientosProps {
-  onClose: () => void;
 }
 
 export interface DetallesVehiculoProps {
-  vehiculo: Vehiculo;
-  onClose: () => void;
+  vehiculo: Vehiculo | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onOpenModal?: (view: VehiculoView, vehiculo?: Vehiculo) => void;
 }
 
 export interface EditVehiculoProps {
-  vehiculo: Vehiculo;
-  onClose: () => void;
+  vehiculo: Vehiculo | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+}
+
+export interface CambiarEstadoProps {
+  vehiculo: Vehiculo | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export interface ProgramarMantenimientoProps {
+  vehiculoId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export interface RegistrarMantenimientoProps {
+  vehiculoId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export interface CompletarMantenimientoProps {
+  mantenimiento: Mantenimiento | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export interface HistorialMantenimientosProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 // ==================== TYPES PARA FORMULARIOS ====================
 
-// Para el formulario de crear vehículo
 export interface CreateVehicleFormValues {
   placa: string;
   tipo: TipoVehiculo;
-  estadoInicial: 'nuevo' | 'usado';
+  estadoInicial: EstadoInicial;
   estadoActual: EstadoVehiculo;
   fechaAdquisicion: string;
   kilometraje: number;
-  observaciones?: string;
 }
 
-// Para el formulario de editar vehículo
 export interface EditVehicleFormValues {
   placa?: string;
   tipo?: TipoVehiculo;
@@ -100,29 +107,11 @@ export interface EditVehicleFormValues {
   kilometraje?: number;
   estadoActual?: EstadoVehiculo;
   observaciones?: string;
-  observacionesProblema?: string; // Si estadoActual = MALO
-  motivoBaja?: string; // Si estadoActual = BAJA
 }
 
-// ==================== TYPES PARA MANTENIMIENTOS ====================
-
-export type MantenimientoItem = Mantenimiento;
-
-// ==================== OPCIONES PARA SELECTS ====================
-
-export interface TipoVehiculoOption {
-  value: TipoVehiculo;
-  label: string;
-}
-
-export interface EstadoVehiculoOption {
-  value: EstadoVehiculo;
-  label: string;
-}
-
-export interface FilterOption {
-  label: string;
-  value: string;
+export interface CambiarEstadoFormValues {
+  estadoActual: EstadoVehiculo;
+  motivo?: string; // Requerido solo si estadoActual = BAJA
 }
 
 // ==================== TYPES PARA FILTROS ====================
@@ -140,13 +129,14 @@ export interface MantenimientoFiltersLocal {
   vehiculoId?: string;
 }
 
-// ==================== TYPES PARA TABS ====================
+// ==================== TYPES PARA TABS DE HISTORIAL ====================
 
 export type HistorialTab = 'por-periodo' | 'por-vehiculo';
 
 export interface TabPorPeriodoProps {
   mantenimientos: Mantenimiento[];
   isLoading?: boolean;
+  onCompletar?: (mantenimiento: Mantenimiento) => void;
 }
 
 export interface TabPorVehiculoProps {
@@ -155,4 +145,17 @@ export interface TabPorVehiculoProps {
   selectedVehiculoId?: string;
   mantenimientos: Mantenimiento[];
   isLoading?: boolean;
+  onProgramar?: (vehiculoId: string) => void;
+  onRegistrar?: (vehiculoId: string) => void;
 }
+
+// ==================== OPCIONES PARA SELECTS ====================
+
+export interface SelectOption<T = string> {
+  value: T;
+  label: string;
+}
+
+export type TipoVehiculoOption = SelectOption<TipoVehiculo>;
+export type EstadoVehiculoOption = SelectOption<EstadoVehiculo>;
+export type EstadoInicialOption = SelectOption<EstadoInicial>;

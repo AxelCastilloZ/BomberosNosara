@@ -55,28 +55,23 @@ export class VehiculosService {
   }
 
   /**
+   * Agrega una línea al log de observaciones del vehículo
+   */
+  private agregarObservacion(vehiculo: Vehiculo, nuevaLinea: string): void {
+    if (vehiculo.observaciones) {
+      vehiculo.observaciones = `${vehiculo.observaciones}\n${nuevaLinea}`;
+    } else {
+      vehiculo.observaciones = nuevaLinea;
+    }
+  }
+
+  /**
    * Valida transiciones de estado según las reglas de negocio
    */
   private async validateStateTransition(
     currentState: EstadoVehiculo,
     newState: EstadoVehiculo,
-    dto: EditVehiculoDto
   ): Promise<void> {
-    // Estados que requieren información adicional
-    if (newState === EstadoVehiculo.MALO && !dto.observacionesProblema) {
-      throw new BadRequestException({
-        code: 'MISSING_PROBLEM_DESCRIPTION',
-        message: 'Describe el problema del vehículo al marcarlo como MALO',
-      });
-    }
-
-    if (newState === EstadoVehiculo.BAJA && !dto.motivoBaja) {
-      throw new BadRequestException({
-        code: 'MISSING_REASON',
-        message: 'Especifica el motivo para dar de baja el vehículo',
-      });
-    }
-
     // Validar transiciones válidas
     const validTransitions: Record<EstadoVehiculo, EstadoVehiculo[]> = {
       [EstadoVehiculo.EN_SERVICIO]: [
@@ -183,7 +178,7 @@ export class VehiculosService {
 
     // Validar transiciones de estado si se está cambiando
     if (dto.estadoActual && dto.estadoActual !== vehiculo.estadoActual) {
-      await this.validateStateTransition(vehiculo.estadoActual, dto.estadoActual, dto);
+      await this.validateStateTransition(vehiculo.estadoActual, dto.estadoActual);
     }
 
     // Si viene fecha, valida que no sea futura
@@ -192,38 +187,46 @@ export class VehiculosService {
       fechaAdq = this.ensurePastOrToday(dto.fechaAdquisicion, 'fechaAdquisicion');
     }
 
-    // Manejo especial de observaciones según el estado
-    let observacionesFinales = vehiculo.observaciones;
-    if (dto.estadoActual === EstadoVehiculo.MALO && dto.observacionesProblema) {
-      observacionesFinales = `${observacionesFinales ?? ''} | PROBLEMA: ${dto.observacionesProblema}`.trim();
-    }
-    if (dto.estadoActual === EstadoVehiculo.BAJA && dto.motivoBaja) {
-      observacionesFinales = `${observacionesFinales ?? ''} | BAJA: ${dto.motivoBaja}`.trim();
-    }
-
     Object.assign(vehiculo, {
       ...dto,
       placa: dto.placa?.trim() ?? vehiculo.placa,
       fechaAdquisicion: fechaAdq,
-      observaciones: observacionesFinales,
       updatedBy: userId,
     });
 
     return await this.vehiculoRepo.save(vehiculo);
   }
 
-  async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: number): Promise<Vehiculo> {
-    const vehiculo = await this.findOne(id);
-    vehiculo.estadoActual = estadoActual;
-    vehiculo.updatedBy = userId;
-    return this.vehiculoRepo.save(vehiculo);
-  }
+ 
+async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: number): Promise<Vehiculo> {
+  const vehiculo = await this.findOne(id);
+  
+  // 🔥 AGREGAR ESTAS LÍNEAS:
+  const fecha = new Date().toLocaleDateString('es-CR');
+  this.agregarObservacion(
+    vehiculo, 
+    `${fecha} - Cambio de estado: ${vehiculo.estadoActual} → ${estadoActual}`
+  );
+  
+  vehiculo.estadoActual = estadoActual;
+  vehiculo.updatedBy = userId;
+  
+  return this.vehiculoRepo.save(vehiculo);
+}
 
   async darDeBaja(id: string, motivo: string, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
+    
+    // Log de la baja
+    const fecha = new Date().toLocaleDateString('es-CR');
+    this.agregarObservacion(
+      vehiculo, 
+      `${fecha} - DADO DE BAJA | Motivo: ${motivo}`
+    );
+    
     vehiculo.estadoActual = EstadoVehiculo.BAJA;
-    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | Baja: ${motivo}`.trim();
     vehiculo.updatedBy = userId;
+    
     return this.vehiculoRepo.save(vehiculo);
   }
 
@@ -232,8 +235,6 @@ export class VehiculosService {
   async softDelete(id: string, userId: number): Promise<{ message: string }> {
     const vehiculo = await this.findOne(id);
 
-    // CAMBIO CRÍTICO: Ya NO eliminamos mantenimientos en cascada
-    // Los mantenimientos persisten para reportes de costos
     vehiculo.deletedBy = userId;
     await this.vehiculoRepo.save(vehiculo);
     await this.vehiculoRepo.softDelete(id);
@@ -260,12 +261,14 @@ export class VehiculosService {
       });
     }
 
-    // CAMBIO: Ya no restauramos mantenimientos (nunca se eliminaron)
     await this.vehiculoRepo.restore(id);
+
+    // Log de restauración
+    const fecha = new Date().toLocaleDateString('es-CR');
+    this.agregarObservacion(vehiculo, `${fecha} - Vehículo RESTAURADO`);
 
     vehiculo.updatedBy = userId;
     vehiculo.deletedBy = null;
-    vehiculo.observaciones = `${vehiculo.observaciones ?? ''} | RESTAURADO por usuario ${userId}`.trim();
 
     return await this.vehiculoRepo.save(vehiculo);
   }
@@ -315,7 +318,6 @@ export class VehiculosService {
   ): Promise<Mantenimiento> {
     const vehiculo = await this.findOne(vehiculoId);
 
-   
     const fechaMantenimiento = new Date(dto.fecha);
     const hoy = new Date();
     hoy.setHours(23, 59, 59, 999);
@@ -350,6 +352,14 @@ export class VehiculosService {
       createdBy: userId,
       updatedBy: userId,
     });
+
+    // 🔥 AGREGAR AL LOG DE OBSERVACIONES DEL VEHÍCULO
+    const fecha = fechaMantenimiento.toLocaleDateString('es-CR');
+    const costoFormateado = dto.costo ? `₡${dto.costo.toLocaleString('es-CR')}` : 'N/A';
+    this.agregarObservacion(
+      vehiculo,
+      `${fecha} - ${dto.descripcion} | Costo: ${costoFormateado} | Km: ${dto.kilometraje} | Técnico: ${dto.tecnico}`
+    );
 
     // Actualizar el kilometraje del vehículo
     vehiculo.kilometraje = dto.kilometraje;
@@ -391,8 +401,16 @@ export class VehiculosService {
     mantenimiento.estado = EstadoMantenimiento.COMPLETADO;
     mantenimiento.updatedBy = userId;
 
-    // Actualizar el kilometraje del vehículo
+    // 🔥 AGREGAR AL LOG DE OBSERVACIONES DEL VEHÍCULO
     const vehiculo = mantenimiento.vehiculo;
+    const fecha = new Date().toLocaleDateString('es-CR');
+    const costoFormateado = dto.costo ? `₡${dto.costo.toLocaleString('es-CR')}` : 'N/A';
+    this.agregarObservacion(
+      vehiculo,
+      `${fecha} - ${mantenimiento.descripcion} [COMPLETADO] | Costo: ${costoFormateado} | Km: ${dto.kilometraje} | Técnico: ${dto.tecnico}`
+    );
+
+    // Actualizar el kilometraje del vehículo
     vehiculo.kilometraje = dto.kilometraje;
     vehiculo.updatedBy = userId;
     await this.vehiculoRepo.save(vehiculo);
@@ -432,24 +450,21 @@ export class VehiculosService {
   // ==================== MANTENIMIENTOS - CONSULTAS ====================
 
   async obtenerHistorial(vehiculoId: string): Promise<Mantenimiento[]> {
-    // Incluye mantenimientos aunque el vehículo esté eliminado
     return this.mantenimientoRepo.find({
       where: { vehiculoId },
       order: { fecha: 'DESC' },
       relations: ['vehiculo'],
-      withDeleted: true, // Incluye vehículos eliminados
+      withDeleted: true,
     });
   }
 
-
-
   async obtenerTodosMantenimientos(): Promise<Mantenimiento[]> {
-  return this.mantenimientoRepo.find({
-    relations: ['vehiculo'],
-    order: { fecha: 'DESC' },
-    withDeleted: true, // Incluye vehículos eliminados
-  });
-}
+    return this.mantenimientoRepo.find({
+      relations: ['vehiculo'],
+      order: { fecha: 'DESC' },
+      withDeleted: true,
+    });
+  }
 
   async obtenerMantenimientosPendientes(): Promise<Mantenimiento[]> {
     return this.mantenimientoRepo.find({
@@ -460,7 +475,6 @@ export class VehiculosService {
   }
 
   async obtenerMantenimientosParaNotificar(): Promise<Mantenimiento[]> {
-    // Mantenimientos pendientes cuya fecha es mañana
     const manana = new Date();
     manana.setDate(manana.getDate() + 1);
     manana.setHours(0, 0, 0, 0);
@@ -478,7 +492,6 @@ export class VehiculosService {
   }
 
   async obtenerMantenimientosDelDia(): Promise<Mantenimiento[]> {
-    // Mantenimientos pendientes cuya fecha es HOY
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
@@ -513,14 +526,13 @@ export class VehiculosService {
     const inicioMes = new Date(anio, mes - 1, 1);
     const finMes = new Date(anio, mes, 0, 23, 59, 59);
 
-    // Solo mantenimientos COMPLETADOS cuentan para costos
     const mantenimientos = await this.mantenimientoRepo.find({
       where: {
         estado: EstadoMantenimiento.COMPLETADO,
         fecha: MoreThanOrEqual(inicioMes) && LessThanOrEqual(finMes),
       },
       relations: ['vehiculo'],
-      withDeleted: true, // Incluye mantenimientos de vehículos eliminados
+      withDeleted: true,
       order: { fecha: 'DESC' },
     });
 

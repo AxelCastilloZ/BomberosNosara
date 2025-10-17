@@ -1,3 +1,5 @@
+// src/types/vehiculo.types.ts
+
 // ==================== ENUMS ====================
 
 export enum EstadoVehiculo {
@@ -35,7 +37,7 @@ export interface Vehiculo {
   // Información operativa
   fechaAdquisicion: string; // ISO date string
   kilometraje: number;
-  observaciones?: string;
+  observaciones?: string; // ✅ Log automático (solo lectura en la UI)
 
   // Relaciones
   mantenimientos?: Mantenimiento[]; // Opcional cuando no viene populated
@@ -51,36 +53,44 @@ export interface Vehiculo {
 
 // ==================== DTOs PARA REQUESTS ====================
 
+/**
+ * DTO para crear un nuevo vehículo
+ * El backend crea automáticamente el campo observaciones vacío
+ */
 export interface CreateVehiculoDto {
   placa: string;
   tipo: TipoVehiculo;
   estadoInicial: EstadoInicial;
   estadoActual: EstadoVehiculo;
-  fechaAdquisicion: string; // ISO date string
+  fechaAdquisicion: string; // ISO date string (YYYY-MM-DD)
   kilometraje: number;
-  observaciones?: string;
 }
 
+/**
+ * DTO para editar un vehículo existente
+ * Todos los campos son opcionales
+ */
 export interface EditVehiculoDto {
-  kilometraje?: number;
-  estadoActual?: EstadoVehiculo;
-  observaciones?: string;
   placa?: string;
   tipo?: TipoVehiculo;
+  estadoActual?: EstadoVehiculo;
   fechaAdquisicion?: string; // ISO date string
-
-  // Campos condicionales según estado
-  observacionesProblema?: string; // Requerido si estadoActual = MALO
-  motivoBaja?: string; // Requerido si estadoActual = BAJA
+  kilometraje?: number;
+  observaciones?: string; // ✅ Opcional para edición manual del log (solo admin)
 }
 
+/**
+ * DTO para cambiar solo el estado de un vehículo
+ * Endpoint: PATCH /vehiculos/:id/estado
+ */
 export interface UpdateEstadoDto {
   estadoActual: EstadoVehiculo;
-  observaciones?: string;
-  observacionesProblema?: string; // Si es MALO
-  motivoBaja?: string; // Si es BAJA
 }
 
+/**
+ * DTO para dar de baja un vehículo
+ * Endpoint: PATCH /vehiculos/:id/dar-de-baja
+ */
 export interface DarDeBajaDto {
   motivo: string;
 }
@@ -95,17 +105,14 @@ export interface PaginatedVehiculoQueryDto {
   type?: TipoVehiculo;
 }
 
-// ==================== TYPES AUXILIARES ====================
-
-export interface TipoVehiculoOption {
-  value: TipoVehiculo;
-  label: string;
+export interface PaginatedVehiculoResponseDto {
+  data: Vehiculo[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
-export interface EstadoVehiculoOption {
-  value: EstadoVehiculo;
-  label: string;
-}
+// ==================== IMPORT DE MANTENIMIENTO ====================
 
-// Importar Mantenimiento para la relación
 import type { Mantenimiento } from './mantenimiento.types';

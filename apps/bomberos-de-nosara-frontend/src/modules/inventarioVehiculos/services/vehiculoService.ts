@@ -1,3 +1,5 @@
+// src/modules/inventarioVehiculos/services/vehiculoService.ts
+
 import api from '../../../api/apiConfig';
 import type { AxiosError } from 'axios';
 import type {
@@ -6,7 +8,7 @@ import type {
   EditVehiculoDto,
   UpdateEstadoDto,
   PaginatedVehiculoQueryDto,
-  EstadoVehiculo,
+  PaginatedVehiculoResponseDto, // ✅ Corregido
 } from '../../../types/vehiculo.types';
 import type {
   Mantenimiento,
@@ -17,12 +19,22 @@ import type {
   ReporteCostosMensuales,
   ReporteCostosPorVehiculo,
 } from '../../../types/mantenimiento.types';
-import type {
-  PaginatedVehiculoResponse,
-  DeleteResponse,
-  ExistsResponse,
-  ApiErrorPayload,
-} from '../../../types/api-responses.types';
+
+// ==================== TYPES DE RESPUESTAS ====================
+
+interface DeleteResponse {
+  message: string;
+}
+
+interface ExistsResponse {
+  exists: boolean;
+}
+
+interface ApiErrorPayload {
+  code?: string;
+  message?: string;
+  field?: string;
+}
 
 // ==================== HELPER DE ERRORES ====================
 
@@ -58,24 +70,22 @@ export const vehiculoService = {
     }
   },
 
-  getAllPaginated: async (params: PaginatedVehiculoQueryDto): Promise<PaginatedVehiculoResponse> => {
-  try {
-    const queryParams = new URLSearchParams();
+  getAllPaginated: async (params: PaginatedVehiculoQueryDto): Promise<PaginatedVehiculoResponseDto> => {
+    try {
+      const queryParams = new URLSearchParams();
 
-    if (params.page) queryParams.append('page', params.page.toString());
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-    if (params.search) queryParams.append('search', params.search);
-    
-    // Si status existe, lo enviamos (sin validar 'all')
-    if (params.status) queryParams.append('status', params.status);
-    if (params.type) queryParams.append('type', params.type);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.limit) queryParams.append('limit', params.limit.toString());
+      if (params.search) queryParams.append('search', params.search);
+      if (params.status) queryParams.append('status', params.status);
+      if (params.type) queryParams.append('type', params.type);
 
-    const res = await api.get(`/vehiculos?${queryParams.toString()}`);
-    return res.data;
-  } catch (err) {
-    normalizeApiError(err);
-  }
-},
+      const res = await api.get(`/vehiculos?${queryParams.toString()}`);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
 
   getAllWithDeleted: async (): Promise<Vehiculo[]> => {
     try {
@@ -153,7 +163,7 @@ export const vehiculoService = {
     }
   },
 
-  // ==================== MANTENIMIENTOS - PROGRAMAR ====================
+  // ==================== MANTENIMIENTOS - PROGRAMAR/REGISTRAR/COMPLETAR ====================
 
   programarMantenimiento: async (vehiculoId: string, data: ProgramarMantenimientoDto): Promise<Mantenimiento> => {
     try {
@@ -164,8 +174,6 @@ export const vehiculoService = {
     }
   },
 
-  // ==================== MANTENIMIENTOS - REGISTRAR ====================
-
   registrarMantenimiento: async (vehiculoId: string, data: RegistrarMantenimientoDto): Promise<Mantenimiento> => {
     try {
       const res = await api.post(`/vehiculos/${vehiculoId}/mantenimientos/registrar`, data);
@@ -174,8 +182,6 @@ export const vehiculoService = {
       normalizeApiError(err);
     }
   },
-
-  // ==================== MANTENIMIENTOS - COMPLETAR ====================
 
   completarMantenimiento: async (mantenimientoId: string, data: CompletarMantenimientoDto): Promise<Mantenimiento> => {
     try {
@@ -217,6 +223,15 @@ export const vehiculoService = {
     }
   },
 
+  obtenerTodosMantenimientos: async (): Promise<Mantenimiento[]> => {
+    try {
+      const res = await api.get('/vehiculos/mantenimientos/todos');
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
   obtenerMantenimientosPendientes: async (): Promise<Mantenimiento[]> => {
     try {
       const res = await api.get('/vehiculos/mantenimientos/pendientes');
@@ -238,17 +253,6 @@ export const vehiculoService = {
   obtenerMantenimientosParaNotificar: async (): Promise<Mantenimiento[]> => {
     try {
       const res = await api.get('/vehiculos/mantenimientos/notificar');
-      return res.data;
-    } catch (err) {
-      normalizeApiError(err);
-    }
-  },
-
-  // ==================== MANTENIMIENTOS - NUEVO ENDPOINT PARA TAB 1 ====================
-
-  obtenerTodosMantenimientos: async (): Promise<Mantenimiento[]> => {
-    try {
-      const res = await api.get('/vehiculos/mantenimientos/todos');
       return res.data;
     } catch (err) {
       normalizeApiError(err);

@@ -1,3 +1,5 @@
+// src/modules/inventarioVehiculos/hooks/useVehiculos.ts
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vehiculoService } from '../services/vehiculoService';
 import type {
@@ -6,6 +8,7 @@ import type {
   EditVehiculoDto,
   UpdateEstadoDto,
   PaginatedVehiculoQueryDto,
+  PaginatedVehiculoResponseDto,
 } from '../../../types/vehiculo.types';
 import type {
   Mantenimiento,
@@ -16,11 +19,16 @@ import type {
   ReporteCostosMensuales,
   ReporteCostosPorVehiculo,
 } from '../../../types/mantenimiento.types';
-import type {
-  PaginatedVehiculoResponse,
-  DeleteResponse,
-  ExistsResponse,
-} from '../../../types/api-responses.types';
+
+// ==================== TYPES AUXILIARES ====================
+
+interface DeleteResponse {
+  message: string;
+}
+
+interface ExistsResponse {
+  exists: boolean;
+}
 
 // ==================== QUERY KEYS ====================
 
@@ -36,15 +44,24 @@ const COSTOS_VEHICULO_KEY = (id: string, mes?: number, anio?: number) =>
 
 // ==================== HOOKS DE CONSULTA - VEHÍCULOS ====================
 
-export const useVehiculos = (params?: PaginatedVehiculoQueryDto) => {
-  return useQuery<Vehiculo[] | PaginatedVehiculoResponse>({
-    queryKey: params ? [...VEHICULOS_KEY, params] : VEHICULOS_KEY,
-    queryFn: () => {
-      if (params && (params.page || params.limit || params.search || params.status || params.type)) {
-        return vehiculoService.getAllPaginated(params);
-      }
-      return vehiculoService.getAll();
-    },
+/**
+ * Hook para obtener todos los vehículos sin paginación
+ */
+export const useVehiculos = () => {
+  return useQuery<Vehiculo[]>({
+    queryKey: VEHICULOS_KEY,
+    queryFn: () => vehiculoService.getAll(),
+    staleTime: 1000 * 60 * 10, // 10 minutos
+  });
+};
+
+/**
+ * Hook para obtener vehículos con paginación y filtros
+ */
+export const useVehiculosPaginated = (params: PaginatedVehiculoQueryDto) => {
+  return useQuery<PaginatedVehiculoResponseDto>({
+    queryKey: [...VEHICULOS_KEY, 'paginated', params],
+    queryFn: () => vehiculoService.getAllPaginated(params),
     staleTime: 1000 * 60 * 10, // 10 minutos
   });
 };
@@ -80,7 +97,7 @@ export const useExistsByPlaca = (placa?: string) => {
 export const useAddVehiculo = () => {
   const qc = useQueryClient();
   return useMutation<Vehiculo, Error, CreateVehiculoDto>({
-    mutationFn: vehiculoService.create,
+    mutationFn: (data: CreateVehiculoDto) => vehiculoService.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
     },
