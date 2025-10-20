@@ -73,10 +73,9 @@ export interface CreateVehiculoDto {
 export interface EditVehiculoDto {
   placa?: string;
   tipo?: TipoVehiculo;
-  estadoActual?: EstadoVehiculo;
-  fechaAdquisicion?: string; // ISO date string
+  estadoInicial?: EstadoInicial; 
+  fechaAdquisicion?: string;
   kilometraje?: number;
-  observaciones?: string; // ✅ Opcional para edición manual del log (solo admin)
 }
 
 /**

@@ -107,6 +107,18 @@ export const formatCosto = (costo: number): string => {
   }).format(costo);
 };
 
+
+
+
+export const formatCostoDolares = (costo: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(costo);
+};
+
 export const formatFecha = (fecha: string | Date): string => {
   const date = typeof fecha === 'string' ? new Date(fecha) : fecha;
   

@@ -8,6 +8,9 @@ import { EmptyState } from '../../../components/common/inventory/EmptyState';
 import { VehiculoCard } from './VehiculoCard';
 import { useVehiculosPaginated } from '../hooks/useVehiculos';
 import { CrearVehiculoModal } from './modals/CrearVehiculoModal';
+import { DetallesVehiculoModal } from './modals/DetallesVehiculoModal';
+import { CambiarEstadoModal } from './modals/CambiarEstadoModal';
+import { EditarVehiculoModal } from './modals/EditarVehiculoModal';
 import type { Vehiculo, EstadoVehiculo, TipoVehiculo } from '../../../types/vehiculo.types';
 import { 
   ESTADO_VEHICULO_OPTIONS, 
@@ -74,16 +77,21 @@ export const ListaVehiculos: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header con título y botón */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vehículos</h1>
-          <p className="text-sm text-gray-500 mt-1">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {/* Header con título y botón - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">
+            Vehículos
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Administra la flota de vehículos de bomberos
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
+        <Button 
+          onClick={() => setShowCreateModal(true)}
+          className="w-full sm:w-auto flex-shrink-0"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Agregar vehículo
         </Button>
@@ -128,7 +136,7 @@ export const ListaVehiculos: React.FC = () => {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {vehiculos.map((vehiculo) => (
             <VehiculoCard
               key={vehiculo.id}
@@ -147,30 +155,23 @@ export const ListaVehiculos: React.FC = () => {
         onOpenChange={setShowCreateModal} 
       />
 
-      {/* TODO: Implementar estos modales */}
-      {/* {showDetailsModal && selectedVehiculo && (
-        <DetallesVehiculoModal 
-          vehiculo={selectedVehiculo}
-          open={showDetailsModal}
-          onOpenChange={setShowDetailsModal}
-        />
-      )}
+      <DetallesVehiculoModal 
+        vehiculo={selectedVehiculo}
+        open={showDetailsModal}
+        onOpenChange={setShowDetailsModal}
+      />
 
-      {showEditModal && selectedVehiculo && (
-        <EditarVehiculoModal 
-          vehiculo={selectedVehiculo}
-          open={showEditModal}
-          onOpenChange={setShowEditModal}
-        />
-      )}
+      <CambiarEstadoModal 
+        vehiculo={selectedVehiculo}
+        open={showStatusModal}
+        onOpenChange={setShowStatusModal}
+      />
 
-      {showStatusModal && selectedVehiculo && (
-        <CambiarEstadoModal 
-          vehiculo={selectedVehiculo}
-          open={showStatusModal}
-          onOpenChange={setShowStatusModal}
-        />
-      )} */}
+      <EditarVehiculoModal 
+        vehiculo={selectedVehiculo}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+      />
     </div>
   );
 };

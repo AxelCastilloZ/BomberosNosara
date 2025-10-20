@@ -1,3 +1,4 @@
+// src/components/common/inventory/DangerZone.tsx
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
@@ -5,9 +6,10 @@ import { Button } from '../../../components/ui/button';
 interface DangerZoneProps {
   title: string;
   description: string;
-  actionLabel: string;
-  onAction: () => void;
+  actionLabel?: string; // ✅ Ahora opcional
+  onAction?: () => void; // ✅ Ahora opcional
   isLoading?: boolean;
+  children?: React.ReactNode; // ✅ Nuevo: soporta children
 }
 
 export const DangerZone: React.FC<DangerZoneProps> = ({
@@ -16,6 +18,7 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
   actionLabel,
   onAction,
   isLoading = false,
+  children, // ✅ Nuevo
 }) => {
   return (
     <div className="rounded-lg border border-red-200 bg-red-50 p-6">
@@ -32,14 +35,21 @@ export const DangerZone: React.FC<DangerZoneProps> = ({
             {description}
           </p>
           
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={onAction}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Eliminando...' : actionLabel}
-          </Button>
+          {/* ✅ Si hay children, renderizar eso. Si no, el botón default */}
+          {children ? (
+            children
+          ) : (
+            actionLabel && onAction && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={onAction}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Eliminando...' : actionLabel}
+              </Button>
+            )
+          )}
         </div>
       </div>
     </div>

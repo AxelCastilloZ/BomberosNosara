@@ -1,4 +1,5 @@
-import { IsDateString, IsString, IsOptional, MinLength } from 'class-validator';
+import { IsDateString, IsString, IsOptional, MinLength, IsEnum } from 'class-validator';
+import { TipoMantenimiento } from '../enums/mantenimiento.enums';
 
 /**
  * DTO para programar un mantenimiento
@@ -6,6 +7,9 @@ import { IsDateString, IsString, IsOptional, MinLength } from 'class-validator';
  * Los campos de costo, kilometraje y técnico se llenan al completar
  */
 export class ProgramarMantenimientoDto {
+  @IsEnum(TipoMantenimiento, { message: 'El tipo de mantenimiento debe ser preventivo o correctivo' })
+  tipo!: TipoMantenimiento;
+
   @IsDateString({}, { message: 'La fecha del mantenimiento no es válida' })
   fecha!: string;
 

@@ -176,9 +176,22 @@ export class VehiculosService {
   async edit(id: string, dto: EditVehiculoDto, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
 
-    // Validar transiciones de estado si se está cambiando
-    if (dto.estadoActual && dto.estadoActual !== vehiculo.estadoActual) {
-      await this.validateStateTransition(vehiculo.estadoActual, dto.estadoActual);
+    // 🔥 SI CAMBIA KILOMETRAJE, VALIDAR Y REGISTRAR
+    if (dto.kilometraje && dto.kilometraje !== vehiculo.kilometraje) {
+      // Validar que no sea menor
+      if (dto.kilometraje < vehiculo.kilometraje) {
+        throw new BadRequestException({
+          code: 'INVALID_KILOMETRAJE',
+          message: `El kilometraje no puede ser menor al actual (${vehiculo.kilometraje} km)`,
+        });
+      }
+      
+      // Registrar en LOG
+      const fecha = new Date().toLocaleDateString('es-CR');
+      this.agregarObservacion(
+        vehiculo,
+        `${fecha} - Kilometraje actualizado manualmente: ${vehiculo.kilometraje} km → ${dto.kilometraje} km`
+      );
     }
 
     // Si viene fecha, valida que no sea futura
@@ -196,23 +209,27 @@ export class VehiculosService {
 
     return await this.vehiculoRepo.save(vehiculo);
   }
-
  
-async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: number): Promise<Vehiculo> {
-  const vehiculo = await this.findOne(id);
-  
-  // 🔥 AGREGAR ESTAS LÍNEAS:
-  const fecha = new Date().toLocaleDateString('es-CR');
-  this.agregarObservacion(
-    vehiculo, 
-    `${fecha} - Cambio de estado: ${vehiculo.estadoActual} → ${estadoActual}`
-  );
-  
-  vehiculo.estadoActual = estadoActual;
-  vehiculo.updatedBy = userId;
-  
-  return this.vehiculoRepo.save(vehiculo);
-}
+  async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: number): Promise<Vehiculo> {
+    const vehiculo = await this.findOne(id);
+    
+    const estadoAnterior = vehiculo.estadoActual;
+    
+    // Validar transición
+    await this.validateStateTransition(vehiculo.estadoActual, estadoActual);
+    
+    // 🔥 AGREGAR AL LOG
+    const fecha = new Date().toLocaleDateString('es-CR');
+    this.agregarObservacion(
+      vehiculo, 
+      `${fecha} - Cambio de estado: ${estadoAnterior} → ${estadoActual}`
+    );
+    
+    vehiculo.estadoActual = estadoActual;
+    vehiculo.updatedBy = userId;
+    
+    return this.vehiculoRepo.save(vehiculo);
+  }
 
   async darDeBaja(id: string, motivo: string, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.findOne(id);
@@ -298,6 +315,7 @@ async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: n
     const mantenimiento = this.mantenimientoRepo.create({
       vehiculoId: vehiculo.id,
       vehiculo,
+      tipo: dto.tipo,
       fecha: fechaMantenimiento,
       descripcion: dto.descripcion,
       observaciones: dto.observaciones,
@@ -342,6 +360,7 @@ async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: n
     const mantenimiento = this.mantenimientoRepo.create({
       vehiculoId: vehiculo.id,
       vehiculo,
+      tipo: dto.tipo,
       fecha: fechaMantenimiento,
       descripcion: dto.descripcion,
       kilometraje: dto.kilometraje,
@@ -356,9 +375,10 @@ async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: n
     // 🔥 AGREGAR AL LOG DE OBSERVACIONES DEL VEHÍCULO
     const fecha = fechaMantenimiento.toLocaleDateString('es-CR');
     const costoFormateado = dto.costo ? `₡${dto.costo.toLocaleString('es-CR')}` : 'N/A';
+    const tipoLabel = dto.tipo === 'preventivo' ? '[PREVENTIVO]' : '[CORRECTIVO]';
     this.agregarObservacion(
       vehiculo,
-      `${fecha} - ${dto.descripcion} | Costo: ${costoFormateado} | Km: ${dto.kilometraje} | Técnico: ${dto.tecnico}`
+      `${fecha} - ${dto.descripcion} ${tipoLabel} | Costo: ${costoFormateado} | Km: ${dto.kilometraje} | Técnico: ${dto.tecnico}`
     );
 
     // Actualizar el kilometraje del vehículo
@@ -405,9 +425,10 @@ async updateEstado(id: string, estadoActual: Vehiculo['estadoActual'], userId: n
     const vehiculo = mantenimiento.vehiculo;
     const fecha = new Date().toLocaleDateString('es-CR');
     const costoFormateado = dto.costo ? `₡${dto.costo.toLocaleString('es-CR')}` : 'N/A';
+    const tipoLabel = mantenimiento.tipo === 'preventivo' ? '[PREVENTIVO]' : '[CORRECTIVO]';
     this.agregarObservacion(
       vehiculo,
-      `${fecha} - ${mantenimiento.descripcion} [COMPLETADO] | Costo: ${costoFormateado} | Km: ${dto.kilometraje} | Técnico: ${dto.tecnico}`
+      `${fecha} - ${mantenimiento.descripcion} ${tipoLabel} [COMPLETADO] | Costo: ${costoFormateado} | Km: ${dto.kilometraje} | Técnico: ${dto.tecnico}`
     );
 
     // Actualizar el kilometraje del vehículo

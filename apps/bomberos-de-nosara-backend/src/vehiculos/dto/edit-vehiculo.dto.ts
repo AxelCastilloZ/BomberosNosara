@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsNumber, IsEnum, IsDateString, MinLength, Max, Min } from 'class-validator';
+import { IsOptional, IsString, IsNumber, IsEnum, IsDateString, MinLength, Max, Min, IsIn } from 'class-validator';
 import { EstadoVehiculo, TipoVehiculo } from '../enums/vehiculo-bomberil.enums';
 
 export class EditVehiculoDto {
@@ -13,8 +13,8 @@ export class EditVehiculoDto {
   tipo?: TipoVehiculo;
 
   @IsOptional()
-  @IsEnum(EstadoVehiculo, { message: 'Estado de vehículo no válido' })
-  estadoActual?: EstadoVehiculo;
+  @IsIn(['nuevo', 'usado'], { message: 'Estado inicial no válido' })  // ✅ AGREGAR
+  estadoInicial?: 'nuevo' | 'usado';
 
   @IsOptional()
   @IsDateString({}, { message: 'Fecha de adquisición no válida' })
@@ -26,7 +26,6 @@ export class EditVehiculoDto {
   @Max(9999999, { message: 'El kilometraje es demasiado alto' })
   kilometraje?: number;
 
-  @IsOptional()
-  @IsString({ message: 'Las observaciones deben ser texto válido' })
-  observaciones?: string;  // ✅ Este SÍ, por si necesitas editar el log manualmente
+  // ❌ QUITAR observaciones - es un log automático del sistema
+  // ❌ QUITAR estadoActual - se cambia solo desde CambiarEstadoModal con updateEstado()
 }

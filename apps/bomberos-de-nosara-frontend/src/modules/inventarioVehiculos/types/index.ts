@@ -1,22 +1,22 @@
 // src/modules/inventarioVehiculos/types/index.ts
 
 import type { Vehiculo, TipoVehiculo, EstadoVehiculo, EstadoInicial } from '../../../types/vehiculo.types';
-import type { Mantenimiento } from '../../../types/mantenimiento.types';
+import type { Mantenimiento, TipoMantenimiento } from '../../../types/mantenimiento.types';
 
 // ==================== NAVEGACIÓN Y VISTAS ====================
 
 export type VehiculoView =
-  | 'inicio'           // Dashboard principal
-  | 'agregar'          // Crear vehículo
-  | 'detalles'         // Ver detalles completos
-  | 'editar'           // Editar vehículo
-  | 'estado'           // Cambiar estado (incluye dar de baja)
-  | 'programar'        // Programar mantenimiento
-  | 'registrar'        // Registrar mantenimiento directo
-  | 'completar'        // Completar mantenimiento
-  | 'historial'        // Ver historial completo
-  | 'lista'            // Lista de vehículos
-  | 'dashboard';       // Dashboard con estadísticas
+  | 'inicio'
+  | 'agregar'
+  | 'detalles'
+  | 'editar'
+  | 'estado'
+  | 'programar'
+  | 'registrar'
+  | 'completar'
+  | 'historial'
+  | 'lista'
+  | 'dashboard';
 
 // ==================== PROPS DE COMPONENTES ====================
 
@@ -103,16 +103,22 @@ export interface CreateVehicleFormValues {
 export interface EditVehicleFormValues {
   placa?: string;
   tipo?: TipoVehiculo;
+  estadoInicial?: EstadoInicial;
   fechaAdquisicion?: string;
   kilometraje?: number;
-  estadoActual?: EstadoVehiculo;
-  observaciones?: string;
 }
 
 export interface CambiarEstadoFormValues {
   estadoActual: EstadoVehiculo;
-  motivo?: string; // Requerido solo si estadoActual = BAJA
+  motivo?: string;
 }
+
+// ✅ EXPORTAR TYPES DE ZOD (eliminamos las interfaces manuales)
+export type { 
+  ProgramarMantenimientoFormData,
+  RegistrarMantenimientoFormData,
+  CompletarMantenimientoFormData 
+} from '../utils/vehiculoValidations';
 
 // ==================== TYPES PARA FILTROS ====================
 
@@ -126,7 +132,28 @@ export interface MantenimientoFiltersLocal {
   fechaInicio?: string;
   fechaFin?: string;
   estado?: string;
+  tipo?: TipoMantenimiento;
   vehiculoId?: string;
+}
+
+// Props para ProgramarMantenimientoModal
+export interface ProgramarMantenimientoModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export interface CompletarMantenimientoModalProps {
+  mantenimiento: Mantenimiento | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void;
+}
+
+export interface DetallesMantenimientoModalProps {
+  mantenimiento: Mantenimiento | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 // ==================== TYPES PARA TABS DE HISTORIAL ====================
@@ -159,3 +186,4 @@ export interface SelectOption<T = string> {
 export type TipoVehiculoOption = SelectOption<TipoVehiculo>;
 export type EstadoVehiculoOption = SelectOption<EstadoVehiculo>;
 export type EstadoInicialOption = SelectOption<EstadoInicial>;
+export type TipoMantenimientoOption = SelectOption<TipoMantenimiento>;

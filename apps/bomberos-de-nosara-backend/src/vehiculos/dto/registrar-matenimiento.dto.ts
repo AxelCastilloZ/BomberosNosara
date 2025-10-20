@@ -1,4 +1,5 @@
-import { IsDateString, IsNumber, IsString, IsOptional, Min, Max, MinLength } from 'class-validator';
+import { IsDateString, IsNumber, IsString, IsOptional, Min, Max, MinLength, IsEnum } from 'class-validator';
+import { TipoMantenimiento } from '../enums/mantenimiento.enums';
 
 /**
  * DTO para registrar un mantenimiento que ya ocurrió
@@ -6,6 +7,9 @@ import { IsDateString, IsNumber, IsString, IsOptional, Min, Max, MinLength } fro
  * Se usa cuando el mantenimiento NO se programó previamente
  */
 export class RegistrarMantenimientoDto {
+  @IsEnum(TipoMantenimiento, { message: 'El tipo de mantenimiento debe ser preventivo o correctivo' })
+  tipo!: TipoMantenimiento;
+
   @IsDateString({}, { message: 'La fecha del mantenimiento no es válida' })
   fecha!: string;
 

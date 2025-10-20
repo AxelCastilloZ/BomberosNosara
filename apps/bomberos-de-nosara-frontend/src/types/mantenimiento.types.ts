@@ -1,11 +1,17 @@
 import type { Vehiculo } from './vehiculo.types';
 
-// ==================== ENUM ====================
+// ==================== ENUMS ====================
 
 export enum EstadoMantenimiento {
   PENDIENTE = 'pendiente',
   EN_REVISION = 'en_revision',
   COMPLETADO = 'completado',
+}
+
+// ✅ AGREGADO: Enum de tipo de mantenimiento
+export enum TipoMantenimiento {
+  PREVENTIVO = 'preventivo',
+  CORRECTIVO = 'correctivo',
 }
 
 // ==================== ENTIDAD PRINCIPAL ====================
@@ -18,8 +24,9 @@ export interface Mantenimiento {
   vehiculoId: string;
   vehiculo?: Vehiculo; // Opcional cuando no viene populated
 
-  // Estado
+  // Estado y tipo
   estado: EstadoMantenimiento;
+  tipo: TipoMantenimiento; // ✅ AGREGADO
 
   // Información básica
   fecha: string; // ISO date string
@@ -43,12 +50,14 @@ export interface Mantenimiento {
 // ==================== DTOs PARA REQUESTS ====================
 
 export interface ProgramarMantenimientoDto {
+  tipo: TipoMantenimiento; // ✅ AGREGADO
   fecha: string; // ISO date string - debe ser futura
   descripcion: string;
   observaciones?: string;
 }
 
 export interface RegistrarMantenimientoDto {
+  tipo: TipoMantenimiento; // ✅ AGREGADO
   fecha: string; // ISO date string - debe ser pasada o presente
   descripcion: string;
   kilometraje: number;
@@ -62,6 +71,7 @@ export interface CompletarMantenimientoDto {
   tecnico: string;
   costo: number;
   observaciones?: string;
+  // ❌ NO lleva tipo (ya existe en el mantenimiento)
 }
 
 export interface CambiarEstadoMantenimientoDto {
@@ -97,11 +107,18 @@ export interface EstadoMantenimientoOption {
   label: string;
 }
 
+// ✅ AGREGADO: Options para el Select de tipo
+export interface TipoMantenimientoOption {
+  value: TipoMantenimiento;
+  label: string;
+}
+
 // Para filtros en el frontend
 export interface MantenimientoFilters {
   fechaInicio?: string; // ISO date string
   fechaFin?: string; // ISO date string
   estado?: EstadoMantenimiento;
+  tipo?: TipoMantenimiento; // ✅ AGREGADO
   vehiculoId?: string;
 }
 
@@ -113,4 +130,7 @@ export interface EstadisticasMantenimiento {
   completados: number;
   costoTotal: number;
   costoPromedio: number;
+  // ✅ AGREGADO: Stats por tipo
+  preventivos: number;
+  correctivos: number;
 }

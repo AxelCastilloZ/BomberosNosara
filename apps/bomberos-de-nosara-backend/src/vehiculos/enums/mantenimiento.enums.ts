@@ -21,3 +21,9 @@ export enum EstadoMantenimiento {
    */
   COMPLETADO = 'completado',
 }
+
+
+export enum TipoMantenimiento {
+  PREVENTIVO = 'preventivo',
+  CORRECTIVO = 'correctivo'
+}

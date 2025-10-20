@@ -40,26 +40,27 @@ export const EntityFilters: React.FC<EntityFiltersProps> = ({
   hasActiveFilters,
 }) => {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Búsqueda */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
         <Input
           type="text"
           placeholder={searchPlaceholder}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10"
+          className="pl-10 h-10 sm:h-11"
         />
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         {/* Filtro de Estado */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <Select
             value={statusValue}
             onChange={(e) => onStatusChange(e.target.value)}
+            className="w-full h-10 sm:h-11"
           >
             <option value="">Todos los estados</option>
             {statusOptions.map((option) => (
@@ -71,10 +72,11 @@ export const EntityFilters: React.FC<EntityFiltersProps> = ({
         </div>
 
         {/* Filtro de Tipo */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <Select
             value={typeValue}
             onChange={(e) => onTypeChange(e.target.value)}
+            className="w-full h-10 sm:h-11"
           >
             <option value="">Todos los tipos</option>
             {typeOptions.map((option) => (
@@ -90,10 +92,10 @@ export const EntityFilters: React.FC<EntityFiltersProps> = ({
           <Button
             variant="outline"
             onClick={onClearFilters}
-            className="sm:w-auto"
+            className="w-full sm:w-auto h-10 sm:h-11 flex-shrink-0"
           >
-            <X className="h-4 w-4 mr-2" />
-            Limpiar
+            <X className="h-4 w-4 sm:mr-2" />
+            <span className="sm:inline">Limpiar</span>
           </Button>
         )}
       </div>

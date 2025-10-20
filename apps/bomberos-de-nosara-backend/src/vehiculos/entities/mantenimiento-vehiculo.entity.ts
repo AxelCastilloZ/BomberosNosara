@@ -7,7 +7,7 @@ import {
 } from 'typeorm';
 import { Vehiculo } from './vehiculo.entity';
 import { BaseAuditEntity } from '../../common/entities/base-audit.entity';
-import { EstadoMantenimiento } from '../enums/mantenimiento.enums';
+import { EstadoMantenimiento, TipoMantenimiento } from '../enums/mantenimiento.enums';
 
 @Entity('mantenimientos')
 export class Mantenimiento extends BaseAuditEntity {
@@ -32,6 +32,14 @@ export class Mantenimiento extends BaseAuditEntity {
     comment: 'Estado del ciclo de vida del mantenimiento'
   })
   estado!: EstadoMantenimiento;
+
+  // ==================== TIPO DE MANTENIMIENTO ====================
+  @Column({
+    type: 'enum',
+    enum: TipoMantenimiento,
+    comment: 'Tipo de mantenimiento: preventivo o correctivo'
+  })
+  tipo!: TipoMantenimiento;
 
   // ==================== INFORMACIÓN BÁSICA ====================
   @Column({ type: 'date' })

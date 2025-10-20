@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Dialog,
   DialogContent,
@@ -12,14 +13,15 @@ import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
 import { Select } from '../../../../components/ui/select';
+import { useNotifications } from '../../../../components/common/notifications/NotificationProvider';
 import { useAddVehiculo } from '../../hooks/useVehiculos';
-import { VEHICULO_FIELD_LIMITS } from '../../utils/vehiculoValidations';
+import { createVehiculoSchema, VEHICULO_FIELD_LIMITS } from '../../utils/vehiculoValidations';
+import type { CreateVehiculoFormData } from '../../utils/vehiculoValidations';
 import {
   TIPO_VEHICULO_OPTIONS,
   ESTADO_VEHICULO_OPTIONS,
   ESTADO_INICIAL_OPTIONS,
 } from '../../utils/vehiculoHelpers';
-import type { CreateVehiculoDto } from '../../../../types/vehiculo.types';
 
 interface CrearVehiculoModalProps {
   open: boolean;
@@ -32,6 +34,7 @@ export const CrearVehiculoModal: React.FC<CrearVehiculoModalProps> = ({
   onOpenChange,
   onSuccess,
 }) => {
+  const { success, error } = useNotifications();
   const addVehiculoMutation = useAddVehiculo();
 
   const {
@@ -39,16 +42,36 @@ export const CrearVehiculoModal: React.FC<CrearVehiculoModalProps> = ({
     handleSubmit,
     formState: { errors },
     reset,
-  } = useForm<CreateVehiculoDto>();
+    watch,
+  } = useForm<CreateVehiculoFormData>({
+    resolver: zodResolver(createVehiculoSchema),
+    defaultValues: {
+      placa: '',
+      tipo: undefined,
+      estadoInicial: undefined,
+      estadoActual: undefined,
+      fechaAdquisicion: '',
+      kilometraje: 0,
+      observaciones: '',
+    },
+  });
 
-  const onSubmit = async (data: CreateVehiculoDto) => {
+  const placaValue = watch('placa');
+
+  useEffect(() => {
+    if (open) {
+      reset();
+    }
+  }, [open, reset]);
+
+  const onSubmit = async (data: CreateVehiculoFormData) => {
     try {
       await addVehiculoMutation.mutateAsync(data);
-      reset();
-      onOpenChange(false);
+      success('Vehículo creado correctamente');
       onSuccess?.();
-    } catch (error) {
-      console.error('Error al crear vehículo:', error);
+      handleClose();
+    } catch (err: any) {
+      error(err?.message || 'Error al crear el vehículo');
     }
   };
 
@@ -59,10 +82,25 @@ export const CrearVehiculoModal: React.FC<CrearVehiculoModalProps> = ({
     }
   };
 
+  // Calcular fecha máxima (hoy)
+  const getMaxDate = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="px-6 pt-6 pb-4">
+      <DialogContent 
+        className="w-[95vw] max-w-3xl" 
+        style={{
+          maxHeight: '90vh',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: 0,
+        }}
+      >
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle>Agregar Vehículo</DialogTitle>
           <DialogDescription>
             Registra un nuevo vehículo en la flota de bomberos
@@ -70,34 +108,39 @@ export const CrearVehiculoModal: React.FC<CrearVehiculoModalProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-          <div className="overflow-y-auto px-6 flex-1">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4">
+          <div className="overflow-y-auto px-6 py-4 flex-1">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Placa */}
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="placa">
-                  Placa <span className="text-red-600">*</span>
+                  Placa <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="placa"
-                  {...register('placa', { required: 'La placa es obligatoria' })}
-                  placeholder="ABC-123"
+                  {...register('placa')}
+                  placeholder="Ej: ABC-123"
                   maxLength={VEHICULO_FIELD_LIMITS.placa}
                   className={errors.placa ? 'border-red-500' : ''}
+                  disabled={addVehiculoMutation.isPending}
                 />
                 {errors.placa && (
-                  <p className="text-sm text-red-600 mt-1">{errors.placa.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.placa.message}</p>
                 )}
+                <p className="text-sm text-gray-500">
+                  {(placaValue?.length || 0)}/{VEHICULO_FIELD_LIMITS.placa} caracteres
+                </p>
               </div>
 
               {/* Tipo */}
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="tipo">
-                  Tipo de vehículo <span className="text-red-600">*</span>
+                  Tipo de vehículo <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   id="tipo"
-                  {...register('tipo', { required: 'Selecciona un tipo' })}
+                  {...register('tipo')}
                   className={errors.tipo ? 'border-red-500' : ''}
+                  disabled={addVehiculoMutation.isPending}
                 >
                   <option value="">Selecciona un tipo</option>
                   {TIPO_VEHICULO_OPTIONS.map((option) => (
@@ -107,19 +150,20 @@ export const CrearVehiculoModal: React.FC<CrearVehiculoModalProps> = ({
                   ))}
                 </Select>
                 {errors.tipo && (
-                  <p className="text-sm text-red-600 mt-1">{errors.tipo.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.tipo.message}</p>
                 )}
               </div>
 
               {/* Estado Inicial */}
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="estadoInicial">
-                  Estado inicial <span className="text-red-600">*</span>
+                  Estado inicial <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   id="estadoInicial"
-                  {...register('estadoInicial', { required: 'Selecciona un estado' })}
+                  {...register('estadoInicial')}
                   className={errors.estadoInicial ? 'border-red-500' : ''}
+                  disabled={addVehiculoMutation.isPending}
                 >
                   <option value="">Selecciona un estado</option>
                   {ESTADO_INICIAL_OPTIONS.map((option) => (
@@ -129,19 +173,20 @@ export const CrearVehiculoModal: React.FC<CrearVehiculoModalProps> = ({
                   ))}
                 </Select>
                 {errors.estadoInicial && (
-                  <p className="text-sm text-red-600 mt-1">{errors.estadoInicial.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.estadoInicial.message}</p>
                 )}
               </div>
 
               {/* Estado Actual */}
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="estadoActual">
-                  Estado actual <span className="text-red-600">*</span>
+                  Estado actual <span className="text-red-500">*</span>
                 </Label>
                 <Select
                   id="estadoActual"
-                  {...register('estadoActual', { required: 'Selecciona un estado' })}
+                  {...register('estadoActual')}
                   className={errors.estadoActual ? 'border-red-500' : ''}
+                  disabled={addVehiculoMutation.isPending}
                 >
                   <option value="">Selecciona un estado</option>
                   {ESTADO_VEHICULO_OPTIONS.map((option) => (
@@ -151,48 +196,49 @@ export const CrearVehiculoModal: React.FC<CrearVehiculoModalProps> = ({
                   ))}
                 </Select>
                 {errors.estadoActual && (
-                  <p className="text-sm text-red-600 mt-1">{errors.estadoActual.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.estadoActual.message}</p>
                 )}
               </div>
 
               {/* Fecha de Adquisición */}
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="fechaAdquisicion">
-                  Fecha de adquisición <span className="text-red-600">*</span>
+                  Fecha de adquisición <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="fechaAdquisicion"
                   type="date"
-                  {...register('fechaAdquisicion', { required: 'La fecha es obligatoria' })}
+                  max={getMaxDate()}
+                  {...register('fechaAdquisicion')}
                   className={errors.fechaAdquisicion ? 'border-red-500' : ''}
+                  disabled={addVehiculoMutation.isPending}
                 />
                 {errors.fechaAdquisicion && (
-                  <p className="text-sm text-red-600 mt-1">
+                  <p className="text-sm text-red-500 mt-1">
                     {errors.fechaAdquisicion.message}
                   </p>
                 )}
               </div>
 
               {/* Kilometraje */}
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="kilometraje">
-                  Kilometraje (km) <span className="text-red-600">*</span>
+                  Kilometraje (km) <span className="text-red-500">*</span>
                 </Label>
                 <Input
                   id="kilometraje"
                   type="number"
                   {...register('kilometraje', { 
-                    required: 'El kilometraje es obligatorio',
                     valueAsNumber: true,
-                    min: { value: 0, message: 'El kilometraje no puede ser negativo' }
                   })}
-                  placeholder="0"
+                  placeholder="Ej: 15000"
                   min="0"
                   max={VEHICULO_FIELD_LIMITS.kilometraje}
                   className={errors.kilometraje ? 'border-red-500' : ''}
+                  disabled={addVehiculoMutation.isPending}
                 />
                 {errors.kilometraje && (
-                  <p className="text-sm text-red-600 mt-1">{errors.kilometraje.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.kilometraje.message}</p>
                 )}
               </div>
             </div>
