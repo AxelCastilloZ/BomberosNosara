@@ -11,6 +11,8 @@ import {
   FaDownload,
   FaEye,
   FaEllipsisH,
+  FaCalendarAlt,
+  FaUser,
 } from "react-icons/fa";
 
 const iconMap: Record<MaterialEducativo["tipo"], ReactNode> = {
@@ -36,7 +38,22 @@ export default function MaterialCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  // 🔹 Cerrar el menú al hacer clic fuera
+  // 🔹 Formatear fecha y hora (fecha corta CR)
+  const formattedDateTime = material.createdAt
+    ? new Date(material.createdAt).toLocaleString("es-CR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : "";
+
+  // 🧩 Obtener el nombre del usuario desde la relación
+  // El backend ya incluye createdByUser en la respuesta
+  const uploaderName = material.createdByUser
+    ? `${material.createdByUser.nombre || ""} ${material.createdByUser.apellido || ""}`.trim() ||
+      material.createdByUser.username ||
+      material.createdByUser.email
+    : "Usuario desconocido";
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -49,7 +66,7 @@ export default function MaterialCard({
 
   return (
     <div className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-shadow p-4 flex flex-col justify-between relative">
-      {/* Tipo y título */}
+      {/* Tipo, título y descripción */}
       <div>
         <div className="flex items-center gap-2 mb-2">
           {iconMap[material.tipo]}
@@ -63,11 +80,24 @@ export default function MaterialCard({
         <p className="text-sm text-gray-600 line-clamp-2">
           {material.descripcion}
         </p>
+
+        {/* 📅 Fecha y 👤 Usuario */}
+        <div className="mt-3 text-xs text-gray-500 space-y-0.5">
+          {material.createdAt && (
+            <div className="flex items-center gap-1">
+              <FaCalendarAlt className="text-gray-400" />
+              <span>Subido el {formattedDateTime}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1">
+            <FaUser className="text-gray-400" />
+            <span>por {uploaderName}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Botón principal y menú */}
+      {/* Botones y menú */}
       <div className="mt-4 flex items-center justify-between">
-        {/* 👁️ Ver */}
         <button
           onClick={() => onPreview?.(material)}
           className="flex items-center justify-center gap-2 text-gray-700 font-semibold border border-gray-300 rounded-md px-4 py-[6px] hover:bg-gray-50 hover:text-black transition w-full"
@@ -76,7 +106,6 @@ export default function MaterialCard({
           Ver
         </button>
 
-        {/* Menú de 3 puntos */}
         <div className="relative ml-2" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -86,9 +115,7 @@ export default function MaterialCard({
           </button>
 
           {menuOpen && (
-            <div
-              className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-10 animate-fadeIn"
-            >
+            <div className="absolute right-0 mt-2 w-40 bg-white border rounded-md shadow-lg z-10 animate-fadeIn">
               <button
                 onClick={() => {
                   onDownload?.(material);

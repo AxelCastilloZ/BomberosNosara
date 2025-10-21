@@ -4,8 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MaterialEducativo } from './entities/material-educativo.entity';
 import { Repository } from 'typeorm';
+import { MaterialEducativo } from './entities/material-educativo.entity';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { existsSync, unlinkSync } from 'fs';
@@ -18,32 +18,19 @@ export class MaterialEducativoService {
     private readonly repo: Repository<MaterialEducativo>,
   ) {}
 
-  // ✅ Ahora busca solo por título y acepta 'titulo', 'tipo' y 'area' como filtros
-  async findAll(
-    page = 1,
-    limit = 10,
-    titulo = '',
-    tipo = '',
-    area = '',
-  ): Promise<{ data: MaterialEducativo[]; total: number }> {
-    const qb = this.repo.createQueryBuilder('m');
+  // ✅ Asegurar que siempre incluya la relación createdByUser
+  async findAll(page = 1, limit = 10, titulo = '', tipo = '', area = '') {
+    const qb = this.repo
+      .createQueryBuilder('m')
+      .leftJoinAndSelect('m.createdByUser', 'createdByUser')
+      .where('m.deletedAt IS NULL'); // Excluir eliminados
 
-    // 🔍 Buscar solo por título
-    if (titulo && titulo.trim() !== '') {
+    if (titulo)
       qb.andWhere('LOWER(m.titulo) LIKE :titulo', {
         titulo: `%${titulo.toLowerCase()}%`,
       });
-    }
-
-    // 🔹 Filtro por tipo (PDF, Imagen, etc.)
-    if (tipo && tipo.trim() !== '') {
-      qb.andWhere('m.tipo = :tipo', { tipo });
-    }
-
-    // 🆕 Filtro por área
-    if (area && area.trim() !== '') {
-      qb.andWhere('m.area = :area', { area });
-    }
+    if (tipo) qb.andWhere('m.tipo = :tipo', { tipo });
+    if (area) qb.andWhere('m.area = :area', { area });
 
     const [data, total] = await qb
       .orderBy('m.createdAt', 'DESC')
@@ -54,26 +41,44 @@ export class MaterialEducativoService {
     return { data, total };
   }
 
-  async findOneOrFail(id: number): Promise<MaterialEducativo> {
-    const mat = await this.repo.findOne({ where: { id } });
+  // ✅ Buscar uno incluyendo la relación
+  async findOneOrFail(id: number) {
+    const mat = await this.repo.findOne({
+      where: { id },
+      relations: ['createdByUser'], // Usar array de strings
+    });
     if (!mat) throw new NotFoundException(`Material #${id} no encontrado`);
     return mat;
   }
 
+  // ✅ Crear con usuario (auditoría)
   async create(
     data: CreateMaterialDto,
     archivoUrl: string,
+    userId: number,
     vistaPreviaUrl?: string,
   ) {
     const material = this.repo.create({
       ...data,
       url: archivoUrl,
       vistaPrevia: vistaPreviaUrl,
+      createdBy: userId,
+      updatedBy: userId,
     });
-    return await this.repo.save(material);
+    
+    const saved = await this.repo.save(material);
+    
+    // Recargar con la relación para retornar el objeto completo
+    return this.findOneOrFail(saved.id);
   }
 
-  async update(id: number, data: UpdateMaterialDto, archivoUrl?: string) {
+  // ✅ Actualizar con auditoría
+  async update(
+    id: number,
+    data: UpdateMaterialDto,
+    archivoUrl?: string,
+    userId?: number,
+  ) {
     const material = await this.findOneOrFail(id);
 
     if (data.titulo !== undefined) material.titulo = data.titulo;
@@ -87,24 +92,48 @@ export class MaterialEducativoService {
       if (allowed.length && !allowed.includes(ext)) {
         this.safeRemoveByUrl(archivoUrl);
         throw new BadRequestException(
-          `El archivo .${ext} no es válido para el tipo "${material.tipo}". Permitidos: ${allowed.join(
-            ', ',
-          )}`,
+          `El archivo .${ext} no es válido para el tipo "${material.tipo}". Permitidos: ${allowed.join(', ')}`,
         );
       }
       if (material.url) this.safeRemoveByUrl(material.url);
       material.url = archivoUrl;
     }
 
-    return await this.repo.save(material);
+    if (userId) material.updatedBy = userId;
+
+    await this.repo.save(material);
+    
+    // Recargar con la relación actualizada
+    return this.findOneOrFail(id);
   }
 
-  async remove(id: number) {
+  // ✅ Soft delete con auditoría
+  async softDelete(id: number, userId: number) {
     const material = await this.findOneOrFail(id);
-    if (material.url) this.safeRemoveByUrl(material.url);
-    await this.repo.remove(material);
+    material.deletedBy = userId;
+    await this.repo.save(material);
+    await this.repo.softDelete(id);
     return { message: 'Material eliminado correctamente' };
   }
+
+  // ✅ Restaurar material eliminado
+  async restore(id: number, userId: number) {
+    const mat = await this.repo.findOne({ 
+      where: { id }, 
+      withDeleted: true,
+      relations: ['createdByUser']
+    });
+    if (!mat) throw new NotFoundException('Material no encontrado');
+    await this.repo.restore(id);
+    mat.deletedBy = null;
+    mat.updatedBy = userId;
+    await this.repo.save(mat);
+    
+    // Recargar con la relación actualizada
+    return this.findOneOrFail(id);
+  }
+
+  // ==================== UTILIDADES ====================
 
   private allowedByTipo(tipo?: string): string[] {
     const t = (tipo || '').toUpperCase();

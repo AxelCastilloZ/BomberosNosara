@@ -1,5 +1,3 @@
-// src/types/user.ts
-
 // ==== Enums ====
 export enum RoleEnum {
   SUPERUSER = 'SUPERUSER',
@@ -22,7 +20,14 @@ export interface User {
   username: string;
   email: string;
   roles: Role[];
-  // Campos opcionales de auditoría si los agregas después
+
+  // 👇 Campos agregados según la API real del backend
+  nombre?: string;
+  apellido?: string;
+  telefono?: string;
+  estado?: string;
+
+  // Campos opcionales de auditoría
   createdAt?: string;
   updatedAt?: string;
 }
@@ -33,13 +38,19 @@ export interface CreateUserDto {
   email: string;
   password: string;
   roles: string[]; // Array de nombres de roles como strings
+  nombre?: string;
+  apellido?: string;
+  telefono?: string;
 }
 
 export interface UpdateUserDto {
   username?: string;
   email?: string;
   password?: string;
-  roles?: string[]; // Array de nombres de roles como strings
+  roles?: string[];
+  nombre?: string;
+  apellido?: string;
+  telefono?: string;
 }
 
 // ==== Errores del API ====

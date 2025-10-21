@@ -1,5 +1,13 @@
-import { FaFilePdf, FaVideo, FaBookOpen, FaImage, FaDownload, FaEye } from 'react-icons/fa';
-import { MaterialEducativo } from '../../../../interfaces/MaterialEducativo/material.interface';
+import {
+  FaFilePdf,
+  FaVideo,
+  FaBookOpen,
+  FaImage,
+  FaDownload,
+  FaEye,
+  FaCalendarAlt,
+} from "react-icons/fa";
+import { MaterialEducativo } from "../../../../interfaces/MaterialEducativo/material.interface";
 
 interface Props {
   material: MaterialEducativo;
@@ -7,7 +15,7 @@ interface Props {
   onView?: (m: MaterialEducativo) => void;
 }
 
-const iconColors: Record<MaterialEducativo['tipo'], string> = {
+const iconColors: Record<MaterialEducativo["tipo"], string> = {
   PDF: "bg-red-100 text-red-600",
   Video: "bg-purple-100 text-purple-600",
   Documento: "bg-green-100 text-green-600",
@@ -22,9 +30,16 @@ const iconMap = {
 };
 
 export default function MaterialPublicCard({ material, onDownload, onView }: Props) {
+  const formattedDateTime = material.createdAt
+    ? new Date(material.createdAt).toLocaleString("es-CR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : "";
+
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition">
-      {/* Imagen o vista previa */}
+      {/* Imagen o ícono */}
       {material.vistaPrevia ? (
         <img
           src={material.vistaPrevia}
@@ -48,6 +63,14 @@ export default function MaterialPublicCard({ material, onDownload, onView }: Pro
 
         <h3 className="text-lg font-bold">{material.titulo}</h3>
         <p className="text-sm text-gray-600 line-clamp-2">{material.descripcion}</p>
+
+        {/* 📅 Fecha corta */}
+        {material.createdAt && (
+          <div className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+            <FaCalendarAlt className="text-gray-400" />
+            <span>Subido {formattedDateTime}</span>
+          </div>
+        )}
 
         <div className="flex justify-between items-center mt-3">
           <button
