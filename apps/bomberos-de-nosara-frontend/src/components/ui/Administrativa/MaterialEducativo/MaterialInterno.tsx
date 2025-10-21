@@ -1,9 +1,13 @@
- 
+import MaterialGrid from './MaterialGrid';
+
 export default function MaterialInternoPage() {
   return (
-    <div>
-      <h1>Material Interno</h1>
-      <p>Aquí podrás gestionar el material interno de la organización.</p>
-    </div>
+   <div className="min-h-screen bg-gray-100 px-4 pt-[100px] pb-8">
+
+    <MaterialGrid />
+  </div>
+
   );
 }
+
+

@@ -1,9 +1,11 @@
 import { NoticiaCard } from './NoticiaCard';
-import { useNoticias } from '../../../service/noticiasService';
+
 import Slider from 'react-slick';
 import 'slick-carousel/slick/slick.css';
 import 'slick-carousel/slick/slick-theme.css';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { useNoticias } from '../../../hooks/useNoticias';
+import { Noticia } from 'apps/bomberos-de-nosara-frontend/src/types/news';
 
 const FlechaCarrusel = ({ direccion, onClick }: { direccion: 'izquierda' | 'derecha', onClick?: () => void }) => {
   return (
@@ -13,8 +15,8 @@ const FlechaCarrusel = ({ direccion, onClick }: { direccion: 'izquierda' | 'dere
         hidden md:block
         absolute top-1/2 -translate-y-1/2 z-10
         ${direccion === 'izquierda' ? 'left-2 lg:left-4' : 'right-2 lg:right-4'}
-        bg-white rounded-full p-2 lg:p-3
-        hover:bg-red-100
+        text-white rounded-full p-2 lg:p-3
+        hover:bg-red-100 hover:text-black
         transition-colors duration-200
       `}
     >
@@ -62,7 +64,7 @@ export const ListaNoticias = () => {
   return (
     <div className="max-w-5xl mx-auto px-2 sm:px-4 lg:px-6">
       <Slider {...configuracionCarrusel}>
-        {data?.data.map((noticia) => (
+        {data?.data.map((noticia: Noticia) => (
           <div key={noticia.id} className="px-1 sm:px-2 lg:px-3">
             <NoticiaCard noticia={noticia} />
           </div>

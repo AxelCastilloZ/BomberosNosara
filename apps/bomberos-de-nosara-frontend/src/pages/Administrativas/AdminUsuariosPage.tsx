@@ -1,195 +1,155 @@
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
-import { getUsers, createUser, deleteUser } from '../../service/userService';
-import EditUserModal from '../../components/ui/Administrativa/UsuariosAdmin/EditUserModal';
-import ConfirmDeleteModal from '../../components/ui/Administrativa/UsuariosAdmin/ConfirmDeleteModal';
-import { FaUserPlus, FaUsers } from 'react-icons/fa';
-import { HiOutlineUserGroup } from 'react-icons/hi';
+import React from "react";
+import { FaUsers, FaUserPlus } from "react-icons/fa";
+import { HiOutlineUserGroup } from "react-icons/hi";
 
-// Esquema de validación
-const schema = yup.object({
-  username: yup.string().required('El nombre de usuario es obligatorio'),
-  password: yup.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  roles: yup.array().min(1, 'Debes seleccionar al menos un rol'),
-});
+import { useUsers } from "../../hooks/users/useUsers";
+import AddUserForm from "../../components/ui/Administrativa/UsuariosAdmin/AddUserForm";
+import UsuariosTable from "../../components/ui/Administrativa/UsuariosAdmin/UsuariosTable";
+import EditUser from "../../components/ui/Administrativa/UsuariosAdmin/EditUser";
+import ConfirmDelete from "../../components/ui/Administrativa/UsuariosAdmin/ConfirmDelete";
+import type { User } from "../../types/user";
+
+
+import { ROLES, ROLE_LABELS } from "../../constants/roles";
+import type { RoleName } from "../../types/user";
 
 export default function AdminUsuariosPage() {
-  const [users, setUsers] = useState([]);
-  const [error, setError] = useState('');
-  const [editingUser, setEditingUser] = useState<any | null>(null);
-  const [deletingUser, setDeletingUser] = useState<any | null>(null);
+  const { users = [], isLoading, remove } = useUsers();
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-    formState: { errors },
-  } = useForm({
-    resolver: yupResolver(schema),
-    defaultValues: {
-      username: '',
-      password: '',
-      roles: [],
-    },
-  });
+  const [view, setView] = React.useState<"menu" | "list" | "add">("menu");
+  const [filterRole, setFilterRole] = React.useState<"Todos" | RoleName>("Todos");
+  const [editing, setEditing] = React.useState<User | null>(null);
+  const [deleting, setDeleting] = React.useState<User | null>(null);
 
-  const selectedRoles = watch('roles');
-  const allRoles = ['SUPERUSER', 'ADMIN', 'PERSONAL_BOMBERIL', 'VOLUNTARIO'];
 
-  const loadUsers = async () => {
-    try {
-      const data = await getUsers();
-      setUsers(data);
-    } catch (err) {
-      setError('No se pudieron cargar los usuarios');
-    }
-  };
+  const roleOptions: ("Todos" | RoleName)[] = React.useMemo(
+    () => ["Todos", ...ROLES],
+    []
+  );
 
-  const onSubmit = async (data: any) => {
-    try {
-      await createUser(data);
-      reset();
-      loadUsers();
-    } catch (err) {
-      setError('No se pudo crear el usuario');
-    }
-  };
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  // Filtro de usuarios por rol
+  const filteredUsers = React.useMemo(() => {
+    if (filterRole === "Todos") return users;
+    return users.filter((u) => u.roles?.some((r) => r.name === filterRole));
+  }, [users, filterRole]);
 
   return (
-    <div className="p-8 pt-24 max-w-4xl mx-auto">
-      <h1 className="lg:text-4xl md:text-3xl sm:text-3xl font-extrabold text-red-700 mb-6 flex items-center gap-2">
+    <div className="p-6 pt-24 max-w-7xl mx-auto">
+      <h1 className="lg:text-4xl md:text-3xl sm:text-2xl font-extrabold text-red-700 mb-6 flex items-center gap-2">
         <FaUsers className="text-red-700" />
-        Panel de Gestión de Usuarios
+        Gestión de Usuarios
       </h1>
 
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-
-      {/* Formulario de creación */}
-      <div className="bg-white shadow-lg rounded-lg p-6 mb-10 border border-gray-200">
-        <h2 className="text-xl font-semibold text-black mb-4 flex items-center gap-2">
-          <FaUserPlus className="text-black lg:text-3xl sm:text-3xl" />
-          Crear nuevo usuario
-        </h2>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <input
-            placeholder="Nombre de usuario"
-            className="w-full border border-gray-300 p-3 rounded"
-            {...register('username')}
-          />
-          {errors.username && <p className="text-red-500 text-sm">{errors.username.message}</p>}
-
-          <input
-            type="password"
-            placeholder="Contraseña"
-            className="w-full border border-gray-300 p-3 rounded"
-            {...register('password')}
-          />
-          {errors.password && <p className="text-red-500 text-sm">{errors.password.message}</p>}
-
-          <div>
-            <p className="font-medium mb-2">Roles:</p>
-            <div className="lg:grid grid-cols-2 md:flex gap-2">
-              {allRoles.map((role) => (
-                <label key={role} className="flex items-center space-x-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={selectedRoles?.includes(role)}
-                    onChange={() => {
-                      const current = selectedRoles || [];
-                      if (current.includes(role)) {
-                        setValue('roles', current.filter((r) => r !== role));
-                      } else {
-                        setValue('roles', [...current, role]);
-                      }
-                    }}
-                  />
-                  <span>{role}</span>
-                </label>
-              ))}
-            </div>
-            {errors.roles && <p className="text-red-500 text-sm">{errors.roles.message}</p>}
+      {/* Vista inicial con menú */}
+      {view === "menu" && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div
+            onClick={() => setView("list")}
+            className="cursor-pointer bg-white hover:bg-gray-50 shadow-lg rounded-xl border border-gray-200 p-6 flex flex-col items-center justify-center text-center"
+          >
+            <HiOutlineUserGroup className="text-4xl text-red-600 mb-2" />
+            <h2 className="text-lg font-semibold">Lista de Usuarios</h2>
+            <p className="text-sm text-gray-600">
+              Ver todos los usuarios registrados y gestionarlos
+            </p>
           </div>
 
-          <button
-            type="submit"
-            className="bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-2 rounded-2xl transition"
+          <div
+            onClick={() => setView("add")}
+            className="cursor-pointer bg-white hover:bg-gray-50 shadow-lg rounded-xl border border-gray-200 p-6 flex flex-col items-center justify-center text-center"
           >
-            Crear Usuario
-          </button>
-        </form>
-      </div>
-
-      {/* Lista de usuarios */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <HiOutlineUserGroup className="text-gray-900" />
-          Usuarios existentes
-        </h2>
-        <ul className="space-y-3">
-          {users.map((user: any) => (
-            <li
-              key={user.id}
-              className="bg-orange-50 border border-gray-200 rounded-xl p-4 shadow-sm flex justify-between items-center"
-            >
-              <div>
-                <span className="font-bold text-gray-800">{user.username}</span>
-                <span className="ml-2 text-gray-600 text-sm">
-                  | Roles: {user.roles.map((r: any) => r.name).join(', ')}
-                </span>
-              </div>
-              <div className="flex space-x-3">
-                <button
-                  onClick={() => setEditingUser(user)}
-                  className="text-blue-600 hover:underline"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => setDeletingUser(user)}
-                  className="text-red-600 hover:underline"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Modales */}
-      {editingUser && (
-        <EditUserModal
-          user={{
-            id: editingUser.id,
-            nombre: editingUser.username,
-            email: editingUser.username, // Cambia esto si tienes un campo real de email
-            rol: editingUser.roles[0]?.name || '',
-          }}
-          onClose={() => setEditingUser(null)}
-          onUpdated={loadUsers}
-        />
+            <FaUserPlus className="text-4xl text-red-600 mb-2" />
+            <h2 className="text-lg font-semibold">Agregar Usuario</h2>
+            <p className="text-sm text-gray-600">
+              Registrar un nuevo usuario en el sistema
+            </p>
+          </div>
+        </div>
       )}
 
-      {deletingUser && (
-        <ConfirmDeleteModal
-          userName={deletingUser.username}
-          onCancel={() => setDeletingUser(null)}
+      {/* Vista de lista */}
+      {view === "list" && (
+        <div className="space-y-4">
+          <button
+            onClick={() => setView("menu")}
+            className="text-red-600 hover:underline text-sm mb-2"
+          >
+            ← Volver
+          </button>
+
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-semibold flex items-center gap-2">
+              <HiOutlineUserGroup className="text-gray-800" />
+              Usuarios existentes
+            </h2>
+
+            <div className="flex gap-2">
+              {/* Select dinámico con los roles */}
+              <select
+                value={filterRole}
+                onChange={(e) => setFilterRole(e.target.value as "Todos" | RoleName)}
+                className="border rounded-lg p-2"
+              >
+                {roleOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt === "Todos" ? "Todos los roles" : ROLE_LABELS[opt]}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => setView("add")}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm"
+              >
+                + Nuevo Usuario
+              </button>
+            </div>
+          </div>
+
+          {isLoading ? (
+            <p className="text-gray-600">Cargando usuarios...</p>
+          ) : (
+            <UsuariosTable
+              users={filteredUsers}
+              onEdit={setEditing}
+              onDelete={setDeleting}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Vista de agregar */}
+      {view === "add" && (
+        <div className="max-w-lg mx-auto">
+          <button
+            onClick={() => setView("menu")}
+            className="text-red-600 hover:underline text-sm mb-4"
+          >
+            ← Volver
+          </button>
+          <div className="bg-white shadow-lg rounded-lg p-6 border border-gray-200">
+            <h2 className="text-xl font-semibold text-black mb-4 flex items-center gap-2">
+              <FaUserPlus className="text-black lg:text-3xl sm:text-3xl" />
+              Crear nuevo usuario
+            </h2>
+            <AddUserForm />
+          </div>
+        </div>
+      )}
+
+      {/* Modales */}
+      {editing && <EditUser user={editing} onClose={() => setEditing(null)} />}
+
+      {deleting && (
+        <ConfirmDelete
+          userName={deleting.username}
+          onCancel={() => setDeleting(null)}
           onConfirm={async () => {
             try {
-              await deleteUser(deletingUser.id);
-              await loadUsers();
-              setDeletingUser(null);
-            } catch (err) {
-              alert('Error al eliminar usuario');
+              await remove.mutateAsync(deleting.id);
+              setDeleting(null);
+            } catch (err: any) {
+              alert(err?.message || "Error al eliminar");
             }
           }}
         />
