@@ -5,8 +5,14 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   material?: MaterialEducativo | null;
-  onSubmit: (id: number, data: { titulo: string; descripcion: string; tipo: MaterialTipo }) => void;
-  onSubmitWithFile: (id: number, data: { titulo: string; descripcion: string; tipo: MaterialTipo; archivo: File }) => void;
+  onSubmit: (
+    id: number,
+    data: { titulo: string; descripcion: string; tipo: MaterialTipo; area: string }
+  ) => void;
+  onSubmitWithFile: (
+    id: number,
+    data: { titulo: string; descripcion: string; tipo: MaterialTipo; area: string; archivo: File }
+  ) => void;
   isSubmitting?: boolean;
 }
 
@@ -21,6 +27,7 @@ const validExtensions: Record<MaterialTipo, string[]> = {
 };
 
 const ONE_FILE_MSG = 'Solo se puede seleccionar un archivo.';
+const isNonEmpty = (v?: string) => !!v && v.trim().length > 0;
 
 export default function EditMaterialModal({
   isOpen,
@@ -33,17 +40,26 @@ export default function EditMaterialModal({
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [tipo, setTipo] = useState<MaterialTipo>('PDF');
+  const [area, setArea] = useState('');
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [archivoError, setArchivoError] = useState<string>('');
+  const [archivoError, setArchivoError] = useState('');
+  const [areaTouched, setAreaTouched] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const [titleTouched, setTitleTouched] = useState(false);
+  const [descTouched, setDescTouched] = useState(false);
 
   useEffect(() => {
     if (material) {
       setTitulo(material.titulo ?? '');
       setDescripcion(material.descripcion ?? '');
       setTipo(material.tipo ?? 'PDF');
-      setArchivo(null); // archivo requerido: forzamos a elegir uno nuevo
+      setArea(material.area ?? '');
+      setArchivo(null);
       setArchivoError('');
+      setTitleTouched(false);
+      setDescTouched(false);
+      setAreaTouched(false);
       if (fileRef.current) fileRef.current.value = '';
     }
   }, [material]);
@@ -58,20 +74,6 @@ export default function EditMaterialModal({
     return map[tipo];
   }, [tipo]);
 
-  useEffect(() => {
-    if (!archivo) return;
-    const ext = archivo.name.split('.').pop()?.toLowerCase() || '';
-    if (!validExtensions[tipo].includes(ext)) {
-      setArchivo(null);
-      setArchivoError(`El archivo seleccionado no coincide con el tipo ${tipo}. Vuelve a seleccionarlo.`);
-      if (fileRef.current) fileRef.current.value = '';
-    } else {
-      setArchivoError('');
-    }
-  }, [tipo, archivo]);
-
-  if (!isOpen || !material) return null;
-
   const validateFile = (f: File | null, t: MaterialTipo): string => {
     if (!f) return 'Debes seleccionar un archivo.';
     const ext = f.name.split('.').pop()?.toLowerCase() || '';
@@ -85,7 +87,6 @@ export default function EditMaterialModal({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // ⚠️ Mostrar mensaje si intentan subir más de un archivo
     if (files.length > 1) {
       setArchivo(null);
       setArchivoError(ONE_FILE_MSG);
@@ -108,37 +109,45 @@ export default function EditMaterialModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!titulo.trim() || !descripcion.trim()) return;
-
-    const err = validateFile(archivo, tipo); // archivo OBLIGATORIO
-    if (err) {
-      setArchivoError(err);
+    if (!isNonEmpty(titulo) || !isNonEmpty(descripcion) || !isNonEmpty(area)) {
+      setTitleTouched(true);
+      setDescTouched(true);
+      setAreaTouched(true);
       return;
     }
 
-    onSubmitWithFile(material.id, {
-      titulo: titulo.trim(),
-      descripcion: descripcion.trim(),
-      tipo,
-      archivo: archivo!, // validado arriba
-    });
+    if (archivo) {
+      const err = validateFile(archivo, tipo);
+      if (err) {
+        setArchivoError(err);
+        return;
+      }
+
+      onSubmitWithFile(material!.id, {
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim(),
+        tipo,
+        area: area.trim(),
+        archivo,
+      });
+    } else {
+      onSubmit(material!.id, {
+        titulo: titulo.trim(),
+        descripcion: descripcion.trim(),
+        tipo,
+        area: area.trim(),
+      });
+    }
   };
 
-  const titleCount = titulo.length;
-  const descCount = descripcion.length;
-  const titleLimit = titleCount === TITLE_MAX;
-  const descLimit = descCount === DESC_MAX;
-
-  const isFormValid =
-    !!titulo.trim() &&
-    !!descripcion.trim() &&
-    !!archivo &&
-    !archivoError &&
-    !isSubmitting;
+  if (!isOpen || !material) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md w-full max-w-md space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-6 rounded-lg shadow-md w-full max-w-md space-y-4"
+      >
         <h2 className="text-2xl font-bold text-center">Editar Material</h2>
 
         {/* Título */}
@@ -146,38 +155,41 @@ export default function EditMaterialModal({
           <input
             type="text"
             value={titulo}
-            onChange={(e) => setTitulo(e.target.value)}
-            maxLength={TITLE_MAX}
-            required
-            aria-invalid={titleLimit}
-            className={`w-full border rounded p-2 ${titleLimit ? 'border-red-500' : ''}`}
+            onChange={(e) => setTitulo(e.target.value.slice(0, TITLE_MAX))}
+            onBlur={() => setTitleTouched(true)}
+            className="w-full border p-2 rounded border-gray-300"
             placeholder="Título"
           />
-          <div className="mt-1 flex items-center justify-between text-xs">
-            <span className={titleLimit ? 'text-red-600' : 'text-gray-500'}>
-              {titleCount}/{TITLE_MAX}
-            </span>
-            {titleLimit && <span className="text-red-600" aria-live="polite">Llegaste al límite ({TITLE_MAX})</span>}
-          </div>
         </div>
 
         {/* Descripción */}
         <div>
           <textarea
             value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            maxLength={DESC_MAX}
-            required
-            aria-invalid={descLimit}
-            className={`w-full border rounded p-2 ${descLimit ? 'border-red-500' : ''}`}
+            onChange={(e) => setDescripcion(e.target.value.slice(0, DESC_MAX))}
+            onBlur={() => setDescTouched(true)}
+            className="w-full border p-2 rounded border-gray-300"
             placeholder="Descripción"
           />
-          <div className="mt-1 flex items-center justify-between text-xs">
-            <span className={descLimit ? 'text-red-600' : 'text-gray-500'}>
-              {descCount}/{DESC_MAX}
-            </span>
-            {descLimit && <span className="text-red-600" aria-live="polite">Llegaste al límite ({DESC_MAX})</span>}
-          </div>
+        </div>
+
+        {/* Área */}
+        <div>
+          <select
+            value={area}
+            onChange={(e) => setArea(e.target.value)}
+            onBlur={() => setAreaTouched(true)}
+            className="w-full border rounded p-2 border-gray-300"
+            required
+          >
+            <option value="">Seleccione área</option>
+            <option value="Incendios Forestales">Incendios Forestales</option>
+            <option value="Incendios Industriales">Incendios Industriales</option>
+            <option value="Rescates">Rescates Verticales</option>
+            <option value="Rescate">Rescates Acuáticos</option>
+            <option value="Primeros Auxilios">Primeros Auxilios</option>
+            <option value="Reubicación de Animales">Reubicación de Animales</option>
+          </select>
         </div>
 
         {/* Tipo */}
@@ -185,7 +197,7 @@ export default function EditMaterialModal({
           value={tipo}
           onChange={(e) => setTipo(e.target.value as MaterialTipo)}
           required
-          className="w-full border rounded p-2"
+          className="w-full border rounded p-2 border-gray-300"
         >
           <option value="PDF">PDF</option>
           <option value="Video">Video</option>
@@ -193,36 +205,34 @@ export default function EditMaterialModal({
           <option value="Imagen">Imagen</option>
         </select>
 
-        {/* Archivo (OBLIGATORIO, solo 1) */}
+        {/* Archivo */}
         <div>
           <input
             ref={fileRef}
             type="file"
-            required
             onChange={handleFileChange}
             accept={accept}
-            aria-invalid={!!archivoError}
-            className={`block w-full border rounded p-2 ${archivoError ? 'border-red-500' : ''}`}
+            className={`block w-full border rounded p-2 ${
+              archivoError ? 'border-red-500' : 'border-gray-300'
+            }`}
           />
-          <div className="mt-1 text-xs" aria-live="polite">
-            {archivoError ? (
-              <span className="text-red-600">{archivoError}</span>
-            ) : (
-              <span className="text-gray-500">
-                Solo se puede seleccionar un archivo. Tipos permitidos: {validExtensions[tipo].join(', ')}
-              </span>
-            )}
-          </div>
+          {archivoError && <p className="text-red-600 text-xs mt-1">{archivoError}</p>}
         </div>
 
+        {/* Botones */}
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-300 rounded" disabled={isSubmitting}>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-300 rounded"
+            disabled={isSubmitting}
+          >
             Cancelar
           </button>
           <button
             type="submit"
             className="px-4 py-2 bg-emerald-600 text-white rounded disabled:opacity-60"
-            disabled={!isFormValid}
+            disabled={isSubmitting}
           >
             Guardar cambios
           </button>

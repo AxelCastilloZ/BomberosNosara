@@ -1,7 +1,6 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { AnimatePresence, motion } from "framer-motion";
-import { ReactNode, useMemo, useRef, useState } from "react";
-
+import { motion } from "framer-motion";
+import { ReactNode, useMemo, useRef, useState, useEffect } from "react";
 import {
   FaBars,
   FaBook,
@@ -37,8 +36,8 @@ const ALL_ITEMS: SidebarItem[] = [
   { icon: <FaWrench />, label: "Inventario de Equipo", href: "/admin/equipo", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL] },
   { icon: <FaRegNewspaper />, label: "Noticias", href: "/admin/noticias", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
   { icon: <FaChartBar />, label: "Estadísticas", href: "/admin/estadisticas", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
-  { icon: <FaHandshake />, label: 'Registro Voluntarios', href: "/admin/registro-horas", roles: [RoleEnum.VOLUNTARIO] },
-  { icon: <FaHandshake />, label: 'Gestión Voluntarios', href: "/admin/voluntarios", roles: [RoleEnum.SUPERUSER] },
+  { icon: <FaHandshake />, label: "Registro Voluntarios", href: "/admin/registro-horas", roles: [RoleEnum.VOLUNTARIO] },
+  { icon: <FaHandshake />, label: "Gestión Voluntarios", href: "/admin/voluntarios", roles: [RoleEnum.SUPERUSER] },
   { icon: <FaBook />, label: "Material Interno", href: "", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL, RoleEnum.VOLUNTARIO] },
   { icon: <FaComments />, label: "Chat Interno", href: "/admin/chat", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL, RoleEnum.VOLUNTARIO] },
 ];
@@ -76,37 +75,33 @@ export default function AdminLayout() {
   const navigate = useNavigate();
 
   const [isCollapsed, setCollapsedState] = useState(false);
-  const [open, setOpenState] = useState(true);
+  const [open, setOpenState] = useState(window.innerWidth >= 1024);
 
   const setCollapsed = (value: boolean) => {
-    if (window.innerWidth >= 1024) {
-      setCollapsedState(value);
-    }
+    if (window.innerWidth >= 1024) setCollapsedState(value);
   };
 
   const setOpen = (value: boolean) => {
-    if (window.innerWidth < 1024) {
-      setOpenState(value);
-    } else {
-      setOpenState(true);
-    }
+    if (window.innerWidth < 1024) setOpenState(value);
+    else setOpenState(true);
   };
 
-  React.useEffect(() => {
+  // ✅ Ajusta automáticamente el sidebar al redimensionar
+  useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 1024) {
         setOpen(true);
-      } else if (open) {
+      } else {
+        setOpen(false);
         setCollapsedState(false);
       }
     };
-    window.addEventListener("resize", handleResize);
     handleResize();
+    window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [open]);
+  }, []);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
-
   const isDashboard = location.pathname === "/admin";
   const showSidebar = !isDashboard;
   const needsFullHeight = location.pathname.startsWith("/admin/chat");
@@ -122,24 +117,58 @@ export default function AdminLayout() {
     navigate({ to: "/login" });
   };
 
+  // ✅ Cierra el sidebar al hacer clic fuera (en móvil)
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sidebarRef.current && !sidebarRef.current.contains(e.target as Node) && window.innerWidth < 1024) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 relative">
+      {/* 🔹 Botón hamburguesa (solo móvil) */}
+      {showSidebar && (
+        <button
+          onClick={() => setOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-50 bg-white border border-gray-200 p-2 rounded-md shadow-md text-gray-700"
+        >
+          <FaBars className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* 🔹 Overlay oscuro cuando el menú está abierto en móvil */}
+      {open && window.innerWidth < 1024 && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
       <div className="flex min-h-screen">
         {showSidebar && (
           <motion.aside
             ref={sidebarRef}
-            className={`fixed left-0 z-40 bg-white border-r border-gray-200 flex flex-col justify-between
+            className={`
+              bg-white border-r border-gray-200 flex flex-col justify-between
               ${isCollapsed ? "w-16" : "w-64"}
-              ${open ? "translate-x-0" : "-translate-x-full lg:translate-x-16"}`}
+              ${open ? "translate-x-0" : "-translate-x-full"}
+              fixed lg:sticky top-0 left-0 z-40
+              transition-transform duration-300
+              h-screen
+            `}
             initial={{ x: "-100%" }}
             animate={{
               x: open ? 0 : "-100%",
               width: isCollapsed ? "4rem" : "16rem",
             }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            style={{ height: "100vh", top: 0 }}
           >
-            {/* 📌 Sección superior con logo y botón de colapsar */}
+
+            {/* 🔹 Header del sidebar */}
             <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 shrink-0">
               <div className="flex items-center gap-3">
                 <img
@@ -153,20 +182,31 @@ export default function AdminLayout() {
                   </span>
                 )}
               </div>
+
+              {/* Botón colapsar (desktop) */}
               <button
                 onClick={() => setCollapsed(!isCollapsed)}
                 className="hidden lg:flex p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
                 aria-label={isCollapsed ? "Expandir menú" : "Contraer menú"}
               >
-                {isCollapsed ? (
-                  <FaChevronRight className="w-4 h-4" />
-                ) : (
-                  <FaChevronRight className="w-4 h-4 transform rotate-180" />
-                )}
+                <FaChevronRight
+                  className={`w-4 h-4 transition-transform ${
+                    isCollapsed ? "" : "rotate-180"
+                  }`}
+                />
+              </button>
+
+              {/* Botón cerrar (solo móvil) */}
+              <button
+                onClick={() => setOpen(false)}
+                className="lg:hidden p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                aria-label="Cerrar menú"
+              >
+                <FaTimes className="w-4 h-4" />
               </button>
             </div>
 
-            {/* 📌 Sección menú */}
+            {/* 🔹 Menú principal */}
             <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-0.5">
               {!isCollapsed && (
                 <div className="px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs font-medium text-gray-500">
@@ -183,7 +223,9 @@ export default function AdminLayout() {
                 >
                   <Link
                     to={href}
-                    className={`${BRAND.itemBase} ${BRAND.itemHover} ${isActive(href) ? BRAND.itemActive : ""} ${isCollapsed ? "justify-center" : ""}`}
+                    className={`${BRAND.itemBase} ${BRAND.itemHover} ${
+                      isActive(href) ? BRAND.itemActive : ""
+                    } ${isCollapsed ? "justify-center" : ""}`}
                     title={isCollapsed ? label : ""}
                     onClick={() => setOpen(false)}
                   >
@@ -194,7 +236,7 @@ export default function AdminLayout() {
               ))}
             </div>
 
-            {/* 📌 Perfil inferior */}
+            {/* 🔹 Perfil inferior */}
             {isCollapsed ? (
               <div className="border-t border-gray-200 py-3 flex flex-col items-center gap-2 shrink-0">
                 <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-semibold">
@@ -204,7 +246,6 @@ export default function AdminLayout() {
                   onClick={handleLogout}
                   className="p-2 rounded-md text-red-600 hover:bg-red-50"
                   title="Cerrar sesión"
-                  aria-label="Cerrar sesión"
                 >
                   <FaSignOutAlt className="w-4 h-4" />
                 </button>
@@ -220,14 +261,15 @@ export default function AdminLayout() {
                       {userRoles[0] || "Usuario"}
                     </p>
                     <p className="text-xs text-gray-500 truncate">
-                      {userRoles.includes(RoleEnum.SUPERUSER) || userRoles.includes(RoleEnum.ADMIN) ? "Administrador" : "Usuario"}
+                      {userRoles.includes(RoleEnum.SUPERUSER) || userRoles.includes(RoleEnum.ADMIN)
+                        ? "Administrador"
+                        : "Usuario"}
                     </p>
                   </div>
                   <button
                     onClick={handleLogout}
                     className="shrink-0 p-2 rounded-md text-red-600 hover:bg-red-50"
                     title="Cerrar sesión"
-                    aria-label="Cerrar sesión"
                   >
                     <FaSignOutAlt className="w-4 h-4" />
                   </button>
@@ -237,19 +279,27 @@ export default function AdminLayout() {
           </motion.aside>
         )}
 
-        {/* 📌 Contenido principal */}
+        {/* 🔹 Contenido principal */}
         <motion.main
-          className={`flex-1 p-2 sm:p-3 md:p-4 w-full transition-all duration-300 ${showSidebar ? (isCollapsed ? "lg:ml-16" : "lg:ml-64") : "lg:ml-0"}`}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          className={`flex-1 p-2 sm:p-3 md:p-4 w-full transition-all duration-300 ${
+            showSidebar
+              ? window.innerWidth >= 1024
+                ? "" // 🧱 en pantallas grandes el sidebar es estático, sin margen
+                : "ml-0"
+              : ""
+          }`}
         >
+
           <div className="w-full max-w-full 2xl:max-w-7xl mx-auto">
             <div
               className={[
-                isDashboard ? "bg-transparent border-0 shadow-none" : "bg-white border border-gray-200 shadow-sm",
+                isDashboard
+                  ? "bg-transparent border-0 shadow-none"
+                  : "bg-white border border-gray-200 shadow-sm",
                 "rounded-lg w-full",
-                needsFullHeight ? "min-h-[calc(100vh-4rem)] overflow-visible flex" : "overflow-hidden",
+                needsFullHeight
+                  ? "min-h-[calc(100vh-4rem)] overflow-visible flex"
+                  : "overflow-hidden",
               ].join(" ")}
             >
               <Outlet />

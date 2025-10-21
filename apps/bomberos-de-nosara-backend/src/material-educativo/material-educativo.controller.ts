@@ -10,6 +10,8 @@ import {
   ParseIntPipe,
   Delete,
   Res,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -20,6 +22,8 @@ import { Response } from 'express';
 import { CreateMaterialDto } from './dto/create-material.dto';
 import { UpdateMaterialDto } from './dto/update-material.dto';
 import { MaterialEducativoService } from './material-educativo.service';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { GetUser } from '../common/decorators/get-user.decorator';
 
 function ensureDir(path: string) {
   if (!existsSync(path)) mkdirSync(path, { recursive: true });
@@ -28,14 +32,23 @@ function ensureDir(path: string) {
 const MATERIAL_DIR = join(process.cwd(), 'uploads', 'material');
 
 @Controller('material-educativo')
+@UseGuards(JwtAuthGuard)
 export class MaterialEducativoController {
   constructor(private readonly service: MaterialEducativoService) {}
 
+  // ✅ Filtros: título, tipo, área
   @Get()
-  findAll() {
-    return this.service.findAll();
+  async findAll(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('titulo') titulo = '',
+    @Query('tipo') tipo = '',
+    @Query('area') area = '',
+  ) {
+    return this.service.findAll(Number(page), Number(limit), titulo, tipo, area);
   }
 
+  // ✅ Crear material (ligado al usuario)
   @Post()
   @UseInterceptors(
     FileInterceptor('archivo', {
@@ -49,16 +62,29 @@ export class MaterialEducativoController {
           cb(null, uniqueName);
         },
       }),
-      // limits: { fileSize: 25 * 1024 * 1024 }, // opcional
     }),
   )
-  async create(@UploadedFile() archivo: Express.Multer.File, @Body() data: CreateMaterialDto) {
+  async create(
+    @UploadedFile() archivo: Express.Multer.File,
+    @Body() data: CreateMaterialDto,
+    @GetUser('id') userId: number,
+  ) {
     const archivoUrl = `/uploads/material/${archivo.filename}`;
-    return this.service.create(data, archivoUrl);
+    return this.service.create(data, archivoUrl, userId);
   }
 
-  /** EDITAR: acepta JSON (solo metadatos) o multipart (metadatos + archivo) */
+  // ✅ Actualizar sin archivo
   @Put(':id')
+  async updateJson(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() data: UpdateMaterialDto,
+    @GetUser('id') userId: number,
+  ) {
+    return this.service.update(id, data, undefined, userId);
+  }
+
+  // ✅ Actualizar con archivo
+  @Put(':id/file')
   @UseInterceptors(
     FileInterceptor('archivo', {
       storage: diskStorage({
@@ -73,28 +99,25 @@ export class MaterialEducativoController {
       }),
     }),
   )
-  async update(
+  async updateWithFile(
     @Param('id', ParseIntPipe) id: number,
     @UploadedFile() archivo: Express.Multer.File,
     @Body() data: UpdateMaterialDto,
+    @GetUser('id') userId: number,
   ) {
+    if (typeof data === 'string') data = JSON.parse(data);
     const archivoUrl = archivo ? `/uploads/material/${archivo.filename}` : undefined;
-    return this.service.update(id, data, archivoUrl);
+    return this.service.update(id, data, archivoUrl, userId);
   }
 
-  /** DESCARGA: fuerza descarga con Content-Disposition y respeta token (si usas guard) */
+  // ✅ Descargar archivo
   @Get(':id/download')
   async download(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
     const mat = await this.service.findOneOrFail(id);
-
-    // mat.url => "/uploads/material/archivo.ext"
-    const relPath = mat.url.replace(/^\//, ''); // "uploads/material/archivo.ext"
+    const relPath = mat.url.replace(/^\//, '');
     const full = join(process.cwd(), relPath);
-    if (!existsSync(full)) {
-      return res.status(404).send('Archivo no encontrado');
-    }
+    if (!existsSync(full)) return res.status(404).send('Archivo no encontrado');
 
-    // nombre amigable basado en título + extensión original
     const ext = extname(full) || '.bin';
     const safeBase = (mat.titulo || 'material')
       .normalize('NFKD')
@@ -102,14 +125,19 @@ export class MaterialEducativoController {
       .trim()
       .replace(/\s+/g, '_');
     const filename = `${safeBase}${ext}`;
-
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     return res.sendFile(full);
   }
 
-  /** ELIMINAR: borra registro y archivo físico */
+  // ✅ Eliminar (soft delete con auditoría)
   @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number) {
-    return this.service.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number, @GetUser('id') userId: number) {
+    return this.service.softDelete(id, userId);
+  }
+
+  // ✅ Restaurar material eliminado (solo Admin o SuperUser)
+  @Post(':id/restore')
+  async restore(@Param('id', ParseIntPipe) id: number, @GetUser('id') userId: number) {
+    return this.service.restore(id, userId);
   }
 }

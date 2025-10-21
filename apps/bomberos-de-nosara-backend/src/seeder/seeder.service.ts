@@ -1,4 +1,3 @@
-
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -65,11 +64,10 @@ export class SeederService implements OnModuleInit {
     user = this.userRepo.create({ username, email, password, roles: [superRole] });
     await this.userRepo.save(user);
 
-
     const forceReset = this.cfg.get<boolean>('ADMIN_FORCE_PASSWORD_RESET', true);
     if (needsResetEmail || forceReset) {
-      const appBaseUrl = this.cfg.get<string>('APP_BASE_URL', 'http://localhost:5173');
-      await this.resetSvc.sendResetEmail(email, appBaseUrl, { ip: '127.0.0.1', ua: 'Seeder' });
+      // Usar el nuevo método público
+      await this.resetSvc.requestPasswordReset({ email });
     }
 
     this.logger.log(`Superusuario creado: ${username} (${email}).`);

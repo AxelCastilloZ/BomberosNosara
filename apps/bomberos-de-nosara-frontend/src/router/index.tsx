@@ -166,7 +166,7 @@ const adminChildren = [
     beforeLoad: requireRoles(CAN.estadisticas),
   }),
 
-  // 🚀 Material Educativo: CRUD vs Público
+  //  Material Educativo: CRUD vs Público
   createRoute({
     path: 'material-interno',
     component: AdminMaterialEducativoPage,

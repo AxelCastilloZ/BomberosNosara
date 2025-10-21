@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { JwtModule } from '@nestjs/jwt';
+import { ScheduleModule } from '@nestjs/schedule'; // ← NUEVO
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -24,6 +25,8 @@ import { UsersModule } from './users/users.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { WebSocketsModule } from './web-sockets/web-sockets.module';
 import { VoluntariosModule } from './voluntarios/voluntarios.module';
+import { MobileModule } from './mobile/mobile.module';
+import { StatisticsModule } from './statistics/statistics.module';
 
 @Module({
   imports: [
@@ -74,6 +77,10 @@ import { VoluntariosModule } from './voluntarios/voluntarios.module';
 
     EventEmitterModule.forRoot(),
 
+    // ==================== NUEVO: Schedule Module ====================
+    ScheduleModule.forRoot(),
+    // ================================================================
+
     JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],
@@ -123,6 +130,10 @@ import { VoluntariosModule } from './voluntarios/voluntarios.module';
     VoluntariosModule,
 
     ChatModule,
+
+    MobileModule,
+
+    StatisticsModule,
   ],
 })
 export class AppModule {}

@@ -1,17 +1,18 @@
-// ==== Uniones y alias base (type) ====
+// ==== Enums ====
+export enum RoleEnum {
+  SUPERUSER = 'SUPERUSER',
+  ADMIN = 'ADMIN',
+  PERSONAL_BOMBERIL = 'PERSONAL_BOMBERIL',
+  VOLUNTARIO = 'VOLUNTARIO',
+}
+
+// Alias para nombres de roles como strings
 export type RoleName = 'SUPERUSER' | 'ADMIN' | 'PERSONAL_BOMBERIL' | 'VOLUNTARIO';
 
-// Errores normalizados del API
-export type ApiFieldError = {
-  code: 'DUPLICATE_KEY' | 'VALIDATION_ERROR' | 'UNKNOWN';
-  message: string;
-  field?: 'email' | 'username' | string;
-};
-
-// ==== Modelos de dominio (interface) ====
+// ==== Entidades de dominio ====
 export interface Role {
   id: number;
-  name: RoleName;
+  name: RoleEnum;
 }
 
 export interface User {
@@ -19,23 +20,45 @@ export interface User {
   username: string;
   email: string;
   roles: Role[];
-  // agrega lo que tengas en backend (createdAt, etc.)
+
+  // 👇 Campos agregados según la API real del backend
+  nombre?: string;
+  apellido?: string;
+  telefono?: string;
+  estado?: string;
+
+  // Campos opcionales de auditoría
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// ==== DTOs (derivados con type) ====
-export type CreateUserDto = {
+// ==== DTOs ====
+export interface CreateUserDto {
   username: string;
   email: string;
   password: string;
-  roles: RoleName[];
-};
+  roles: string[]; // Array de nombres de roles como strings
+  nombre?: string;
+  apellido?: string;
+  telefono?: string;
+}
 
-export type UpdateUserDto = {
+export interface UpdateUserDto {
   username?: string;
   email?: string;
   password?: string;
-  roles?: RoleName[];
-};
+  roles?: string[];
+  nombre?: string;
+  apellido?: string;
+  telefono?: string;
+}
 
-// Si usas filas específicas en la tabla (pero idealmente puede ser User):
+// ==== Errores del API ====
+export interface ApiFieldError {
+  code: 'DUPLICATE_KEY' | 'VALIDATION_ERROR' | 'UNKNOWN';
+  message: string;
+  field?: 'email' | 'username' | string;
+}
+
+// ==== Alias para compatibilidad ====
 export type UserRow = User;

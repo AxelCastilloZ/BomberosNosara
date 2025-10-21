@@ -1,27 +1,35 @@
-// src/auth/entities/password-reset-token.entity.ts
 import {
-  Entity, PrimaryGeneratedColumn, Column, Index, CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
 } from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('password_reset_tokens')
 export class PasswordResetToken {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Index()
-  @Column({ type: 'int' })
+  @Column()
   userId!: number;
 
-  @Index({ unique: true })
-  @Column({ type: 'varchar', length: 128 })
+  @Column({ unique: true, length: 64 })
   token!: string;
 
   @Column({ type: 'datetime' })
   expiresAt!: Date;
 
-  @Column({ type: 'datetime', nullable: true, default: null })
+  @Column({ type: 'datetime', nullable: true })
   consumedAt!: Date | null;
 
   @CreateDateColumn()
   createdAt!: Date;
+
+  // Relación con User (solo de una dirección)
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'userId' })
+  user!: User;
 }

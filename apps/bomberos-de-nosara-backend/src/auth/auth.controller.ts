@@ -1,12 +1,10 @@
-// src/auth/auth.controller.ts
-import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param } from '@nestjs/common';
 import { Throttle, minutes } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { PasswordResetService } from './password-reset.service';
-import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { ResetThrottleGuard } from '../common/guards/reset-throttle.guard';
+import { PasswordResetRequestDto } from './dto/password-reset-request.dto';
+import { PasswordResetConfirmDto } from './dto/password-reset-confirm.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -21,22 +19,25 @@ export class AuthController {
   }
 
   @Post('request-password-reset')
-  @UseGuards(ResetThrottleGuard)
-  @Throttle({ reset: { limit: 3, ttl: minutes(15) } }) // <- en v5 va un objeto
-  async requestPasswordReset(@Body() dto: RequestPasswordResetDto, @Req() req: any) {
-    const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
-
-    // Si hay proxy delante, recuerda app.set('trust proxy', 1) en main.ts
-    const ip = Array.isArray(req.ips) && req.ips.length ? req.ips[0] : req.ip;
-    const ua = (req.headers['user-agent'] as string) || undefined;
-
-    await this.passwordReset.sendResetEmail(dto.email, appBaseUrl, { ip, ua });
-    return { message: 'Si la cuenta existe, se enviaron instrucciones para restablecer la contraseña.' };
+  @Throttle({ default: { limit: 3, ttl: minutes(15) } })
+  async requestPasswordReset(@Body() dto: PasswordResetRequestDto) {
+    await this.passwordReset.requestPasswordReset(dto);
+    return { 
+      message: 'Si la cuenta existe, se enviaron instrucciones para restablecer la contraseña.' 
+    };
   }
 
-  @Post('reset-password')
-  async resetPassword(@Body() dto: ResetPasswordDto) {
-    await this.passwordReset.consumeResetToken(dto.token, dto.newPassword);
-    return { message: 'Contraseña actualizada correctamente' };
+  @Post('reset-password')  // <-- CAMBIÉ AQUÍ: de 'confirm-password-reset' a 'reset-password'
+  async resetPassword(@Body() dto: PasswordResetConfirmDto) {
+    await this.passwordReset.confirmPasswordReset(dto);
+    return { 
+      message: 'Contraseña actualizada correctamente' 
+    };
+  }
+
+  @Get('validate-reset-token/:token')
+  async validateResetToken(@Param('token') token: string) {
+    const result = await this.passwordReset.validateToken(token);
+    return result;
   }
 }

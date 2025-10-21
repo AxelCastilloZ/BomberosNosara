@@ -103,11 +103,41 @@ export const useChatApi = () => {
     [headers]
   );
 
+  const markMessagesAsRead = useCallback(
+    async (conversationId: number): Promise<boolean> => {
+      try {
+        // Get current user ID from the token
+        const claims = decodeJwt(token || undefined);
+        if (!claims) return false;
+        
+        const userId = Number(claims.sub || claims.id || claims.userId);
+        if (!userId) return false;
+
+        await axios.post(
+          `${API_URL}/chat/conversations/${conversationId}/mark-read`,
+          { userId },
+          { 
+            headers: { 
+              ...headers, 
+              'Content-Type': 'application/json' 
+            } 
+          }
+        );
+        return true;
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+        return false;
+      }
+    },
+    [headers, token]
+  );
+
   return {
     fetchCurrentUser,
     fetchAvailableUsers,
     getOrCreateGroupConversation,
     getConversationMessages,
     findConversationWithUser,
+    markMessagesAsRead,
   };
 };

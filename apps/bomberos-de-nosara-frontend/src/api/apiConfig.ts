@@ -1,4 +1,4 @@
-// src/api/apiConfig.ts  (o donde tengas tu instancia)
+
 import axios, {
   AxiosError,
   AxiosHeaders,
@@ -11,12 +11,12 @@ const api = axios.create({
   withCredentials: false,
 });
 
-// Helper para detectar FormData sin romper en SSR/tests
+
 const isFormData = (v: unknown): v is FormData =>
   typeof FormData !== 'undefined' && v instanceof FormData;
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  // Aseguramos headers como AxiosHeaders
+  
   const headers = AxiosHeaders.from(config.headers);
 
   // Token
@@ -25,9 +25,9 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  // Si mandamos FormData, dejá que el navegador ponga el boundary.
+  
   if (isFormData(config.data)) {
-    headers.delete('Content-Type'); // también elimina la variante case-insensitive
+    headers.delete('Content-Type');
   }
 
   config.headers = headers;
