@@ -2,7 +2,6 @@ import {
   Controller, 
   Get, 
   Post, 
-  Put, 
   Patch, 
   Delete,
   Param, 
@@ -13,11 +12,12 @@ import {
 import { VehiculosService } from './vehiculos.service';
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
 import { EditVehiculoDto } from './dto/edit-vehiculo.dto';
-import { MantenimientoVehiculoDto } from './dto/mantenimiento-vehiculo.dto';
-import { MantenimientoProgramadoVehiculoDto } from './dto/mantenimiento-programado-vehiculo.dto';
-import { ReposicionVehiculoDto } from './dto/reposicion-vehiculo.dto';
+import { ProgramarMantenimientoDto } from './dto/programar-mantenimiento.dto';
+import { RegistrarMantenimientoDto } from './dto/registrar-matenimiento.dto';
+import { CompletarMantenimientoDto } from './dto/completar-mantenimiento.dto';
 import { PaginatedVehiculoQueryDto } from './dto/paginated-query.dto';
 import { EstadoVehiculo } from './enums/vehiculo-bomberil.enums';
+import { EstadoMantenimiento } from './enums/mantenimiento.enums';
 
 // Imports para autenticación y autorización
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -31,7 +31,7 @@ import { RoleEnum } from '../roles/role.enum';
 export class VehiculosController {
   constructor(private readonly service: VehiculosService) {}
 
-  // ================= OPERACIONES BÁSICAS CRUD =================
+  // ==================== OPERACIONES BÁSICAS CRUD ====================
 
   @Get()
   findAll(@Query() query: PaginatedVehiculoQueryDto) {
@@ -50,11 +50,6 @@ export class VehiculosController {
     return this.service.findAllWithDeleted();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id);
-  }
-
   @Post()
   create(
     @Body() dto: CreateVehiculoDto,
@@ -63,27 +58,61 @@ export class VehiculosController {
     return this.service.create(dto, userId);
   }
 
-  // ================= EDICIÓN Y ACTUALIZACIÓN =================
+  // ==================== MANTENIMIENTOS - CONSULTAS ESPECÍFICAS (SIN PARÁMETROS) ====================
+  // IMPORTANTE: Estas rutas deben ir ANTES de las rutas con :id para evitar conflictos
 
-  @Patch(':id/estado')
-  async updateEstado(
-    @Param('id') id: string,
-    @Body() body: { 
-      estadoActual: EstadoVehiculo; 
-      observaciones?: string;
-      observacionesProblema?: string;
-      motivoBaja?: string;
-    },
-    @GetUser('id') userId: number
+  @Get('mantenimientos/todos')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerTodosMantenimientos() {
+    return this.service.obtenerTodosMantenimientos();
+  }
+
+  @Get('mantenimientos/pendientes')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerMantenimientosPendientes() {
+    return this.service.obtenerMantenimientosPendientes();
+  }
+
+  @Get('mantenimientos/del-dia')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerMantenimientosDelDia() {
+    return this.service.obtenerMantenimientosDelDia();
+  }
+
+  @Get('mantenimientos/notificar')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerMantenimientosParaNotificar() {
+    return this.service.obtenerMantenimientosParaNotificar();
+  }
+
+  // ==================== REPORTES DE COSTOS (RUTAS ESPECÍFICAS) ====================
+
+  @Get('reportes/costos-mensuales')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  obtenerCostosMensuales(
+    @Query('mes') mes: string,
+    @Query('anio') anio: string
   ) {
-    const editDto: EditVehiculoDto = {
-      estadoActual: body.estadoActual,
-      observaciones: body.observaciones,
-      observacionesProblema: body.observacionesProblema,
-      motivoBaja: body.motivoBaja
-    };
+    return this.service.obtenerCostosMensuales(Number(mes), Number(anio));
+  }
 
-    return this.service.edit(id, editDto, userId);
+  // ==================== UTILIDADES (RUTAS ESPECÍFICAS) ====================
+
+  @Get('placa/:placa/exists')
+  existsByPlaca(@Param('placa') placa: string) {
+    return this.service.existsByPlaca(placa);
+  }
+
+  // ==================== RUTAS CON :id (DEBEN IR DESPUÉS DE LAS ESPECÍFICAS) ====================
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
   }
 
   @Patch(':id')
@@ -94,8 +123,6 @@ export class VehiculosController {
   ) {
     return this.service.edit(id, dto, userId);
   }
-
-  // ================= SOFT DELETE Y RESTAURACIÓN =================
 
   @Delete(':id')
   @UseGuards(RolesGuard)
@@ -117,15 +144,15 @@ export class VehiculosController {
     return this.service.restore(id, userId);
   }
 
-  // ================= OPERACIONES ESPECIALES =================
+  // ==================== OPERACIONES ESPECIALES DE VEHÍCULO ====================
 
-  @Put(':id/estado')
-  updateEstadoLegacy(
-    @Param('id') id: string, 
-    @Body('estadoActual') estado: string,
+  @Patch(':id/estado')
+  async updateEstado(
+    @Param('id') id: string,
+    @Body() body: { estadoActual: EstadoVehiculo },
     @GetUser('id') userId: number
   ) {
-    return this.service.updateEstado(id, estado as any, userId);
+    return this.service.updateEstado(id, body.estadoActual, userId);
   }
 
   @Patch(':id/dar-de-baja')
@@ -136,66 +163,83 @@ export class VehiculosController {
     @Body('motivo') motivo: string,
     @GetUser('id') userId: number
   ) {
-    const editDto: EditVehiculoDto = {
-      estadoActual: EstadoVehiculo.BAJA,
-      motivoBaja: motivo
-    };
-    return this.service.edit(id, editDto, userId);
+    return this.service.darDeBaja(id, motivo, userId);
   }
 
-  @Post(':id/reposicion')
-  @UseGuards(RolesGuard)
-  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  registrarReposicion(
-    @Param('id') id: string, 
-    @Body() dto: ReposicionVehiculoDto,
+  // ==================== MANTENIMIENTOS - PROGRAMAR/REGISTRAR ====================
+
+  @Post(':id/mantenimientos/programar')
+  programarMantenimiento(
+    @Param('id') vehiculoId: string, 
+    @Body() dto: ProgramarMantenimientoDto,
     @GetUser('id') userId: number
   ) {
-    return this.service.registrarReposicion(id, dto, userId);
+    return this.service.programarMantenimiento(vehiculoId, dto, userId);
   }
 
-  // ================= MANTENIMIENTOS =================
-
-  @Put(':id/mantenimiento')
+  @Post(':id/mantenimientos/registrar')
   registrarMantenimiento(
-    @Param('id') id: string, 
-    @Body() dto: MantenimientoVehiculoDto | MantenimientoProgramadoVehiculoDto,
+    @Param('id') vehiculoId: string, 
+    @Body() dto: RegistrarMantenimientoDto,
     @GetUser('id') userId: number
   ) {
-    if ('fechaProximoMantenimiento' in dto) {
-      return this.service.programarMantenimiento(id, dto as MantenimientoProgramadoVehiculoDto, userId);
-    } else {
-      return this.service.registrarMantenimiento(id, dto as MantenimientoVehiculoDto, userId);
-    }
+    return this.service.registrarMantenimiento(vehiculoId, dto, userId);
   }
 
-  @Post(':id/historial')
-  registrarMantenimientoHistorico(
-    @Param('id') id: string, 
-    @Body() dto: MantenimientoVehiculoDto,
-    @GetUser('id') userId: number
-  ) {
-    return this.service.registrarMantenimiento(id, dto, userId);
+  // ==================== MANTENIMIENTOS - CONSULTAS POR VEHÍCULO ====================
+
+  @Get(':id/mantenimientos/historial')
+  obtenerHistorial(@Param('id') vehiculoId: string) {
+    return this.service.obtenerHistorial(vehiculoId);
   }
 
-  @Get(':id/historial')
-  obtenerHistorial(@Param('id') id: string) {
-    return this.service.obtenerHistorial(id);
+  @Get(':id/mantenimientos/proximo')
+  obtenerProximoMantenimiento(@Param('id') vehiculoId: string) {
+    return this.service.obtenerProximoMantenimiento(vehiculoId);
   }
 
-  @Delete(':id/mantenimiento-programado')
+  // ==================== REPORTES DE COSTOS POR VEHÍCULO ====================
+
+  @Get(':id/reportes/costos')
   @UseGuards(RolesGuard)
   @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  cancelarMantenimientoProgramado(
-    @Param('id') id: string,
-    @GetUser('id') userId: number
+  obtenerCostosPorVehiculo(
+    @Param('id') vehiculoId: string,
+    @Query('mes') mes?: string,
+    @Query('anio') anio?: string
   ) {
-    return this.service.cancelarMantenimientoProgramado(id, userId);
+    return this.service.obtenerCostosPorVehiculo(
+      vehiculoId, 
+      mes ? Number(mes) : undefined,
+      anio ? Number(anio) : undefined
+    );
   }
 
-  // ================= MANTENIMIENTOS - SOFT DELETE Y RESTAURACIÓN =================
+  // ==================== MANTENIMIENTOS - COMPLETAR/CAMBIAR ESTADO ====================
 
-  @Delete('mantenimiento/:id')
+  @Patch('mantenimientos/:mantenimientoId/completar')
+  completarMantenimiento(
+    @Param('mantenimientoId') mantenimientoId: string,
+    @Body() dto: CompletarMantenimientoDto,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.completarMantenimiento(mantenimientoId, dto, userId);
+  }
+
+  @Patch('mantenimientos/:mantenimientoId/estado')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  cambiarEstadoMantenimiento(
+    @Param('mantenimientoId') mantenimientoId: string,
+    @Body('estado') estado: EstadoMantenimiento,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.cambiarEstadoMantenimiento(mantenimientoId, estado, userId);
+  }
+
+  // ==================== MANTENIMIENTOS - SOFT DELETE Y RESTAURACIÓN ====================
+
+  @Delete('mantenimientos/:id')
   @UseGuards(RolesGuard)
   @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
   softDeleteMantenimiento(
@@ -205,7 +249,7 @@ export class VehiculosController {
     return this.service.softDeleteMantenimiento(id, userId);
   }
 
-  @Post('mantenimiento/:id/restore')
+  @Post('mantenimientos/:id/restore')
   @UseGuards(RolesGuard)
   @Roles(RoleEnum.SUPERUSER)
   restoreMantenimiento(
@@ -213,12 +257,5 @@ export class VehiculosController {
     @GetUser('id') userId: number
   ) {
     return this.service.restoreMantenimiento(id, userId);
-  }
-
-  // ================= UTILIDADES =================
-
-  @Get('placa/:placa/exists')
-  existsByPlaca(@Param('placa') placa: string) {
-    return this.service.existsByPlaca(placa);
   }
 }

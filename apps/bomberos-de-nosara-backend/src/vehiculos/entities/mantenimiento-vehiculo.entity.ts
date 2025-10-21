@@ -2,71 +2,62 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  DeleteDateColumn,
   ManyToOne,
-  JoinColumn
+  JoinColumn,
 } from 'typeorm';
 import { Vehiculo } from './vehiculo.entity';
-import { User } from '../../users/entities/user.entity';
+import { BaseAuditEntity } from '../../common/entities/base-audit.entity';
+import { EstadoMantenimiento, TipoMantenimiento } from '../enums/mantenimiento.enums';
 
 @Entity('mantenimientos')
-export class Mantenimiento {
+export class Mantenimiento extends BaseAuditEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @ManyToOne(() => Vehiculo, vehiculo => vehiculo.mantenimientos)
+  // ==================== RELACIÓN CON VEHÍCULO ====================
+  @ManyToOne(() => Vehiculo, vehiculo => vehiculo.mantenimientos, {
+    onDelete: 'NO ACTION', // Permite que el mantenimiento persista aunque se elimine el vehículo
+  })
+  @JoinColumn({ name: 'vehiculo_id' })
   vehiculo!: Vehiculo;
 
+  @Column({ name: 'vehiculo_id', type: 'uuid' })
+  vehiculoId!: string;
+
+  // ==================== ESTADO DEL MANTENIMIENTO ====================
+  @Column({
+    type: 'enum',
+    enum: EstadoMantenimiento,
+    default: EstadoMantenimiento.PENDIENTE,
+    comment: 'Estado del ciclo de vida del mantenimiento'
+  })
+  estado!: EstadoMantenimiento;
+
+  // ==================== TIPO DE MANTENIMIENTO ====================
+  @Column({
+    type: 'enum',
+    enum: TipoMantenimiento,
+    comment: 'Tipo de mantenimiento: preventivo o correctivo'
+  })
+  tipo!: TipoMantenimiento;
+
+  // ==================== INFORMACIÓN BÁSICA ====================
   @Column({ type: 'date' })
   fecha!: Date;
 
   @Column()
   descripcion!: string;
 
-  @Column()
-  kilometraje!: number;
+  // ==================== DATOS DE COMPLETADO (OPCIONALES HASTA COMPLETAR) ====================
+  @Column({ type: 'int', nullable: true })
+  kilometraje?: number;
 
-  @Column()
-  tecnico!: string;
+  @Column({ nullable: true })
+  tecnico?: string;
 
-  @Column('decimal', { precision: 10, scale: 2 })
-  costo!: number;
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  costo?: number;
 
   @Column({ type: 'text', nullable: true })
   observaciones?: string;
-
-  // ==================== AUDITORÍA ====================
-  @Column({ name: 'created_by', type: 'int' })
-  createdBy!: number;
-
-  @Column({ name: 'updated_by', type: 'int' })
-  updatedBy!: number;
-
-  @Column({ name: 'deleted_by', type: 'int', nullable: true })
-  deletedBy?: number | null;
-
-  // Relaciones con usuarios
-  @ManyToOne(() => User, { eager: false })
-  @JoinColumn({ name: 'created_by' })
-  createdByUser!: User;
-
-  @ManyToOne(() => User, { eager: false })
-  @JoinColumn({ name: 'updated_by' })
-  updatedByUser!: User;
-
-  @ManyToOne(() => User, { eager: false, nullable: true })
-  @JoinColumn({ name: 'deleted_by' })
-  deletedByUser?: User;
-
-  // ==================== TIMESTAMPS ====================
-  @CreateDateColumn({ name: 'createdAt' })
-  createdAt!: Date;
-
-  @UpdateDateColumn({ name: 'updatedAt' })
-  updatedAt!: Date;
-
-  @DeleteDateColumn({ name: 'deletedAt' })
-  deletedAt?: Date;
 }

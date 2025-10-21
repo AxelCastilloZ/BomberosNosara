@@ -1,59 +1,82 @@
+// src/modules/inventarioVehiculos/hooks/useVehiculos.ts
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vehiculoService } from '../services/vehiculoService';
 import type {
-  Vehicle,
-  MantenimientoData,
-  MantenimientoProgramadoData,
-  ReposicionData,
+  Vehiculo,
+  CreateVehiculoDto,
+  EditVehiculoDto,
+  UpdateEstadoDto,
+  PaginatedVehiculoQueryDto,
+  PaginatedVehiculoResponseDto,
 } from '../../../types/vehiculo.types';
 
+// ==================== TYPES AUXILIARES ====================
+
+interface DeleteResponse {
+  message: string;
+}
+
+interface ExistsResponse {
+  exists: boolean;
+}
+
+// ==================== QUERY KEYS ====================
+
 const VEHICULOS_KEY = ['vehiculos'] as const;
-const HISTORIAL_KEY = (id: string) => ['vehiculos', id, 'historial'] as const;
 
-// ==================== TIPOS PARA PAGINACIÓN ====================
+// ==================== HOOKS DE CONSULTA - VEHÍCULOS ====================
 
-interface UseVehiculosParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: string;
-  type?: string;
-}
-
-interface PaginatedResponse {
-  data: Vehicle[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
-// ==================== HOOKS DE CONSULTA ====================
-
-export const useVehiculos = (params?: UseVehiculosParams) => {
-  return useQuery<Vehicle[] | PaginatedResponse>({
-    queryKey: params ? [...VEHICULOS_KEY, params] : VEHICULOS_KEY,
-    queryFn: () => {
-      if (params) {
-        return vehiculoService.getAllPaginated(params);
-      }
-      return vehiculoService.getAll();
-    },
-    staleTime: 1000 * 60 * 10,
+/**
+ * Hook para obtener todos los vehículos sin paginación
+ */
+export const useVehiculos = () => {
+  return useQuery<Vehiculo[]>({
+    queryKey: VEHICULOS_KEY,
+    queryFn: () => vehiculoService.getAll(),
+    staleTime: 1000 * 60 * 10, // 10 minutos
   });
 };
 
-export const useHistorialVehiculo = (id?: string) => {
-  return useQuery<any[]>({
-    queryKey: id ? HISTORIAL_KEY(id) : ['vehiculos', 'historial', 'disabled'],
-    queryFn: () => vehiculoService.getHistorial(id as string),
+/**
+ * Hook para obtener vehículos con paginación y filtros
+ */
+export const useVehiculosPaginated = (params: PaginatedVehiculoQueryDto) => {
+  return useQuery<PaginatedVehiculoResponseDto>({
+    queryKey: [...VEHICULOS_KEY, 'paginated', params],
+    queryFn: () => vehiculoService.getAllPaginated(params),
+    staleTime: 1000 * 60 * 10, // 10 minutos
+  });
+};
+
+/**
+ * Hook para obtener vehículos incluyendo los eliminados (soft delete)
+ */
+export const useVehiculosWithDeleted = () => {
+  return useQuery<Vehiculo[]>({
+    queryKey: [...VEHICULOS_KEY, 'with-deleted'],
+    queryFn: () => vehiculoService.getAllWithDeleted(),
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+};
+
+/**
+ * Hook para obtener un vehículo por ID
+ */
+export const useVehiculo = (id?: string) => {
+  return useQuery<Vehiculo>({
+    queryKey: [...VEHICULOS_KEY, id],
+    queryFn: () => vehiculoService.getOne(id as string),
     enabled: !!id,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 5, // 5 minutos
   });
 };
 
+/**
+ * Hook para verificar si existe un vehículo por placa
+ */
 export const useExistsByPlaca = (placa?: string) => {
-  return useQuery<{ exists: boolean }>({
+  return useQuery<ExistsResponse>({
     queryKey: ['vehiculos', 'placa', placa],
     queryFn: () => vehiculoService.existsByPlaca(placa as string),
     enabled: !!placa && placa.length >= 3,
@@ -63,121 +86,83 @@ export const useExistsByPlaca = (placa?: string) => {
 
 // ==================== HOOKS DE MUTACIÓN - VEHÍCULOS ====================
 
+/**
+ * Hook para crear un nuevo vehículo
+ */
 export const useAddVehiculo = () => {
   const qc = useQueryClient();
-  return useMutation<Vehicle, Error, Omit<Vehicle, 'id'>>({
-    mutationFn: vehiculoService.create,
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
+  return useMutation<Vehiculo, Error, CreateVehiculoDto>({
+    mutationFn: (data: CreateVehiculoDto) => vehiculoService.create(data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
+    },
   });
 };
 
+/**
+ * Hook para editar un vehículo existente
+ */
 export const useUpdateVehiculo = () => {
   const qc = useQueryClient();
-  return useMutation<Vehicle, Error, Partial<Vehicle> & { id: string }>({
-    mutationFn: vehiculoService.update,
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
+  return useMutation<Vehiculo, Error, { id: string; data: EditVehiculoDto }>({
+    mutationFn: ({ id, data }) => vehiculoService.edit(id, data),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
+      qc.invalidateQueries({ queryKey: [...VEHICULOS_KEY, variables.id] });
+    },
   });
 };
 
-export const useActualizarEstadoVehiculo = () => {
-  const qc = useQueryClient();
-  return useMutation<Vehicle, Error, { id: string; estadoActual: Vehicle['estadoActual'] }>({
-    mutationFn: ({ id, estadoActual }) => vehiculoService.updateEstado(id, estadoActual),
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
-  });
-};
-
+/**
+ * Hook para eliminar un vehículo (soft delete)
+ */
 export const useDeleteVehiculo = () => {
   const qc = useQueryClient();
-  return useMutation<{ message: string }, Error, string>({
-    mutationFn: (id: string) => vehiculoService.delete(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
+  return useMutation<DeleteResponse, Error, string>({
+    mutationFn: (id: string) => vehiculoService.softDelete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
+    },
   });
 };
 
+/**
+ * Hook para restaurar un vehículo eliminado
+ */
 export const useRestoreVehiculo = () => {
   const qc = useQueryClient();
-  return useMutation<Vehicle, Error, string>({
+  return useMutation<Vehiculo, Error, string>({
     mutationFn: (id: string) => vehiculoService.restore(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
+    },
   });
 };
 
+/**
+ * Hook para actualizar el estado de un vehículo
+ */
+export const useUpdateEstadoVehiculo = () => {
+  const qc = useQueryClient();
+  return useMutation<Vehiculo, Error, { id: string; data: UpdateEstadoDto }>({
+    mutationFn: ({ id, data }) => vehiculoService.updateEstado(id, data),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
+      qc.invalidateQueries({ queryKey: [...VEHICULOS_KEY, variables.id] });
+    },
+  });
+};
+
+/**
+ * Hook para dar de baja un vehículo
+ */
 export const useDarDeBajaVehiculo = () => {
   const qc = useQueryClient();
-  return useMutation<Vehicle, Error, { id: string; motivo: string }>({
+  return useMutation<Vehiculo, Error, { id: string; motivo: string }>({
     mutationFn: ({ id, motivo }) => vehiculoService.darDeBaja(id, motivo),
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
-  });
-};
-
-// ==================== HOOKS DE MUTACIÓN - REPOSICIÓN ====================
-
-export const useRegistrarReposicionVehiculo = () => {
-  const qc = useQueryClient();
-  return useMutation<Vehicle, Error, { id: string; data: ReposicionData }>({
-    mutationFn: ({ id, data }) => vehiculoService.registrarReposicion(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: VEHICULOS_KEY }),
-  });
-};
-
-// ==================== HOOKS DE MUTACIÓN - MANTENIMIENTOS ====================
-
-export const useRegistrarMantenimiento = () => {
-  const qc = useQueryClient();
-  return useMutation<any, Error, { id: string; data: MantenimientoData }>({
-    mutationFn: ({ id, data }) => vehiculoService.registrarMantenimiento(id, data),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
-      qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.id) });
-    },
-  });
-};
-
-export const useProgramarMantenimiento = () => {
-  const qc = useQueryClient();
-  return useMutation<Vehicle, Error, { id: string; data: MantenimientoProgramadoData }>({
-    mutationFn: ({ id, data }) => vehiculoService.programarMantenimiento(id, data),
-    onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
-      qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.id) });
-    },
-  });
-};
-
-export const useCancelarMantenimientoProgramado = () => {
-  const qc = useQueryClient();
-  return useMutation<Vehicle, Error, string>({
-    mutationFn: (id: string) => vehiculoService.cancelarMantenimientoProgramado(id),
-    onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
-      qc.invalidateQueries({ queryKey: HISTORIAL_KEY(id) });
-    },
-  });
-};
-
-export const useDeleteMantenimiento = () => {
-  const qc = useQueryClient();
-  return useMutation<{ message: string }, Error, { id: string; vehiculoId?: string }>({
-    mutationFn: ({ id }) => vehiculoService.deleteMantenimiento(id),
-    onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
-      if (variables.vehiculoId) {
-        qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.vehiculoId) });
-      }
-    },
-  });
-};
-
-export const useRestoreMantenimiento = () => {
-  const qc = useQueryClient();
-  return useMutation<any, Error, { id: string; vehiculoId?: string }>({
-    mutationFn: ({ id }) => vehiculoService.restoreMantenimiento(id),
-    onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: VEHICULOS_KEY });
-      if (variables.vehiculoId) {
-        qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.vehiculoId) });
-      }
+      qc.invalidateQueries({ queryKey: [...VEHICULOS_KEY, variables.id] });
     },
   });
 };

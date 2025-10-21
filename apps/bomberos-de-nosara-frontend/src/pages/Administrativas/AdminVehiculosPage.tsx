@@ -1,57 +1,65 @@
 // src/pages/Administrativas/AdminVehiculosPage.tsx
+
 import { useState, useMemo } from 'react';
 import {
   Truck, 
-  PlusCircle, 
   ClipboardList, 
   Wrench, 
   ArrowLeft,
-  Ambulance,
-  Car,
-  Bike,
+  Calendar,
+  DollarSign,
+  AlertCircle,
 } from 'lucide-react';
 
 // Types
-import type { VehiculoView } from '../../modules/inventarioVehiculos/types';
-import type { Vehicle } from '../../types/vehiculo.types';
+import type { Vehiculo } from '../../types/vehiculo.types';
 
 // Componentes del módulo
-import VehiculoList from '../../modules/inventarioVehiculos/components/vehiculoList';
-import MantenimientoVehiculo from '../../modules/inventarioVehiculos/components/MantenimientoVehiculo';
-import UpdateStatus from '../../modules/inventarioVehiculos/components/updateStatus';
-import ScheduleMaintenance from '../../modules/inventarioVehiculos/components/scheduleMaintenance';
-import RecordMaintenance from '../../modules/inventarioVehiculos/components/recordMaintenance';
-import AddVehiculo from '../../modules/inventarioVehiculos/components/addVehiculo';
-import DetallesVehiculo from '../../modules/inventarioVehiculos/components/DetallesVehiculo';
-import EditVehiculo from '../../modules/inventarioVehiculos/components/EditVehiculo';
+import { ListaVehiculos } from '../../modules/inventarioVehiculos/components/ListaVehiculos';
+import { DashboardMantenimiento } from '../../modules/inventarioVehiculos/components/mantenimientos/DashboardMantenimiento';
 
-// Hook
+// Hooks
 import { useVehiculos } from '../../modules/inventarioVehiculos/hooks/useVehiculos';
+import { 
+  useMantenimientosPendientes,
+  useTodosMantenimientos,
+} from '../../modules/inventarioVehiculos/hooks/useMantenimientos';
+import { useCostosMensuales } from '../../modules/inventarioVehiculos/hooks/useReportes';
+
+// Utils
+import { calcularDiasHasta } from '../../modules/inventarioVehiculos/utils/vehiculoHelpers';
+
+type PageView = 'dashboard' | 'lista' | 'mantenimiento';
 
 export default function AdminVehiculosPage() {
-  const [viewMode, setViewMode] = useState<VehiculoView>('dashboard');
-  const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState<Vehicle | null>(null);
+  const [viewMode, setViewMode] = useState<PageView>('dashboard');
 
-  // Llamar sin parámetros para obtener todos los vehículos (para las estadísticas)
-  const { data: vehiclesResponse = [] } = useVehiculos();
+  // Obtener datos de vehículos
+  const { data: vehiclesResponse, isLoading: isLoadingVehicles } = useVehiculos();
 
-  // Extraer el array de vehículos correctamente
-  const vehicles = useMemo(() => {
-    if (Array.isArray(vehiclesResponse)) {
-      return vehiclesResponse;
-    }
-    if (vehiclesResponse && 'data' in vehiclesResponse) {
-      return vehiclesResponse.data;
-    }
+  // Obtener datos de mantenimientos
+  const { data: mantenimientosPendientes = [], isLoading: isLoadingPendientes } = useMantenimientosPendientes();
+  const { data: todosMantenimientos = [], isLoading: isLoadingTodos } = useTodosMantenimientos();
+
+  // Obtener costos del mes actual
+  const mesActual = new Date().getMonth() + 1;
+  const anioActual = new Date().getFullYear();
+  const { data: costosMensuales, isLoading: isLoadingCostos } = useCostosMensuales(mesActual, anioActual);
+
+  // Extracción segura con tipo explícito
+  const vehicles: Vehiculo[] = (() => {
+    if (!vehiclesResponse) return [];
+    if (Array.isArray(vehiclesResponse)) return vehiclesResponse;
+    if ('data' in vehiclesResponse) return (vehiclesResponse as any).data || [];
     return [];
-  }, [vehiclesResponse]);
+  })();
 
-  // Calcular estadísticas
-  const stats = useMemo(() => {
-    const enServicio = vehicles.filter(v => v.estadoActual?.toLowerCase() === 'en servicio').length;
-    const malos = vehicles.filter(v => v.estadoActual?.toLowerCase() === 'malo').length;
-    const fuera = vehicles.filter(v => v.estadoActual?.toLowerCase() === 'fuera de servicio').length;
-    const baja = vehicles.filter(v => v.estadoActual?.toLowerCase() === 'dado de baja').length;
+  // Calcular estadísticas de vehículos
+  const statsVehiculos = useMemo(() => {
+    const enServicio = vehicles.filter(v => v.estadoActual === 'en servicio').length;
+    const malos = vehicles.filter(v => v.estadoActual === 'malo').length;
+    const fuera = vehicles.filter(v => v.estadoActual === 'fuera de servicio').length;
+    const baja = vehicles.filter(v => v.estadoActual === 'dado de baja').length;
     
     return {
       enServicio,
@@ -62,48 +70,68 @@ export default function AdminVehiculosPage() {
     };
   }, [vehicles]);
 
+  // Calcular estadísticas de mantenimientos
+  const statsMantenimientos = useMemo(() => {
+    // Próximo mantenimiento
+    const pendientesOrdenados = [...mantenimientosPendientes].sort((a, b) => {
+      return new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+    });
+    const proximoMantenimiento = pendientesOrdenados[0];
+    const diasHastaProximo = proximoMantenimiento 
+      ? calcularDiasHasta(proximoMantenimiento.fecha)
+      : null;
+
+    // Mantenimientos del mes actual
+    const mantenimientosDelMes = todosMantenimientos.filter(m => {
+      const fecha = new Date(m.fecha);
+      return fecha.getMonth() === mesActual - 1 && fecha.getFullYear() === anioActual;
+    });
+
+    return {
+      pendientes: mantenimientosPendientes.length,
+      delMes: mantenimientosDelMes.length,
+      costoDelMes: costosMensuales?.total || 0,
+      diasHastaProximo,
+      proximoMantenimiento,
+    };
+  }, [mantenimientosPendientes, todosMantenimientos, costosMensuales, mesActual, anioActual]);
+
   const volverAlDashboard = () => {
-    setVehiculoSeleccionado(null);
     setViewMode('dashboard');
   };
 
-  const volverALista = () => {
-    setVehiculoSeleccionado(null);
-    setViewMode('lista');
+  // Loading state
+  const isLoading = isLoadingVehicles || isLoadingPendientes || isLoadingTodos || isLoadingCostos;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen px-6 py-8 w-full bg-[#f9fafb] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500">Cargando información...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const formatCosto = (costo: number) => {
+    return new Intl.NumberFormat('es-CR', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(costo);
   };
 
-  // Helper para iconos de vehículos
-  const getVehicleIcon = (type: string, className = 'h-5 w-5'): React.ReactNode => {
-    const normalized = type.toLowerCase();
-    
-    if (normalized.includes('camión') || normalized.includes('sisterna')) 
-      return <Truck className={className} />;
-    if (normalized.includes('ambulancia')) 
-      return <Ambulance className={className} />;
-    if (normalized.includes('pickup')) 
-      return <Car className={className} />;
-    if (normalized.includes('moto')) 
-      return <Bike className={className} />;
-    
-    return <Wrench className={className} />;
-  };
-
-  // Helper para colores de estado
-  const getStatusColor = (status: string): string => {
-    switch (status) {
-      case 'en servicio': return 'bg-emerald-500';
-      case 'malo': return 'bg-amber-500';
-      case 'fuera de servicio': return 'bg-orange-500';
-      case 'dado de baja': return 'bg-red-500';
-      default: return 'bg-slate-300';
+  const getTextoProximoMantenimiento = () => {
+    if (!statsMantenimientos.diasHastaProximo) {
+      return 'Sin programar';
     }
-  };
-
-  const cambiarVista = (nuevaVista: VehiculoView, vehiculo?: Vehicle) => {
-    if (vehiculo) {
-      setVehiculoSeleccionado(vehiculo);
-    }
-    setViewMode(nuevaVista);
+    const dias = statsMantenimientos.diasHastaProximo;
+    if (dias === 0) return 'Hoy';
+    if (dias === 1) return 'Mañana';
+    if (dias < 0) return `Atrasado ${Math.abs(dias)} día${Math.abs(dias) > 1 ? 's' : ''}`;
+    return `En ${dias} día${dias > 1 ? 's' : ''}`;
   };
 
   return (
@@ -121,6 +149,7 @@ export default function AdminVehiculosPage() {
       {/* Vista Dashboard Principal */}
       {viewMode === 'dashboard' && (
         <div className="flex flex-col min-h-[calc(100vh-8rem)]">
+          {/* Header */}
           <div className="flex items-center gap-4 mb-6">
             <Truck className="h-8 w-8 text-red-700" />
             <div>
@@ -131,6 +160,7 @@ export default function AdminVehiculosPage() {
             </div>
           </div>
 
+          {/* Cards de navegación */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <button 
               onClick={() => setViewMode('lista')} 
@@ -138,16 +168,7 @@ export default function AdminVehiculosPage() {
             >
               <ClipboardList className="h-8 w-8 mx-auto text-gray-600 group-hover:text-red-600 transition-colors" />
               <h3 className="mt-3 font-semibold text-gray-800 group-hover:text-red-700">Lista de Vehículos</h3>
-              <p className="text-sm text-gray-600 mt-1">Ver todos los vehículos registrados</p>
-            </button>
-
-            <button 
-              onClick={() => setViewMode('agregar')} 
-              className="bg-red-50 border border-red-200 p-6 rounded-lg hover:bg-red-100 hover:shadow-md transition-all text-center group"
-            >
-              <PlusCircle className="h-8 w-8 mx-auto text-red-600 group-hover:text-red-700 transition-colors" />
-              <h3 className="mt-3 font-semibold text-red-700 group-hover:text-red-800">Agregar Vehículo</h3>
-              <p className="text-sm text-red-600 mt-1">Registrar nuevo vehículo en la flota</p>
+              <p className="text-sm text-gray-600 mt-1">Ver y gestionar todos los vehículos</p>
             </button>
 
             <button 
@@ -155,59 +176,114 @@ export default function AdminVehiculosPage() {
               className="bg-white border border-gray-200 p-6 rounded-lg hover:bg-gray-50 hover:shadow-md transition-all text-center group"
             >
               <Wrench className="h-8 w-8 mx-auto text-gray-600 group-hover:text-red-600 transition-colors" />
-              <h3 className="mt-3 font-semibold text-gray-800 group-hover:text-red-700">Mantenimiento</h3>
-              <p className="text-sm text-gray-600 mt-1">Programar y registrar mantenimientos</p>
+              <h3 className="mt-3 font-semibold text-gray-800 group-hover:text-red-700">Mantenimiento de Vehículos</h3>
+              <p className="text-sm text-gray-600 mt-1">Gestión de mantenimientos</p>
             </button>
           </div>
 
-          {/* Espaciador flexible */}
-          <div className="mt-8"></div>
+          <div className="flex-1"></div>
 
-          {/* Tarjeta de Estadísticas - Inferior Izquierda */}
-          <div className="max-w-sm bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-            <div className="mb-4">
-              <h3 className="text-base font-semibold text-gray-900 mb-0.5">Estado de la Flota</h3>
-              <p className="text-xs text-gray-600">Resumen del estado de los vehículos</p>
+          {/* Tarjetas de Estadísticas */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-4xl">
+            {/* Card: Estado de la Flota */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <div className="mb-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-0.5">Estado de la Flota</h3>
+                <p className="text-xs text-gray-600">Resumen del estado de los vehículos</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-lg border border-emerald-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                    <span className="text-xs font-medium text-gray-700">En servicio</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900">{statsVehiculos.enServicio}</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-2.5 bg-amber-50 rounded-lg border border-amber-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                    <span className="text-xs font-medium text-gray-700">Malos</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900">{statsVehiculos.malos}</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-2.5 bg-orange-50 rounded-lg border border-orange-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                    <span className="text-xs font-medium text-gray-700">Fuera de servicio</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900">{statsVehiculos.fuera}</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-2.5 bg-red-50 rounded-lg border border-red-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                    <span className="text-xs font-medium text-gray-700">Dado de baja</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900">{statsVehiculos.baja}</span>
+                </div>
+
+                <div className="pt-2.5 mt-2.5 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700">Total de vehículos</span>
+                    <span className="text-base font-bold text-red-700">{statsVehiculos.total}</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            {/* Stats items */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-lg border border-emerald-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                  <span className="text-xs font-medium text-gray-700">En servicio</span>
-                </div>
-                <span className="text-xs font-bold text-gray-900">{stats.enServicio}</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-2.5 bg-amber-50 rounded-lg border border-amber-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                  <span className="text-xs font-medium text-gray-700">Malos</span>
-                </div>
-                <span className="text-xs font-bold text-gray-900">{stats.malos}</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-2.5 bg-orange-50 rounded-lg border border-orange-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
-                  <span className="text-xs font-medium text-gray-700">Fuera de servicio</span>
-                </div>
-                <span className="text-xs font-bold text-gray-900">{stats.fuera}</span>
-              </div>
-              
-              <div className="flex items-center justify-between p-2.5 bg-red-50 rounded-lg border border-red-100">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                  <span className="text-xs font-medium text-gray-700">Dado de baja</span>
-                </div>
-                <span className="text-xs font-bold text-gray-900">{stats.baja}</span>
-              </div>
 
-              <div className="pt-2.5 mt-2.5 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-700">Total de vehículos</span>
-                  <span className="text-base font-bold text-red-700">{stats.total}</span>
+            {/* Card: Mantenimientos */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <div className="mb-4">
+                <h3 className="text-base font-semibold text-gray-900 mb-0.5">Mantenimientos</h3>
+                <p className="text-xs text-gray-600">Resumen de mantenimientos programados</p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2.5 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="flex items-center gap-2.5">
+                    <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
+                    <span className="text-xs font-medium text-gray-700">Pendientes</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900">{statsMantenimientos.pendientes}</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-2.5 bg-purple-50 rounded-lg border border-purple-100">
+                  <div className="flex items-center gap-2.5">
+                    <Calendar className="h-3.5 w-3.5 text-purple-500" />
+                    <span className="text-xs font-medium text-gray-700">Este mes</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900">{statsMantenimientos.delMes}</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-2.5 bg-green-50 rounded-lg border border-green-100">
+                  <div className="flex items-center gap-2.5">
+                    <DollarSign className="h-3.5 w-3.5 text-green-500" />
+                    <span className="text-xs font-medium text-gray-700">Gastos del mes</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-900">{formatCosto(statsMantenimientos.costoDelMes)}</span>
+                </div>
+
+                <div className="pt-2.5 mt-2.5 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700">Próximo mantenimiento</span>
+                    <span className={`text-sm font-bold ${
+                      statsMantenimientos.diasHastaProximo !== null && statsMantenimientos.diasHastaProximo < 0
+                        ? 'text-red-600'
+                        : statsMantenimientos.diasHastaProximo !== null && statsMantenimientos.diasHastaProximo <= 3
+                        ? 'text-orange-600'
+                        : 'text-blue-600'
+                    }`}>
+                      {getTextoProximoMantenimiento()}
+                    </span>
+                  </div>
+                  {statsMantenimientos.proximoMantenimiento && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      {statsMantenimientos.proximoMantenimiento.vehiculo?.placa || 'N/A'} - {statsMantenimientos.proximoMantenimiento.descripcion}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -216,101 +292,10 @@ export default function AdminVehiculosPage() {
       )}
 
       {/* Vista Lista de Vehículos */}
-      {viewMode === 'lista' && (
-        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Lista de Vehículos</h2>
-            <p className="text-gray-600">Administra todos los vehículos de la flota</p>
-          </div>
-          <VehiculoList
-            getVehicleIcon={getVehicleIcon}
-            getStatusColor={getStatusColor}
-            onEstado={(vehiculo) => cambiarVista('estado', vehiculo)}
-            onVerDetalles={(vehiculo) => cambiarVista('detalles', vehiculo)}
-            onEditar={(vehiculo) => cambiarVista('editar', vehiculo)}
-          />
-        </div>
-      )}
+      {viewMode === 'lista' && <ListaVehiculos />}
 
-      {/* Vista Agregar Vehículo */}
-      {viewMode === 'agregar' && (
-        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Agregar Nuevo Vehículo</h2>
-            <p className="text-gray-600">Registra un nuevo vehículo en la flota de bomberos</p>
-          </div>
-          <AddVehiculo onSuccess={volverAlDashboard} />
-        </div>
-      )}
-
-      {/* Vista Actualizar Estado */}
-      {viewMode === 'estado' && vehiculoSeleccionado && (
-        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Actualizar Estado de Vehículo</h2>
-            <p className="text-gray-600">Modifica el estado operacional de {vehiculoSeleccionado.placa}</p>
-          </div>
-          <UpdateStatus 
-            vehiculo={vehiculoSeleccionado}
-            onClose={volverAlDashboard} 
-          />
-        </div>
-      )}
-
-      {/* Vista Programar Mantenimiento */}
-      {viewMode === 'programar' && vehiculoSeleccionado && (
-        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Programar Mantenimiento</h2>
-            <p className="text-gray-600">Programa mantenimiento para {vehiculoSeleccionado.placa}</p>
-          </div>
-          <ScheduleMaintenance 
-            vehiculoId={vehiculoSeleccionado.id} 
-            onClose={volverAlDashboard} 
-          />
-        </div>
-      )}
-
-      {/* Vista Registrar Mantenimiento */}
-      {viewMode === 'registrar' && vehiculoSeleccionado && (
-        <div className="bg-white border border-gray-300 shadow rounded-lg p-6">
-          <div className="mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Registrar Mantenimiento</h2>
-            <p className="text-gray-600">Registra mantenimiento realizado para {vehiculoSeleccionado.placa}</p>
-          </div>
-          <RecordMaintenance 
-            vehiculoId={vehiculoSeleccionado.id} 
-            onClose={volverAlDashboard} 
-          />
-        </div>
-      )}
-
-      {/* Vista Detalles del Vehículo */}
-      {viewMode === 'detalles' && vehiculoSeleccionado && (
-        <div className="flex justify-center items-start">
-          <DetallesVehiculo 
-            vehiculo={vehiculoSeleccionado}
-            onClose={volverALista}
-          />
-        </div>
-      )}
-
-      {/* Vista Editar Vehículo */}
-     {/* Vista Editar Vehículo */}
-{viewMode === 'editar' && vehiculoSeleccionado && (
-  <div className="flex justify-center items-start px-4 py-6">
-    <EditVehiculo 
-      vehiculo={vehiculoSeleccionado}
-      onClose={volverALista}
-      onSuccess={volverALista}
-    />
-  </div>
-)}
-
-      {/* Vista Mantenimiento Unificado - SIN CONTENEDOR EXTRA */}
-      {viewMode === 'mantenimiento' && (
-        <MantenimientoVehiculo onBack={volverAlDashboard} />
-      )}
+      {/* Vista Dashboard de Mantenimiento */}
+      {viewMode === 'mantenimiento' && <DashboardMantenimiento />}
     </div>
   );
 }
