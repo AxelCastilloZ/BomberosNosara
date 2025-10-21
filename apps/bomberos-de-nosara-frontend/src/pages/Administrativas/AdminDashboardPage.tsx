@@ -33,7 +33,7 @@ const allDashboardItems = [
     icon: <FaTruck size={24} />,
     label: "Inventario de Vehículos",
     href: "/admin/vehiculos",
-    roles: ["SUPERUSER", "ADMIN"],
+    roles: ["SUPERUSER", "ADMIN","PERSONAL_BOMBERIL" ],
   },
   {
     icon: <FaChartBar size={24} />,

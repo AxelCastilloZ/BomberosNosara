@@ -15,15 +15,16 @@ import {
   useNoticias,
   useUpdateNoticia,
 } from '../service/noticiasService';
+import { uploadImage } from '../service/uploadService';
 import { Noticia } from '../types/news';
 
 export default function AdminNoticiasPage() {
-  const [page, setPage] = useState(1);
-  const limit = 10;
-  const { data, isLoading } = useNoticias(page, limit);
-  const noticias = data?.data || [];
-  const total = data?.total || 0;
-  const totalPages = Math.ceil(total / limit) || 1;
+  const [page, setPage]=useState(1);
+  const limit=10;
+  const { data, isLoading }=useNoticias(page, limit);
+  const noticias=data?.data||[];
+  const total=data?.total||0;
+  const totalPages=Math.ceil(total/limit)||1;
   const { mutate: addNoticia }=useAddNoticia();
   const { mutate: updateNoticia }=useUpdateNoticia();
   const { mutate: deleteNoticia }=useDeleteNoticia();
@@ -33,12 +34,13 @@ export default function AdminNoticiasPage() {
   const [showLoading, setShowLoading]=useState(false);
   const [showSuccess, setShowSuccess]=useState(false);
   const [successMsg, setSuccessMsg]=useState('');
-  const [toDeleteId, setToDeleteId]=useState<string|null>(null);
+  const [toDeleteId, setToDeleteId]=useState<number|null>(null);
   const [showConfirmDelete, setShowConfirmDelete]=useState(false);
+  const [selectedFile, setSelectedFile]=useState<File|null>(null);
+  const [previewUrl, setPreviewUrl]=useState<string>('');
 
   const form=useForm({
     defaultValues: {
-      id: '',
       titulo: '',
       descripcion: '',
       url: '',
@@ -47,9 +49,22 @@ export default function AdminNoticiasPage() {
     onSubmit: async ({ value }) => {
       try {
         setShowLoading(true);
+
+        // Si hay un archivo seleccionado, subirlo primero
+        let imageUrl=value.url;
+        if (selectedFile) {
+          imageUrl=await uploadImage(selectedFile);
+        }
+
+        // Crear el objeto de noticia con la URL de la imagen
+        const noticiaData={
+          ...value,
+          url: imageUrl
+        };
+
         if (editingNoticia) {
           await new Promise<void>((resolve, reject) => {
-            updateNoticia(value, {
+            updateNoticia({ noticia: noticiaData, id: editingNoticia.id! }, {
               onSuccess: () => {
                 setSuccessMsg(`Noticia actualizada: ${value.titulo}`);
                 resolve();
@@ -61,7 +76,7 @@ export default function AdminNoticiasPage() {
           });
         } else {
           await new Promise<void>((resolve, reject) => {
-            addNoticia(value, {
+            addNoticia(noticiaData, {
               onSuccess: () => {
                 setSuccessMsg(`Noticia agregada: ${value.titulo}`);
                 resolve();
@@ -75,6 +90,8 @@ export default function AdminNoticiasPage() {
         setShowSuccess(true);
         setIsFormOpen(false);
         setEditingNoticia(null);
+        setSelectedFile(null);
+        setPreviewUrl('');
         form.reset();
       } catch (error) {
         console.error('Error en la operación:', error);
@@ -86,11 +103,27 @@ export default function AdminNoticiasPage() {
     },
   });
 
+  const handleFileChange=(e: React.ChangeEvent<HTMLInputElement>) => {
+    const file=e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      const url=URL.createObjectURL(file);
+      setPreviewUrl(url);
+      console.log(url);
+      form.setFieldValue('url', '');
+    }
+  };
+
   const handleEdit=(noticia: Noticia) => {
     setEditingNoticia(noticia);
-    Object.entries(noticia).forEach(([key, value]) => {
-      form.setFieldValue(key as keyof Noticia, value);
+    const formFields=['titulo', 'descripcion', 'url', 'fecha'] as const;
+    formFields.forEach((field) => {
+      if (field in noticia) {
+        form.setFieldValue(field, noticia[field]);
+      }
     });
+    setPreviewUrl(noticia.url);
+    setSelectedFile(null);
     setIsFormOpen(true);
   };
 
@@ -166,8 +199,10 @@ export default function AdminNoticiasPage() {
           </button>
           <button
             onClick={() => {
-              setToDeleteId(row.original.id);
-              setShowConfirmDelete(true);
+              if (row.original.id!==undefined) {
+                setToDeleteId(row.original.id);
+                setShowConfirmDelete(true);
+              }
             }}
             className="text-red-600 hover:text-red-700 text-sm"
           >
@@ -192,6 +227,8 @@ export default function AdminNoticiasPage() {
           <button
             onClick={() => {
               setEditingNoticia(null);
+              setSelectedFile(null);
+              setPreviewUrl('');
               form.reset();
               setIsFormOpen(true);
             }}
@@ -205,56 +242,56 @@ export default function AdminNoticiasPage() {
           <p className="text-center text-gray-500">Cargando noticias...</p>
         ):(
           <>
-          <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
-            <table className="min-w-full bg-white border border-gray-300">
-              <thead className="bg-red-100 text-red-800">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className="px-6 py-3 border border-gray-300 text-left text-sm font-bold uppercase tracking-wide"
-                      >
-                        {flexRender(header.column.columnDef.header, header.getContext())}
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="divide-y divide-gray-300">
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-blue-50 transition">
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="px-6 py-4 border border-gray-200 text-gray-700 align-top"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          {/* Controles de paginación */}
-          <div className="flex justify-end gap-2 mt-12 mb-12">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-            >
-              Anterior
-            </button>
-            <span className="px-2 py-1">Página {page} de {totalPages}</span>
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages}
-              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
-            >
-              Siguiente
-            </button>
-          </div>
+            <div className="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
+              <table className="min-w-full bg-white border border-gray-300">
+                <thead className="bg-red-100 text-red-800">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className="px-6 py-3 border border-gray-300 text-left text-sm font-bold uppercase tracking-wide"
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody className="divide-y divide-gray-300">
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-blue-50 transition">
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className="px-6 py-4 border border-gray-200 text-gray-700 align-top"
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Controles de paginación */}
+            <div className="flex justify-end gap-2 mt-12 mb-12">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p-1))}
+                disabled={page===1}
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+              >
+                Anterior
+              </button>
+              <span className="px-2 py-1">Página {page} de {totalPages}</span>
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p+1))}
+                disabled={page===totalPages}
+                className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            </div>
           </>
         )}
 
@@ -271,16 +308,6 @@ export default function AdminNoticiasPage() {
                 }}
                 className="space-y-4"
               >
-                <form.Field name="id">
-                  {(field) => (
-                    <input
-                      placeholder="ID"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      className="w-full border p-2 rounded"
-                    />
-                  )}
-                </form.Field>
                 <form.Field name="titulo">
                   {(field) => (
                     <input
@@ -301,21 +328,32 @@ export default function AdminNoticiasPage() {
                     />
                   )}
                 </form.Field>
-                <form.Field name="url">
-                  {(field) => (
-                    <input
-                      placeholder="URL de la Imagen"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      className="w-full border p-2 rounded"
-                    />
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Imagen de la Noticia
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="w-full border p-2 rounded"
+                  />
+                  {(previewUrl||editingNoticia?.url)&&(
+                    <div className="mt-2">
+                      <img
+                        src={previewUrl||editingNoticia?.url}
+                        alt="Preview"
+                        className="w-32 h-32 object-cover rounded border"
+                      />
+                    </div>
                   )}
-                </form.Field>
+                </div>
                 <form.Field name="fecha">
                   {(field) => (
                     <input
                       placeholder="Fecha"
                       type="date"
+                      max={new Date().toISOString().split('T')[0]}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       className="w-full border p-2 rounded"
@@ -326,7 +364,11 @@ export default function AdminNoticiasPage() {
                 <div className="flex justify-between pt-4">
                   <button
                     type="button"
-                    onClick={() => setIsFormOpen(false)}
+                    onClick={() => {
+                      setIsFormOpen(false);
+                      setSelectedFile(null);
+                      setPreviewUrl('');
+                    }}
                     className="bg-gray-300 text-gray-800 px-4 py-2 rounded"
                   >
                     Cancelar

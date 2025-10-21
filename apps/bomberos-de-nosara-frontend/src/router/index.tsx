@@ -29,7 +29,7 @@ import AdminVehiculosPage from '../pages/Administrativas/AdminVehiculosPage';
 import AdminNoticiasPage from '../pages/AdminNoticiasPage';
 import AdminSuggestionsPage from '../pages/AdminSuggestionsPage';
 import SuggestionsPage from '../pages/SuggestionsPage';
-
+import DonarPage from '../pages/DonarPage';
 
 
 const isAdminAuthenticated=() => {
@@ -102,6 +102,13 @@ const routeTree=rootRoute.addChildren([
     component: NoticiasPage,
     getParentRoute: () => rootRoute,
   }),
+
+  createRoute({
+    path: '/donar',
+    component: DonarPage,
+    getParentRoute: () => rootRoute,
+  }),
+
   createRoute({
     path: '/admin/noticias',
     component: AdminNoticiasPage,

@@ -2,8 +2,8 @@ import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('noticias')
 export class Noticia {
-  @PrimaryGeneratedColumn('uuid') //para generar los id automaticos
-  id!: string;
+  @PrimaryGeneratedColumn()
+  id!: number;
 
   @Column()
   titulo!: string;

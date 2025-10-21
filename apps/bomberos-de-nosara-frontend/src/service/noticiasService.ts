@@ -33,18 +33,17 @@ export const useAddNoticia = () => {
 export const useUpdateNoticia = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (noticia: Noticia) => {
-      await axios.put(`${API_URL}/${noticia.id}`, noticia);
+    mutationFn: async ({ noticia, id }: { noticia: Omit<Noticia, 'id'>; id: number }) => {
+      await axios.put(`${API_URL}/${id}`, noticia);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['noticias'] }),
   });
 };
 
-//DELETE 
 export const useDeleteNoticia = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: number) => {
       await axios.delete(`${API_URL}/${id}`);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['noticias'] }),

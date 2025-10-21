@@ -31,7 +31,7 @@ export const DonanteModal = ({ donante, onClose }: ModalProps) => {
         </button>
 
         <img
-          src={donante.logo}
+          src={`${import.meta.env.VITE_API_URL}${donante.logo}`}
           alt={donante.nombre}
           className="h-40 mx-auto mb-4 object-contain"
         />
