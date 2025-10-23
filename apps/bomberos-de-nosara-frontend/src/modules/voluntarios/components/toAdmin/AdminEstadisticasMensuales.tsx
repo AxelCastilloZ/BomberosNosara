@@ -1,7 +1,7 @@
 // src/components/ui/Administrativa/Voluntarios/EstadisticasVoluntariosMensuales.tsx
-import { useEstadisticasVolMensuales} from '../../../../hooks/useVoluntarios';
+import { useEstadisticasVolMensuales} from '../../Hooks/useVoluntarios';
 import { BarChart3, Users, Clock, CheckCircle } from 'lucide-react';
-import { EstadisticasVoluntariosDto } from '../../../../types/voluntarios';
+import { EstadisticasVoluntariosDto } from '../../types/voluntarios';
 import { useState } from 'react';
 
 export default function AdminEstadisticasMensuales() {

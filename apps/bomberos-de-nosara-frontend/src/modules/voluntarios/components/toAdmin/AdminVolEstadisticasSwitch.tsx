@@ -1,7 +1,7 @@
 // src/components/ui/Administrativa/Voluntarios/VoluntariosEstadisticasSwitch.tsx
 import { useState } from 'react';
-import AdminEstadisticasMensuales from './AdminEstadisticasMensuales';
-import AdminEstadisticasVoluntarios from './AdminEstadisticasVoluntarios';
+import AdminEstadisticasMensuales from '../../../../modules/voluntarios/components/toAdmin/AdminEstadisticasMensuales';
+import AdminEstadisticasVoluntarios from '../../../../modules/voluntarios/components/toAdmin/AdminEstadisticasVoluntarios';
 
 export default function AdminVolEstadisticasSwitch() {
   const [modo, setModo] = useState<'absolutas' | 'mensuales'>('absolutas');

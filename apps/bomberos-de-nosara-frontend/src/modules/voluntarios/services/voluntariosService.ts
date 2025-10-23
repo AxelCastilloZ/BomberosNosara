@@ -1,4 +1,4 @@
-import api from "../api/apiConfig";
+import api from "../../../api/apiConfig";
 import { CreateParticipacionDto, EstadisticasVoluntariosDto, PaginatedDto, PaginatedResponse, UpdateEstadoDto } from "../types/voluntarios";
 
 

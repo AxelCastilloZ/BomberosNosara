@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { BarChart3, Users, ArrowLeft } from 'lucide-react';
 //import AdminEstadisticasVoluntarios from '../../components/ui/Administrativa/Voluntarios/AdminEstadisticasVoluntarios';
-import AdminParticipacionesFilt from '../../components/ui/Administrativa/Voluntarios/AdminParticipacionesFilt';
-import AdminVolEstadisticasSwitch from '../../components/ui/Administrativa/Voluntarios/AdminVolEstadisticasSwitch';
+import AdminParticipacionesFilt from '../../modules/voluntarios/components/toAdmin/AdminParticipacionesFilt';
+import AdminVolEstadisticasSwitch from '../../modules/voluntarios/components/toAdmin/AdminVolEstadisticasSwitch';
 
 type VoluntarioView = 'dashboard' | 'lista' | 'estadisticas';
 

@@ -1,7 +1,7 @@
 // useVoluntarios.ts - VERSIÓN COMPLETA CON DEBUG
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { voluntariadoService } from '../service/voluntariosService';
-import { CreateParticipacionDto, EstadisticasVoluntariosDto, PaginatedDto, UpdateEstadoDto } from '../types/voluntarios';
+import { voluntariadoService } from '../../voluntarios/services/voluntariosService';
+import { CreateParticipacionDto, EstadisticasVoluntariosDto, PaginatedDto, UpdateEstadoDto } from '../../voluntarios/types/voluntarios';
 
 // Hook para ver el historial de participaciones del voluntario
 export const useMisParticipaciones = (estado?: string) =>

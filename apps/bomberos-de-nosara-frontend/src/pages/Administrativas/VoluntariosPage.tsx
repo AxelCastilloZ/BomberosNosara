@@ -1,8 +1,8 @@
 import { useState } from "react";
-import ParticipacionForm from "../../components/ui/Administrativa/Voluntarios/ParticipacionForm";
-import { useHorasAprobadas, useHorasPendientes } from "../../hooks/useVoluntarios";
+import ParticipacionForm from "../../modules/voluntarios/components/toVoluntarios/ParticipacionForm";
+import { useHorasAprobadas, useHorasPendientes } from "../../modules/voluntarios/Hooks/useVoluntarios";
 //import VolParticipacionesTable from "../../components/ui/Administrativa/Voluntarios/VolParticipacionesTable";
-import VoluntarioCards from "../../components/ui/Administrativa/Voluntarios/VoluntarioCards";
+import VoluntarioCards from "../../modules/voluntarios/components/toVoluntarios/VoluntarioCards";
 
 
 export default function VoluntariosPage() {

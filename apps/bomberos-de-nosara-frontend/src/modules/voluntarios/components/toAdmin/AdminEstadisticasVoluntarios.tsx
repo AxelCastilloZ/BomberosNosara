@@ -1,7 +1,7 @@
 // src/components/ui/Administrativa/Voluntarios/EstadisticasVoluntarios.tsx
-import { useEstadisticasVolGenerales } from '../../../../hooks/useVoluntarios';
+import { useEstadisticasVolGenerales } from '../../Hooks/useVoluntarios';
 import { BarChart3, Users, Clock, CheckCircle } from 'lucide-react';
-import { EstadisticasVoluntariosDto } from '../../../../types/voluntarios';
+import { EstadisticasVoluntariosDto } from '../../types/voluntarios';
 
 export default function AdminEstadisticasVoluntarios() {
   const { data, isLoading } = useEstadisticasVolGenerales();

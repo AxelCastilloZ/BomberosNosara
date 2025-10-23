@@ -1,7 +1,7 @@
 // src/components/ui/Administrativa/Voluntarios/AdminParticipacionesCards.tsx
-import { Participacion } from '../../../../types/voluntarios';
-import CambiarEstadoModal from '../../Modals/Voluntarios/CambiarEstadoModal';
-import ParticipacionModal from '../../Modals/Voluntarios/ParticipacionModal';
+import { Participacion } from '../../types/voluntarios';
+import CambiarEstadoModal from '../modals/CambiarEstadoModal';
+import ParticipacionModal from '../modals/ParticipacionModal';
 import { MapPin, Clock, User, FileText, Calendar } from 'lucide-react';
 import { useState } from 'react';
 

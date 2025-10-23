@@ -1,9 +1,9 @@
 // src/components/ui/Voluntarios/VolParticipacionesCards.tsx
-import { Participacion } from '../../../../types/voluntarios';
+import { Participacion } from '../../types/voluntarios';
 import { MapPin, Clock, FileText, Calendar } from 'lucide-react';
 import { useState } from 'react';
-import ParticipacionModal from '../../Modals/Voluntarios/ParticipacionModal';
-import { useMisParticipaciones } from '../../../../hooks/useVoluntarios';
+import ParticipacionModal from '../modals/ParticipacionModal';
+import { useMisParticipaciones } from '../../Hooks/useVoluntarios';
 
 const MAX_DESC = 40;
 const MAX_UBIC = 20;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import AdminParticipacionesCards from './AdminParticipacionesCards';
-import { TipoActividad } from '../../../../types/voluntarios';
-import { useParticipacionesPaginadas } from '../../../../hooks/useVoluntarios';
+import { TipoActividad } from '../../types/voluntarios';
+import { useParticipacionesPaginadas } from '../../Hooks/useVoluntarios';
 
 export type FiltrosForm = {
   descripcion?: string;
