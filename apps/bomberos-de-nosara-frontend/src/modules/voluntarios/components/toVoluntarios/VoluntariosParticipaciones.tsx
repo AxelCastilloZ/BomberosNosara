@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import AdminParticipacionesCards from './AdminParticipacionesCards';
+import VoluntarioCards from './VoluntarioCards';
 import { TipoActividad } from '../../types/voluntarios';
-import { useParticipacionesPaginadas } from '../../Hooks/useVoluntarios';
+import { useMisParticipacionesPaginadas } from '../../Hooks/useVoluntarios';
 
-export type FiltrosForm = {
+export type FiltrosVoluntarioForm = {
   descripcion?: string;
-  voluntario?: string;
   tipoActividad?: TipoActividad;
   fechaDesde?: string;
   fechaHasta?: string;
@@ -14,10 +13,9 @@ export type FiltrosForm = {
   limit: number;
 };
 
-export default function AdminParticipacionesFilt() {
-  const [filtros, setFiltros] = useState<FiltrosForm>({
+export default function VoluntariosParticipaciones() {
+  const [filtros, setFiltros] = useState<FiltrosVoluntarioForm>({
     descripcion: '',
-    voluntario: '',
     tipoActividad: undefined,
     fechaDesde: '',
     fechaHasta: '',
@@ -26,44 +24,32 @@ export default function AdminParticipacionesFilt() {
     limit: 6,
   });
 
-  // Estados temporales para debounce
-  const [searchDesc, setSearchDesc] = useState('');
-  const [searchVol, setSearchVol] = useState('');
+  // Estado temporal solo para el campo de búsqueda (para debounce)
+  const [searchText, setSearchText] = useState('');
 
-  const { data, isLoading } = useParticipacionesPaginadas(filtros);
+  const { data, isLoading } = useMisParticipacionesPaginadas(filtros);
   const totalPages = data?.totalPages ?? 1;
 
-  // Debounce para descripción
+  // Debounce para el campo de búsqueda
   useEffect(() => {
     const timer = setTimeout(() => {
-      setFiltros((prev) => ({ ...prev, descripcion: searchDesc, page: 1 }));
-    }, 500);
+      setFiltros((prev) => ({ ...prev, descripcion: searchText, page: 1 }));
+    }, 500); // Espera 500ms después de que el usuario deje de escribir
 
     return () => clearTimeout(timer);
-  }, [searchDesc]);
+  }, [searchText]);
 
-  // Debounce para voluntario
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFiltros((prev) => ({ ...prev, voluntario: searchVol, page: 1 }));
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchVol]);
-
-  const actualizarFiltro = <K extends keyof FiltrosForm>(
+  const actualizarFiltro = <K extends keyof FiltrosVoluntarioForm>(
     key: K,
-    value: FiltrosForm[K]
+    value: FiltrosVoluntarioForm[K]
   ) => {
     setFiltros((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
   const limpiarFiltros = () => {
-    setSearchDesc('');
-    setSearchVol('');
+    setSearchText('');
     setFiltros({
       descripcion: '',
-      voluntario: '',
       tipoActividad: undefined,
       fechaDesde: '',
       fechaHasta: '',
@@ -80,16 +66,8 @@ export default function AdminParticipacionesFilt() {
         {/* Buscar por descripción */}
         <input
           placeholder="Buscar por descripción"
-          value={searchDesc}
-          onChange={(e) => setSearchDesc(e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2"
-        />
-
-        {/* Nombre del voluntario */}
-        <input
-          placeholder="Nombre del voluntario"
-          value={searchVol}
-          onChange={(e) => setSearchVol(e.target.value)}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2"
         />
 
@@ -153,9 +131,11 @@ export default function AdminParticipacionesFilt() {
 
       {/* Cards */}
       {isLoading ? (
-        <p className="text-gray-600">Cargando...</p>
+        <p className="text-center text-gray-600">Cargando...</p>
+      ) : data?.data && data.data.length > 0 ? (
+        <VoluntarioCards data={data.data} />
       ) : (
-        <AdminParticipacionesCards data={data?.data ?? []} />
+        <p className="text-center text-gray-500">No se encontraron participaciones</p>
       )}
 
       {/* Paginación */}

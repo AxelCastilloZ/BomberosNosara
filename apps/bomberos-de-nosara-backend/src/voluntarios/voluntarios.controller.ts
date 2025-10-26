@@ -55,11 +55,24 @@ export class VoluntariosController {
     }
   }
 
-  // Voluntario ve su historial
+  // Voluntario ve su historial -- to delete
   @Get('mis-participaciones')
   @Roles(RoleEnum.VOLUNTARIO)
   historial(@Req() req: Request, @Query('estado') estado?: string) {
     return this.voluntariosService.listarHistorial(req.user as any, estado);
+  }
+
+  // Voluntario ve su historial paginado con filtros
+  @Get('mis-participaciones/paginado')
+  @Roles(RoleEnum.VOLUNTARIO)
+  async misParticipacionesPaginadas(
+    @Req() req: Request,
+    @Query() dto: FiltrosParticipacionDto,
+  ) {
+    return this.voluntariosService.listarHistorialPaginado(
+      req.user as any,
+      dto,
+    );
   }
 
   // Voluntario ve sus horas aprobadas

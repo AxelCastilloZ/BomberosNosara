@@ -76,7 +76,7 @@ export class VoluntariosService {
     };
   }
 
-  //Service para listar el historial de participaciones de un voluntario
+  //Service para listar el historial de participaciones de un voluntario  --to delete
   async listarHistorial(user: User, estado?: string): Promise<any[]> {
     const where: any = { voluntario: { id: user.id } };
     if (estado) where.estado = estado;
@@ -90,6 +90,60 @@ export class VoluntariosService {
       ...p,
       horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
     }));
+  }
+
+  // Service que lista las participaciones del voluntario con paginación y filtros --nuevo
+  async listarHistorialPaginado(user: User, dto: FiltrosParticipacionDto) {
+    const page = dto.page ?? 1;
+    const limit = dto.limit ?? 6;
+
+    const query = this.participacionRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.voluntario', 'voluntario')
+      .where('voluntario.id = :userId', { userId: user.id })
+      .orderBy('p.fecha', 'DESC');
+
+    // Filtros
+    if (dto.descripcion) {
+      query.andWhere(
+        new Brackets((qb) =>
+          qb.where('p.actividad LIKE :txt').orWhere('p.descripcion LIKE :txt'),
+        ),
+        { txt: `%${dto.descripcion}%` },
+      );
+    }
+
+    if (dto.tipoActividad) {
+      query.andWhere('p.actividad = :tipo', { tipo: dto.tipoActividad });
+    }
+
+    if (dto.fechaDesde) {
+      query.andWhere('p.fecha >= :desde', { desde: dto.fechaDesde });
+    }
+
+    if (dto.fechaHasta) {
+      query.andWhere('p.fecha <= :hasta', { hasta: dto.fechaHasta });
+    }
+
+    if (dto.estado) {
+      query.andWhere('p.estado = :estado', { estado: dto.estado });
+    }
+
+    const total = await query.getCount();
+    const result = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      data: result.map((p) => ({
+        ...p,
+        horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   // ----- ADMIN ------

@@ -3,6 +3,7 @@ import ParticipacionForm from "../../modules/voluntarios/components/toVoluntario
 import { useHorasAprobadas, useHorasPendientes } from "../../modules/voluntarios/Hooks/useVoluntarios";
 //import VolParticipacionesTable from "../../components/ui/Administrativa/Voluntarios/VolParticipacionesTable";
 import VoluntarioCards from "../../modules/voluntarios/components/toVoluntarios/VoluntarioCards";
+import VoluntariosParticipaciones from "../../modules/voluntarios/components/toVoluntarios/VoluntariosParticipaciones";
 
 
 export default function VoluntariosPage() {
@@ -82,7 +83,7 @@ export default function VoluntariosPage() {
 			 <h2 className="text-2xl font-bold text-black pt-6 mb-3">
 				Mis Participaciones
 			 </h2>
-			<VoluntarioCards />
+			<VoluntariosParticipaciones />
 			</section>
 
 			{/* Slide-over panel */}
