@@ -7,6 +7,10 @@ export class Role {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ unique: true })
+  @Column({ 
+    type: 'enum',
+    enum: RoleEnum,
+    unique: true 
+  })
   name!: RoleEnum; 
 }
