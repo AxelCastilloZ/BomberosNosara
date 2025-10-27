@@ -7,12 +7,19 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { QueryFailedError } from 'typeorm';
 
-@Catch()
+@Catch()  
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
   catch(exception: unknown, host: ArgumentsHost) {
+    
+    if (exception instanceof QueryFailedError) {
+    
+      return;
+    }
+
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
@@ -29,7 +36,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     const isDevelopment = process.env.NODE_ENV !== 'production';
 
-    // LOG COMPLETO EN DESARROLLO
+    
     if (isDevelopment) {
       this.logger.error('\n========== ERROR CAPTURADO ==========');
       this.logger.error(`URL: ${request.method} ${request.url}`);

@@ -9,17 +9,20 @@ export class TypeOrmExceptionFilter implements ExceptionFilter {
     const res = ctx.getResponse();
     const req = ctx.getRequest();
 
-    // En TypeORM >= 0.3 los detalles de MySQL vienen en driverError
     const d = exception.driverError ?? {};
 
     // --- DUPLICATE KEY (MySQL/MariaDB) ---
     if (d?.errno === 1062 || d?.code === 'ER_DUP_ENTRY') {
-      const field = this.extractFieldFromMySql(d); // puede ser undefined
+      const field = this.extractFieldFromMySql(d);
+      const value = this.extractValueFromError(d?.sqlMessage);
+      const message = this.buildDuplicateMessage(field, value);
+
       return res.status(HttpStatus.CONFLICT).json({
         statusCode: HttpStatus.CONFLICT,
         code: 'DUPLICATE_KEY',
-        field, // si no se logra inferir, no se envía o queda undefined
-        message: 'Ya existe un registro con el mismo valor en un campo único.',
+        field,
+        value,
+        message,
         path: req.url,
         timestamp: new Date().toISOString(),
       });
@@ -75,7 +78,7 @@ export class TypeOrmExceptionFilter implements ExceptionFilter {
       });
     }
 
-
+    // --- INCORRECT VALUE ---
     if (d?.errno === 1366) {
       return res.status(HttpStatus.BAD_REQUEST).json({
         statusCode: HttpStatus.BAD_REQUEST,
@@ -87,7 +90,7 @@ export class TypeOrmExceptionFilter implements ExceptionFilter {
       });
     }
 
-    // --- DEADLOCK / LOCK TIMEOUT (opcional, útil en concurrencia) ---
+    // --- DEADLOCK / LOCK TIMEOUT ---
     if (d?.errno === 1213 || d?.errno === 1205) {
       return res.status(HttpStatus.CONFLICT).json({
         statusCode: HttpStatus.CONFLICT,
@@ -107,17 +110,76 @@ export class TypeOrmExceptionFilter implements ExceptionFilter {
     });
   }
 
-  // Intenta extraer un "campo" a partir del nombre de la constraint en MySQL
+  // Extrae el valor duplicado del mensaje de error
+  private extractValueFromError(sqlMessage?: string): string | undefined {
+    if (!sqlMessage) return undefined;
+    
+    // Ejemplo: "Duplicate entry 'g55' for key 'vehiculos.IDX_...'"
+    const match = sqlMessage.match(/Duplicate entry '([^']+)'/);
+    return match?.[1];
+  }
+
+  // Construye un mensaje específico según el campo
+  private buildDuplicateMessage(field?: string, value?: string): string {
+    const displayValue = value ? ` '${value.toUpperCase()}'` : '';
+    
+    switch (field) {
+      case 'placa':
+        return value 
+          ? `La placa${displayValue} ya está registrada. Use una placa diferente.`
+          : 'Esta placa ya está registrada. Use una placa diferente.';
+      
+      case 'email':
+        return value
+          ? `El correo${displayValue} ya está en uso. Use un correo diferente.`
+          : 'Este correo ya está en uso. Use un correo diferente.';
+      
+      case 'codigo':
+        return value
+          ? `El código${displayValue} ya existe. Use un código diferente.`
+          : 'Este código ya existe. Use un código diferente.';
+      
+      case 'serial':
+        return value
+          ? `El número de serie${displayValue} ya está registrado. Use uno diferente.`
+          : 'Este número de serie ya está registrado. Use uno diferente.';
+      
+      default:
+        return value
+          ? `El valor${displayValue} ya existe en este campo. Use uno diferente.`
+          : 'Este valor ya existe. Use uno diferente.';
+    }
+  }
+
+  // Intenta extraer un "campo" a partir del constraint name y del SQL query
   private extractFieldFromMySql(d: any): string | undefined {
     const msg: string = d?.sqlMessage || '';
+    const sql: string = d?.sql || '';
 
-
+    // Primero intenta con el constraint name
     const m1 = msg.match(/for key '.*\.(\w+)'/);
-    if (m1?.[1]) return this.normalizeConstraintName(m1[1]);
+    if (m1?.[1]) {
+      const normalized = this.normalizeConstraintName(m1[1]);
+      if (normalized) return normalized;
+    }
 
- 
     const m2 = msg.match(/for key '(\w+)'/);
-    if (m2?.[1]) return this.normalizeConstraintName(m2[1]);
+    if (m2?.[1]) {
+      const normalized = this.normalizeConstraintName(m2[1]);
+      if (normalized) return normalized;
+    }
+
+    // Si no encuentra en el constraint, busca en el SQL query
+    if (sql.toLowerCase().includes('`placa`')) return 'placa';
+    if (sql.toLowerCase().includes('`email`')) return 'email';
+    if (sql.toLowerCase().includes('`codigo`')) return 'codigo';
+    if (sql.toLowerCase().includes('`serial`')) return 'serial';
+
+    // Busca en el mensaje de error también
+    if (msg.toLowerCase().includes('placa')) return 'placa';
+    if (msg.toLowerCase().includes('email')) return 'email';
+    if (msg.toLowerCase().includes('codigo')) return 'codigo';
+    if (msg.toLowerCase().includes('serial')) return 'serial';
 
     return undefined;
   }
@@ -129,8 +191,8 @@ export class TypeOrmExceptionFilter implements ExceptionFilter {
     return this.normalizeConstraintName(m[1]);
   }
 
-  // Normaliza nombres de constraints a posibles campos; mantiene genérico
-  private normalizeConstraintName(name: string) {
+  // Normaliza nombres de constraints a posibles campos
+  private normalizeConstraintName(name: string): string | undefined {
     const n = name.toLowerCase();
     if (n.includes('placa')) return 'placa';
     if (n.includes('codigo')) return 'codigo';
@@ -138,7 +200,6 @@ export class TypeOrmExceptionFilter implements ExceptionFilter {
     if (n.includes('stock')) return 'stock';
     if (n.includes('cantidad')) return 'cantidad';
     if (n.includes('email')) return 'email';
- 
     return undefined;
   }
 }
