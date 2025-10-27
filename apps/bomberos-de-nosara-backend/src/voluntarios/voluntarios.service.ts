@@ -1,14 +1,9 @@
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-return */
 import { Injectable } from '@nestjs/common';
 import {
   BadRequestException,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common/exceptions';
 import { User } from '../users/entities/user.entity';
-import { RoleEnum } from '../roles/role.enum';
 import { Between, Brackets, Repository } from 'typeorm';
 import { Participacion } from './entities/participacion.entity';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,10 +17,6 @@ export class VoluntariosService {
     @InjectRepository(Participacion)
     private readonly participacionRepo: Repository<Participacion>,
   ) {}
-
-  private verificarRolVoluntario(user: any): boolean {
-    return user.roles?.includes(RoleEnum.VOLUNTARIO);
-  }
 
   /**
    * Convierte una fecha string (YYYY-MM-DD) a Date sin problemas de zona horaria
@@ -78,12 +69,6 @@ export class VoluntariosService {
     user: User,
     dto: CreateParticipacionDto,
   ): Promise<any> {
-    if (!this.verificarRolVoluntario(user)) {
-      throw new UnauthorizedException(
-        'Solo usuarios con rol VOLUNTARIO pueden registrar participaciones',
-      );
-    }
-
     // Validar que horaFin sea mayor que horaInicio
     const horas = this.calcularHoras(dto.horaInicio, dto.horaFin);
     if (horas <= 0) {

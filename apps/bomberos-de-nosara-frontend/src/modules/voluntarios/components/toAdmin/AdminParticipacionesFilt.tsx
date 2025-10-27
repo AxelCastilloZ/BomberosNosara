@@ -85,7 +85,7 @@ export default function AdminParticipacionesFilt() {
   return (
     <div className="w-full">
       {/* Filtros */}
-      <div className="bg-white rounded-xl shadow border border-gray-200 p-4 mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
+      <div className="bg-white rounded-xl shadow border  p-4 mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
         {/* Buscar por descripción */}
         <input
           placeholder="Buscar por descripción"
@@ -150,7 +150,7 @@ export default function AdminParticipacionesFilt() {
         </select>
 
         {/* Botón Limpiar */}
-        <div className="flex justify-end">
+        <div className="flex justify-end md:col-span-2 lg:col-span-3">
           <button
             onClick={limpiarFiltros}
             className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm transition-colors"
