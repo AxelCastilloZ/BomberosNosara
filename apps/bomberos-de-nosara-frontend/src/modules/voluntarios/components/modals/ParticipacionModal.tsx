@@ -1,6 +1,6 @@
 // src/components/ui/Modals/Voluntarios/ParticipacionModal.tsx
 import { FC } from 'react';
-import { Participacion } from '../../../../types/voluntarios';
+import { Participacion } from '../../../../modules/voluntarios/types/voluntarios';
 import { X, User, Clock, MapPin, FileText } from 'lucide-react';
 
 interface Props {

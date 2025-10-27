@@ -1,6 +1,6 @@
 // CambiarEstadoModal.tsx - VERSIÓN CORREGIDA
 import { useEffect, useState } from "react";
-import { useActualizarEstado } from "../../../../hooks/useVoluntarios";
+import { useActualizarEstado } from "../../Hooks/useVoluntarios";
 
 type Props = {
 	id: number;

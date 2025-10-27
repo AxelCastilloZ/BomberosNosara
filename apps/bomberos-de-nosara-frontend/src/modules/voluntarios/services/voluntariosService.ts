@@ -1,4 +1,4 @@
-import api from "../api/apiConfig";
+import api from "../../../api/apiConfig";
 import { CreateParticipacionDto, EstadisticasVoluntariosDto, PaginatedDto, PaginatedResponse, UpdateEstadoDto } from "../types/voluntarios";
 
 
@@ -8,9 +8,20 @@ export const voluntariadoService = {
   return api.post('/voluntarios/participaciones', dto);
 },
 
-  // Lista las participaciones de cada viluntario
+  // Lista las participaciones de cada voluntario -- to delete
   listarMisParticipaciones: (estado?: string) =>
     api.get('/voluntarios/mis-participaciones', { params: { estado } }),
+
+  // Método para listar participaciones del voluntario paginadas y filtradas
+  listarMisParticipacionesPaginadas: (params: PaginatedDto): Promise<PaginatedResponse> => {
+  const cleaned = Object.fromEntries(
+    Object.entries(params).map(([k, v]) => [k, v === '' ? undefined : v])
+  );
+
+  return api
+    .get('/voluntarios/mis-participaciones/paginado', { params: cleaned })
+    .then((res) => res.data);
+},
 
   // Método para actualizar el estado de una participación
   actualizarEstado: (id: number, dto: UpdateEstadoDto) =>
