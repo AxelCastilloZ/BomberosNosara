@@ -34,12 +34,13 @@ logs/
 Thumbs.db
 
 # === pnpm & lock files ===
-pnpm-lock.yaml
+#pnpm-lock.yaml
 pnpm-debug.log*
 lerna-debug.log*
 
 # === Environment variables ===
 .env
+.env.production
 .env.local
 .env.*.local
 .env.*          # Asegura ignorar .env.development, .env.production, etc.

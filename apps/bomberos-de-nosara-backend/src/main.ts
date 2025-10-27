@@ -10,6 +10,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { ServerOptions } from 'socket.io';
 
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
  
@@ -67,8 +68,9 @@ async function bootstrap() {
 
   
   app.useGlobalFilters(
-    new TypeOrmExceptionFilter(), 
-    new AllExceptionsFilter()    
+    new AllExceptionsFilter(),
+    new TypeOrmExceptionFilter()
+      
   );
 
   await app.listen(3000, '0.0.0.0');

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { JwtModule } from '@nestjs/jwt';
-import { ScheduleModule } from '@nestjs/schedule'; // ← NUEVO
+import { ScheduleModule } from '@nestjs/schedule'; 
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -33,14 +33,22 @@ import { StatisticsModule } from './statistics/statistics.module';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath: (() => {
-        const localPath = join(__dirname, '..', '.env');
-        const dockerPath = '/app/.env';
-        if (process.env.NODE_ENV === 'production') {
-          return existsSync(dockerPath) ? dockerPath : localPath;
-        }
-        return existsSync(localPath) ? localPath : undefined;
-      })(),
+     envFilePath: (() => {
+  const nodeEnv = process.env.NODE_ENV;
+  
+  
+  if (nodeEnv === 'production') {
+    const prodPath = join(__dirname, '..', '.env.production');
+    if (existsSync(prodPath)) return prodPath;
+    
+    const dockerPath = '/app/.env';
+    if (existsSync(dockerPath)) return dockerPath;
+  }
+  
+  // Para desarrollo, usa .env
+  const localPath = join(__dirname, '..', '.env');
+  return existsSync(localPath) ? localPath : undefined;
+})(),
       validationSchema: Joi.object({
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
@@ -68,8 +76,9 @@ import { StatisticsModule } from './statistics/statistics.module';
         ADMIN_PASSWORD: Joi.string().min(8).required(),
         BCRYPT_ROUNDS: Joi.number().default(10),
 
-        DB_SYNC: Joi.boolean().default(true),
+        DB_SYNC: Joi.boolean().default(false),
         DB_DROP_SCHEMA: Joi.boolean().default(false),
+        AUTO_RUN_MIGRATIONS: Joi.boolean().default(false),
       }),
     }),
 
@@ -77,9 +86,9 @@ import { StatisticsModule } from './statistics/statistics.module';
 
     EventEmitterModule.forRoot(),
 
-    // ==================== NUEVO: Schedule Module ====================
+   
     ScheduleModule.forRoot(),
-    // ================================================================
+   
 
     JwtModule.registerAsync({
       global: true,
@@ -109,6 +118,7 @@ import { StatisticsModule } from './statistics/statistics.module';
         autoLoadEntities: true,
         synchronize: cfg.get<boolean>('DB_SYNC', false),
         dropSchema: cfg.get<boolean>('DB_DROP_SCHEMA', false),
+         migrationsRun: cfg.get<boolean>('AUTO_RUN_MIGRATIONS', false), 
         retryAttempts: 10,
         retryDelay: 3000,
       }),
