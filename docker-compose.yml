@@ -1,0 +1,54 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: apps/bomberos-de-nosara-backend/Dockerfile
+    container_name: bomberos-nosara-backend
+    ports:
+      - "${BACKEND_PORT}:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - bomberos-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/bomberos-de-nosara-frontend/Dockerfile
+    container_name: bomberos-nosara-frontend
+    ports:
+      - "${FRONTEND_PORT}:4173"
+    depends_on:
+      - backend
+    networks:
+      - bomberos-net
+
+  db:
+    image: mysql:8.0
+    container_name: bomberos-nosara-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_NAME}
+    ports:
+      - "${DATABASE_PORT}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - bomberos-net
+
+volumes:
+  mysql_data:
+
+networks:
+  bomberos-net:
+    driver: bridge

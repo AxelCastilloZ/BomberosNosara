@@ -1,13 +1,35 @@
 {
   "name": "BomberosNosara",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
+  "packageManager": "pnpm@10.12.4",
+  "workspaces": [
+    "apps/*",
+    "shared"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+
+    "// === Backend NestJS ===": "--------------------------------",
+    "dev:backend": "pnpm --filter bomberos-de-nosara-backend run start:dev",
+    "start:backend": "pnpm --filter bomberos-de-nosara-backend run start",
+    "build:backend": "pnpm --filter bomberos-de-nosara-backend run build",
+    "lint:backend": "pnpm --filter bomberos-de-nosara-backend run lint",
+
+    "// === Migraciones TypeORM ===": "--------------------------------",
+    "db:mig:create": "pnpm --filter bomberos-de-nosara-backend run migration:create",
+    "db:mig:generate": "pnpm --filter bomberos-de-nosara-backend run migration:generate",
+    "db:mig:run": "pnpm --filter bomberos-de-nosara-backend run migration:run",
+    "db:mig:revert": "pnpm --filter bomberos-de-nosara-backend run migration:revert",
+    "db:mig:show": "pnpm --filter bomberos-de-nosara-backend run migration:show",
+
+    "// === Seeders (si implementados en backend) ===": "--------------------------------",
+    "db:seed": "pnpm --filter bomberos-de-nosara-backend run db:seed"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.12.4"
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "eslint": "^9.29.0",
+    "typescript": "^5.8.3"
+  }
 }

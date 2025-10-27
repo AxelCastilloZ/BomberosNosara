@@ -1,0 +1,11 @@
+
+apps/*/node_modules
+apps/*/dist
+
+
+node_modules
+dist
+
+
+.env
+npm-debug.log

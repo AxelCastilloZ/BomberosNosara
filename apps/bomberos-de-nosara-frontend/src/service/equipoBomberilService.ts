@@ -1,0 +1,231 @@
+// src/service/equipoBomberilService.ts
+import api from '../api/apiConfig';
+import type { AxiosError } from 'axios';
+import type { CatalogoEquipo } from '../interfaces/EquipoBomberil/catalogoEquipo';
+import type {
+  EquipoBomberil,
+  EquipoMantenimiento,
+  EquipoMantenimientoProgramado,
+  NuevoMantenimientoDTO,
+} from '../interfaces/EquipoBomberil/equipoBomberil';
+
+/** Input para crear equipo */
+export type CreateEquipoBomberilInput = {
+  catalogoId: string;
+  fechaAdquisicion: string; // ISO yyyy-mm-dd
+  estadoInicial: 'nuevo' | 'usado';
+  estadoActual: 'disponible' | 'en mantenimiento' | 'dado de baja';
+  numeroSerie?: string;
+  fotoUrl?: string;
+  cantidad: number;
+};
+
+/** Payload para actualizar el estado (con soporte a “parcial”) */
+export type UpdateEstadoPayload = {
+  id: string;
+  estadoActual: Extract<EquipoBomberil['estadoActual'], 'disponible' | 'en mantenimiento' | 'dado de baja'>;
+  /** Si se envía, aplica el cambio solo a esa cantidad; si no, aplica al grupo completo */
+  cantidadAfectada?: number;
+};
+
+type ApiErrorPayload = {
+  code?: string;
+  field?: string;
+  message?: string | string[];
+  details?: any;
+  statusCode?: number;
+};
+
+function normalizeApiError(err: unknown): never {
+  const axErr = err as AxiosError<ApiErrorPayload>;
+  const payload = axErr?.response?.data;
+
+  const msgArray = Array.isArray(payload?.message) ? payload.message : null;
+  const firstMsg = msgArray?.[0];
+
+  if (payload?.message || payload?.code) {
+    const e = new Error(
+      (typeof payload?.message === 'string' ? payload.message : firstMsg) || 'Error de servidor'
+    );
+    (e as any).code = payload?.code;
+    (e as any).field = payload?.field;
+    (e as any).status = axErr?.response?.status;
+    (e as any).raw = payload;
+    throw e;
+  }
+  const e = new Error(axErr?.message || 'Error de red o del servidor');
+  (e as any).status = axErr?.response?.status;
+  throw e;
+}
+
+export const equipoBomberilService = {
+  async getAll(): Promise<EquipoBomberil[]> {
+    try {
+      const res = await api.get<EquipoBomberil[]>('/equipos-bomberiles');
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async create(equipo: CreateEquipoBomberilInput): Promise<EquipoBomberil> {
+    try {
+      const res = await api.post<EquipoBomberil>('/equipos-bomberiles', equipo);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async update(
+    equipo: Partial<EquipoBomberil> & { id: string }
+  ): Promise<EquipoBomberil> {
+    try {
+      const { id, ...data } = equipo;
+      const res = await api.put<EquipoBomberil>(`/equipos-bomberiles/${id}`, data);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  /**
+   * Actualiza estado total o parcial SIN crear duplicados:
+   * - Parcial: PATCH /equipos-bomberiles/:id/estado-parcial  { estadoActual, cantidad }
+   * - Total:   PATCH /equipos-bomberiles/:id/estado-actual   { estadoActual }
+   */
+  async updateEstado(payload: UpdateEstadoPayload): Promise<EquipoBomberil> {
+    try {
+      const { id, estadoActual, cantidadAfectada } = payload;
+
+      if (typeof cantidadAfectada === 'number') {
+        // ✅ Cambio PARCIAL (mueve parte del grupo)
+        const res = await api.patch<EquipoBomberil>(
+          `/equipos-bomberiles/${id}/estado-parcial`,
+          { estadoActual, cantidad: cantidadAfectada }
+        );
+        return res.data;
+      }
+
+      // ✅ Cambio TOTAL del lote (no clona ni crea fila nueva)
+      const res = await api.patch<EquipoBomberil>(
+        `/equipos-bomberiles/${id}/estado-actual`,
+        { estadoActual }
+      );
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  /** Ruta directa para TOTAL */
+  async patchEstadoActual(id: string, estadoActual: UpdateEstadoPayload['estadoActual']): Promise<EquipoBomberil> {
+    try {
+      const res = await api.patch<EquipoBomberil>(
+        `/equipos-bomberiles/${id}/estado-actual`,
+        { estadoActual }
+      );
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  /** Movimiento PARCIAL directo */
+  async patchEstadoParcial(
+    id: string,
+    args: { estadoActual: UpdateEstadoPayload['estadoActual']; cantidad: number }
+  ): Promise<EquipoBomberil> {
+    try {
+      const res = await api.patch<EquipoBomberil>(
+        `/equipos-bomberiles/${id}/estado-parcial`,
+        args
+      );
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async delete(id: string): Promise<{ success: true }> {
+    try {
+      const res = await api.delete<{ success: true }>(`/equipos-bomberiles/${id}`);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async getCatalogos(): Promise<CatalogoEquipo[]> {
+    try {
+      const res = await api.get<CatalogoEquipo[]>('/equipos-bomberiles/catalogo');
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async addCatalogo(
+    catalogo: { nombre: string; tipo: CatalogoEquipo['tipo'] }
+  ): Promise<CatalogoEquipo> {
+    try {
+      const res = await api.post<CatalogoEquipo>('/equipos-bomberiles/catalogo', catalogo);
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async darDeBaja(id: string, cantidad: number): Promise<EquipoBomberil> {
+    try {
+      const res = await api.patch<EquipoBomberil>(
+        `/equipos-bomberiles/${id}/dar-de-baja`,
+        { cantidad }
+      );
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async registrarMantenimiento(
+    id: string,
+    data: NuevoMantenimientoDTO
+  ): Promise<EquipoMantenimiento> {
+    try {
+      const res = await api.post<EquipoMantenimiento>(
+        `/equipos-bomberiles/${id}/historial`,
+        data
+      );
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async programarMantenimiento(
+    id: string,
+    data: EquipoMantenimientoProgramado
+  ): Promise<EquipoMantenimientoProgramado> {
+    try {
+      const res = await api.put<EquipoMantenimientoProgramado>(
+        `/equipos-bomberiles/${id}/mantenimiento`,
+        data
+      );
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+
+  async getHistorial(id: string): Promise<EquipoMantenimiento[]> {
+    try {
+      const res = await api.get<EquipoMantenimiento[]>(
+        `/equipos-bomberiles/${id}/historial`
+      );
+      return res.data;
+    } catch (err) {
+      normalizeApiError(err);
+    }
+  },
+};
