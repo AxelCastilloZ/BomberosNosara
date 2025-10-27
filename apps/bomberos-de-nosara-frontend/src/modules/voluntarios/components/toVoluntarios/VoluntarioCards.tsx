@@ -1,28 +1,25 @@
-// src/components/ui/Voluntarios/VolParticipacionesCards.tsx
-import { Participacion } from '../../../../types/voluntarios';
+import { Participacion } from '../../types/voluntarios';
 import { MapPin, Clock, FileText, Calendar } from 'lucide-react';
 import { useState } from 'react';
-import ParticipacionModal from '../../Modals/Voluntarios/ParticipacionModal';
-import { useMisParticipaciones } from '../../../../hooks/useVoluntarios';
+import ParticipacionModal from '../modals/ParticipacionModal';
 
 const MAX_DESC = 40;
 const MAX_UBIC = 20;
 
-export default function VolParticipacionesCards() {
-  const { data: participaciones = [], isLoading } = useMisParticipaciones();
+type Props = {
+  data: Participacion[];
+};
+
+export default function VoluntarioCards({ data }: Props) {
   const [modalData, setModalData] = useState<Participacion | null>(null);
 
   const abrirModal = (p: Participacion) => setModalData(p);
   const cerrarModal = () => setModalData(null);
 
-  if (isLoading) return <p className="text-center text-gray-600">Cargando...</p>;
-  if (participaciones.length === 0)
-    return <p className="text-center text-gray-500">No tienes participaciones registradas</p>;
-
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {participaciones.map((p) => {
+        {data.map((p) => {
           const descLarga = p.descripcion.length > MAX_DESC;
           const motivo = p.estado === 'rechazada' ? p.motivoRechazo : null;
           const motivoLargo = motivo && motivo.length > 18;
@@ -30,7 +27,6 @@ export default function VolParticipacionesCards() {
             ? `${p.ubicacion.slice(0, MAX_UBIC)}...`
             : p.ubicacion;
 
-          // ✅ Mostrar "Ver más" si hay texto oculto
           const mostrarVerMas = descLarga || motivoLargo || p.ubicacion.length > MAX_UBIC;
 
           return (
@@ -53,7 +49,7 @@ export default function VolParticipacionesCards() {
                 </span>
               </div>
 
-              {/* Motivo de rechazo (preview) */}
+              {/* Motivo de rechazo */}
               {p.estado === 'rechazada' && motivo && (
                 <div className="text-sm border-l-4 border-red-500 pl-2 mb-2 text-red-700">
                   <strong>Motivo:</strong> {`${motivo.slice(0, 18)}${motivoLargo ? '...' : ''}`}
@@ -82,13 +78,12 @@ export default function VolParticipacionesCards() {
                     return `${h} h ${m} min`;
                   })()}
                 </div>
-                {/* Ubicación recortada con tooltip */}
                 <div className="flex items-center gap-1 col-span-2" title={p.ubicacion}>
                   <MapPin className="w-4 h-4" /> {ubicCorta}
                 </div>
               </div>
 
-              {/* Ver más si hay texto oculto */}
+              {/* Ver más */}
               {mostrarVerMas && (
                 <button
                   onClick={() => abrirModal(p)}

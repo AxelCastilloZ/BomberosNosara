@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useCrearParticipacion } from "../../../../hooks/useVoluntarios";
-import { TipoActividad } from "../../../../types/voluntarios";
+import { useCrearParticipacion } from "../../../../modules/voluntarios/Hooks/useVoluntarios";
+import { TipoActividad } from "../../types/voluntarios";
 
 export default function ParticipacionForm({ onSuccess }: { onSuccess?: () => void }) {
   const crear = useCrearParticipacion();

@@ -55,11 +55,17 @@ export class VoluntariosController {
     }
   }
 
-  // Voluntario ve su historial
-  @Get('mis-participaciones')
+  // Voluntario ve su historial paginado con filtros
+  @Get('mis-participaciones/paginado')
   @Roles(RoleEnum.VOLUNTARIO)
-  historial(@Req() req: Request, @Query('estado') estado?: string) {
-    return this.voluntariosService.listarHistorial(req.user as any, estado);
+  async misParticipacionesPaginadas(
+    @Req() req: Request,
+    @Query() dto: FiltrosParticipacionDto,
+  ) {
+    return this.voluntariosService.listarHistorialPaginado(
+      req.user as any,
+      dto,
+    );
   }
 
   // Voluntario ve sus horas aprobadas
@@ -85,13 +91,6 @@ export class VoluntariosController {
   }
 
   /* ----------  ADMIN  ---------- */
-
-  // Admin ve todas las participaciones
-  // @Get('participaciones')
-  // @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
-  // listarTodas(@Query('estado') estado?: string) {
-  //   return this.voluntariosService.listarTodasParticipaciones(estado);
-  // }
 
   // Admin ve todas las participaciones paginadas y filtradas
   @Get('paginado')

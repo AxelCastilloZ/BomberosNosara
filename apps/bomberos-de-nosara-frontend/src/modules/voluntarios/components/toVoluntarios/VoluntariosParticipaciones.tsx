@@ -1,25 +1,21 @@
-import { useState } from 'react';
-import AdminParticipacionesCards from './AdminParticipacionesCards';
-import { TipoActividad } from '../../../../types/voluntarios';
-import { useParticipacionesPaginadas } from '../../../../hooks/useVoluntarios';
+import { useState, useEffect } from 'react';
+import VoluntarioCards from './VoluntarioCards';
+import { TipoActividad } from '../../types/voluntarios';
+import { useMisParticipacionesPaginadas } from '../../Hooks/useVoluntarios';
 
-export type FiltrosForm = {
+export type FiltrosVoluntarioForm = {
   descripcion?: string;
-  voluntario?: string;
   tipoActividad?: TipoActividad;
   fechaDesde?: string;
   fechaHasta?: string;
   estado?: 'aprobada' | 'pendiente' | 'rechazada';
-
   page: number;
   limit: number;
 };
 
-export default function AdminParticipacionesFilt() {
-  // estado que se usa para hacer la consulta
-  const [filtros, setFiltros] = useState<FiltrosForm>({
+export default function VoluntariosParticipaciones() {
+  const [filtros, setFiltros] = useState<FiltrosVoluntarioForm>({
     descripcion: '',
-    voluntario: '',
     tipoActividad: undefined,
     fechaDesde: '',
     fechaHasta: '',
@@ -28,34 +24,39 @@ export default function AdminParticipacionesFilt() {
     limit: 6,
   });
 
-  // estado temporal del formulario
-  const [draftFiltros, setDraftFiltros] = useState<FiltrosForm>(filtros);
+  // Estado temporal solo para el campo de búsqueda (para debounce)
+  const [searchText, setSearchText] = useState('');
 
-  const { data, isLoading } = useParticipacionesPaginadas(filtros);
+  const { data, isLoading } = useMisParticipacionesPaginadas(filtros);
   const totalPages = data?.totalPages ?? 1;
 
-  const actualizarDraft = <K extends keyof FiltrosForm>(
+  // Debounce para el campo de búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFiltros((prev) => ({ ...prev, descripcion: searchText, page: 1 }));
+    }, 500); // Espera 500ms después de que el usuario deje de escribir
+
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const actualizarFiltro = <K extends keyof FiltrosVoluntarioForm>(
     key: K,
-    value: FiltrosForm[K]
-  ) => setDraftFiltros((prev) => ({ ...prev, [key]: value }));
+    value: FiltrosVoluntarioForm[K]
+  ) => {
+    setFiltros((prev) => ({ ...prev, [key]: value, page: 1 }));
+  };
 
   const limpiarFiltros = () => {
-    const base = {
+    setSearchText('');
+    setFiltros({
       descripcion: '',
-      voluntario: '',
       tipoActividad: undefined,
       fechaDesde: '',
       fechaHasta: '',
       estado: undefined,
       page: 1,
       limit: 6,
-    };
-    setDraftFiltros(base);
-    setFiltros(base);
-  };
-
-  const aplicarFiltros = () => {
-    setFiltros({ ...draftFiltros, page: 1 }); // aplica filtros al hook
+    });
   };
 
   return (
@@ -65,24 +66,16 @@ export default function AdminParticipacionesFilt() {
         {/* Buscar por descripción */}
         <input
           placeholder="Buscar por descripción"
-          value={draftFiltros.descripcion}
-          onChange={(e) => actualizarDraft('descripcion', e.target.value)}
-          className="border border-gray-300 rounded-lg px-3 py-2"
-        />
-
-        {/* Nombre del voluntario */}
-        <input
-          placeholder="Nombre del voluntario"
-          value={draftFiltros.voluntario}
-          onChange={(e) => actualizarDraft('voluntario', e.target.value)}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2"
         />
 
         {/* Tipo de actividad */}
         <select
-          value={draftFiltros.tipoActividad ?? ''}
+          value={filtros.tipoActividad ?? ''}
           onChange={(e) =>
-            actualizarDraft(
+            actualizarFiltro(
               'tipoActividad',
               (e.target.value as TipoActividad) || undefined,
             )
@@ -98,24 +91,24 @@ export default function AdminParticipacionesFilt() {
         {/* Fecha desde */}
         <input
           type="date"
-          value={draftFiltros.fechaDesde}
-          onChange={(e) => actualizarDraft('fechaDesde', e.target.value)}
+          value={filtros.fechaDesde}
+          onChange={(e) => actualizarFiltro('fechaDesde', e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2"
         />
 
         {/* Fecha hasta */}
         <input
           type="date"
-          value={draftFiltros.fechaHasta}
-          onChange={(e) => actualizarDraft('fechaHasta', e.target.value)}
+          value={filtros.fechaHasta}
+          onChange={(e) => actualizarFiltro('fechaHasta', e.target.value)}
           className="border border-gray-300 rounded-lg px-3 py-2"
         />
 
         {/* Estado */}
         <select
-          value={draftFiltros.estado ?? ''}
+          value={filtros.estado ?? ''}
           onChange={(e) =>
-            actualizarDraft('estado', (e.target.value as any) || undefined)
+            actualizarFiltro('estado', (e.target.value as any) || undefined)
           }
           className="border border-gray-300 rounded-lg px-3 py-2"
         >
@@ -125,55 +118,52 @@ export default function AdminParticipacionesFilt() {
           <option value="rechazada">Rechazada</option>
         </select>
 
-        {/* Botones */}
-        <div className="flex gap-2">
+        {/* Botón Limpiar */}
+        <div className="flex justify-end">
           <button
             onClick={limpiarFiltros}
-            className="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg text-sm"
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm transition-colors"
           >
-            Limpiar
-          </button>
-          <button
-            onClick={aplicarFiltros}
-            className="bg-gray-600 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm"
-          >
-            Aplicar
+            Limpiar filtros
           </button>
         </div>
       </div>
 
       {/* Cards */}
       {isLoading ? (
-        <p className="text-gray-600">Cargando...</p>
+        <p className="text-center text-gray-600">Cargando...</p>
+      ) : data?.data && data.data.length > 0 ? (
+        <VoluntarioCards data={data.data} />
       ) : (
-        <AdminParticipacionesCards data={data?.data ?? []} />
+        <p className="text-center text-gray-500">No se encontraron participaciones</p>
       )}
 
       {/* Paginación */}
       {totalPages > 1 && (
-        <div className="flex justify-between items-center mt-6 text-sm">
+        <div className="flex justify-end items-center gap-3 mt-6">
           <button
             onClick={() => setFiltros((f) => ({ ...f, page: f.page - 1 }))}
             disabled={filtros.page === 1}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               filtros.page === 1
-                ? 'bg-gray-200 text-gray-500'
-                : 'bg-gray-600 text-white'
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
             }`}
           >
             Anterior
           </button>
-          <span>
-            Página <strong>{filtros.page}</strong> de{' '}
-            <strong>{totalPages}</strong>
+          
+          <span className="text-gray-700 text-sm font-medium">
+            Página {filtros.page} de {totalPages}
           </span>
+          
           <button
             onClick={() => setFiltros((f) => ({ ...f, page: f.page + 1 }))}
             disabled={filtros.page === totalPages}
-            className={`px-4 py-2 rounded-lg ${
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
               filtros.page === totalPages
-                ? 'bg-gray-200 text-gray-500'
-                : 'bg-gray-600 text-white'
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
             }`}
           >
             Siguiente
