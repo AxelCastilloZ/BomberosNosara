@@ -33,14 +33,22 @@ import { StatisticsModule } from './statistics/statistics.module';
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
-      envFilePath: (() => {
-        const localPath = join(__dirname, '..', '.env');
-        const dockerPath = '/app/.env';
-        if (process.env.NODE_ENV === 'production') {
-          return existsSync(dockerPath) ? dockerPath : localPath;
-        }
-        return existsSync(localPath) ? localPath : undefined;
-      })(),
+     envFilePath: (() => {
+  const nodeEnv = process.env.NODE_ENV;
+  
+  
+  if (nodeEnv === 'production') {
+    const prodPath = join(__dirname, '..', '.env.production');
+    if (existsSync(prodPath)) return prodPath;
+    
+    const dockerPath = '/app/.env';
+    if (existsSync(dockerPath)) return dockerPath;
+  }
+  
+  // Para desarrollo, usa .env
+  const localPath = join(__dirname, '..', '.env');
+  return existsSync(localPath) ? localPath : undefined;
+})(),
       validationSchema: Joi.object({
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
