@@ -8,27 +8,6 @@ export default function AdminEstadisticasMensuales() {
   const [mes, setMes] = useState(new Date().toISOString().slice(0, 7));
   const { data, isLoading } = useEstadisticasVolMensuales(mes);
 
-  if (isLoading) return <p className="text-gray-600">Cargando estadísticas mensuales...</p>;
-
-  if (!data || data.voluntariosActivos === 0) {
-    return (
-      <div className="text-center py-10">
-        <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-700">No hay estadísticas mensuales disponibles</h3>
-        <p className="text-sm text-gray-500">Aún no hay registros de participaciones este mes.</p>
-      </div>
-    );
-  }
-
-  const {
-    totalHoras,
-    voluntariosActivos,
-    promedioHorasPorVoluntario,
-    tasaAprobacion,
-    topVoluntarios,
-    participacionesPorTipo,
-  } = data as EstadisticasVoluntariosDto;
-
   const fmtHoras = (dec: number) => {
     const h = Math.floor(dec);
     const m = Math.round((dec - h) * 60);
@@ -37,72 +16,94 @@ export default function AdminEstadisticasMensuales() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-red-800 mb-6">Estadísticas Mensuales de Voluntarios</h2>
-        <input
-          type="month"
-          value={mes}
-          onChange={(e) => setMes(e.target.value)}
-          className="mb-4 p-2 border rounded"
-        />
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
-          <Clock className="h-8 w-8 text-blue-600" />
-          <div>
-            <p className="text-sm text-gray-600">Horas Totales del Mes</p>
-            <p className="text-2xl font-bold">{fmtHoras(totalHoras)}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
-          <Users className="h-8 w-8 text-green-600" />
-          <div>
-            <p className="text-sm text-gray-600">Voluntarios Activos del Mes</p>
-            <p className="text-2xl font-bold">{voluntariosActivos}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
-          <BarChart3 className="h-8 w-8 text-purple-600" />
-          <div>
-            <p className="text-sm text-gray-600">Promedio</p>
-            <p className="text-2xl font-bold">{fmtHoras(promedioHorasPorVoluntario)}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
-          <CheckCircle className="h-8 w-8 text-green-500" />
-          <div>
-            <p className="text-sm text-gray-600">Tasa de Aprobación del mes</p>
-            <p className="text-2xl font-bold">{tasaAprobacion}%</p>
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+        <h2 className="text-2xl font-bold text-red-800">Estadísticas Mensuales de Voluntarios</h2>
+        <div className="flex items-center gap-2">
+          <label htmlFor="mes-selector" className="text-sm font-medium text-gray-700">
+            Seleccionar mes:
+          </label>
+          <input
+            id="mes-selector"
+            type="month"
+            value={mes}
+            onChange={(e) => setMes(e.target.value)}
+            className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-semibold text-gray-800 mb-2">Top 5 Voluntarios</h3>
-          <ul className="space-y-2">
-            {topVoluntarios.map((v, index) => (
-              <li key={index} className="flex justify-between">
-                <span>{v.nombre}</span>
-                <span className="font-semibold">{fmtHoras(v.horas)}</span>
-              </li>
-            ))}
-          </ul>
+      {isLoading ? (
+        <p className="text-gray-600">Cargando estadísticas mensuales...</p>
+      ) : !data || data.voluntariosActivos === 0 ? (
+        <div className="text-center py-10">
+          <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-700">No hay estadísticas disponibles para este mes</h3>
+          <p className="text-sm text-gray-500">Aún no hay registros de participaciones en el mes seleccionado.</p>
+          <p className="text-sm text-gray-500 mt-2">Prueba seleccionando otro mes.</p>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
+              <Clock className="h-8 w-8 text-blue-600" />
+              <div>
+                <p className="text-sm text-gray-600">Horas Totales del Mes</p>
+                <p className="text-2xl font-bold">{fmtHoras((data as EstadisticasVoluntariosDto).totalHoras)}</p>
+              </div>
+            </div>
 
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-bold text-gray-800 mb-2">Participaciones por Tipo (Mes)</h3>
-          <ul className="space-y-2">
-            {Object.entries(participacionesPorTipo).map(([tipo, cantidad]) => (
-              <li key={tipo} className="flex justify-between">
-                <span>{tipo}</span>
-                <span className="font-semibold">{cantidad} participaciones</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+            <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
+              <Users className="h-8 w-8 text-green-600" />
+              <div>
+                <p className="text-sm text-gray-600">Voluntarios Activos del Mes</p>
+                <p className="text-2xl font-bold">{(data as EstadisticasVoluntariosDto).voluntariosActivos}</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
+              <BarChart3 className="h-8 w-8 text-purple-600" />
+              <div>
+                <p className="text-sm text-gray-600">Promedio</p>
+                <p className="text-2xl font-bold">{fmtHoras((data as EstadisticasVoluntariosDto).promedioHorasPorVoluntario)}</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
+              <CheckCircle className="h-8 w-8 text-green-500" />
+              <div>
+                <p className="text-sm text-gray-600">Tasa de Aprobación del mes</p>
+                <p className="text-2xl font-bold">{(data as EstadisticasVoluntariosDto).tasaAprobacion}%</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white p-4 rounded-lg shadow">
+              <h3 className="font-semibold text-gray-800 mb-2">Top 5 Voluntarios</h3>
+              <ul className="space-y-2">
+                {(data as EstadisticasVoluntariosDto).topVoluntarios.map((v, index) => (
+                  <li key={index} className="flex justify-between">
+                    <span>{v.nombre}</span>
+                    <span className="font-semibold">{fmtHoras(v.horas)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg shadow">
+              <h3 className="font-bold text-gray-800 mb-2">Participaciones por Tipo (Mes)</h3>
+              <ul className="space-y-2">
+                {Object.entries((data as EstadisticasVoluntariosDto).participacionesPorTipo).map(([tipo, cantidad]) => (
+                  <li key={tipo} className="flex justify-between">
+                    <span>{tipo}</span>
+                    <span className="font-semibold">{cantidad} participaciones</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

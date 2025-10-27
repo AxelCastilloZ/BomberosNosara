@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-return */
@@ -28,8 +27,30 @@ export class VoluntariosService {
     return user.roles?.includes(RoleEnum.VOLUNTARIO);
   }
 
-  // ----- VOLUNTARIO ------
+  /**
+   * Convierte una fecha string (YYYY-MM-DD) a Date sin problemas de zona horaria
+   * Usa la zona horaria local para evitar el desfase de días
+   */
+  private parsearFechaSinZonaHoraria(fechaStr: string): string {
+    // Retorna el string directamente - TypeORM lo manejará como DATE sin conversión
+    return fechaStr;
+  }
 
+  private formatearFecha(fecha: any): string {
+    // Si es string YYYY-MM-DD, convertir a DD-MM-YYYY
+    if (typeof fecha === 'string') {
+      const [año, mes, dia] = fecha.split('-');
+      return `${dia}-${mes}-${año}`;
+    }
+    // Si es Date object, extraer sin conversión de zona horaria
+    const fechaObj = new Date(fecha);
+    const dia = String(fechaObj.getUTCDate()).padStart(2, '0');
+    const mes = String(fechaObj.getUTCMonth() + 1).padStart(2, '0');
+    const año = fechaObj.getUTCFullYear();
+    return `${dia}-${mes}-${año}`;
+  }
+
+  // ----- VOLUNTARIO ------
   private calcularHoras(horaInicio: string, horaFin: string): number {
     const [hi, mi] = horaInicio.split(':').map(Number);
     const [hf, mf] = horaFin.split(':').map(Number);
@@ -40,6 +61,17 @@ export class VoluntariosService {
     const diffMs = fin.getTime() - inicio.getTime();
     const horas = diffMs / (1000 * 60 * 60);
     return Math.round(horas * 100) / 100; //
+  }
+
+  /**
+   * Serializa una participación con formato de fecha DD-MM-YYYY
+   */
+  private serializarParticipacion(p: Participacion) {
+    return {
+      ...p,
+      fecha: this.formatearFecha(p.fecha),
+      horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
+    };
   }
 
   async crearParticipacion(
@@ -61,7 +93,7 @@ export class VoluntariosService {
     const participacion = this.participacionRepo.create({
       voluntario: user,
       actividad: dto.actividad,
-      fecha: new Date(dto.fecha),
+      fecha: this.parsearFechaSinZonaHoraria(dto.fecha),
       horaInicio: dto.horaInicio,
       horaFin: dto.horaFin,
       descripcion: dto.descripcion,
@@ -70,29 +102,10 @@ export class VoluntariosService {
     });
 
     const saved = await this.participacionRepo.save(participacion);
-    return {
-      ...saved,
-      horasRegistradas: this.calcularHoras(saved.horaInicio, saved.horaFin),
-    };
+    return this.serializarParticipacion(saved);
   }
 
-  //Service para listar el historial de participaciones de un voluntario  --to delete
-  async listarHistorial(user: User, estado?: string): Promise<any[]> {
-    const where: any = { voluntario: { id: user.id } };
-    if (estado) where.estado = estado;
-
-    const participaciones = await this.participacionRepo.find({
-      where,
-      order: { fecha: 'DESC' },
-    });
-
-    return participaciones.map((p) => ({
-      ...p,
-      horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
-    }));
-  }
-
-  // Service que lista las participaciones del voluntario con paginación y filtros --nuevo
+  // Service que lista las participaciones del voluntario con paginación y filtros
   async listarHistorialPaginado(user: User, dto: FiltrosParticipacionDto) {
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 6;
@@ -118,11 +131,13 @@ export class VoluntariosService {
     }
 
     if (dto.fechaDesde) {
-      query.andWhere('p.fecha >= :desde', { desde: dto.fechaDesde });
+      const fechaDesdeObj = this.parsearFechaSinZonaHoraria(dto.fechaDesde);
+      query.andWhere('p.fecha >= :desde', { desde: fechaDesdeObj });
     }
 
     if (dto.fechaHasta) {
-      query.andWhere('p.fecha <= :hasta', { hasta: dto.fechaHasta });
+      const fechaHastaObj = this.parsearFechaSinZonaHoraria(dto.fechaHasta);
+      query.andWhere('p.fecha <= :hasta', { hasta: fechaHastaObj });
     }
 
     if (dto.estado) {
@@ -136,33 +151,12 @@ export class VoluntariosService {
       .getMany();
 
     return {
-      data: result.map((p) => ({
-        ...p,
-        horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
-      })),
+      data: result.map((p) => this.serializarParticipacion(p)),
       total,
       page,
       totalPages: Math.ceil(total / limit),
     };
   }
-
-  // ----- ADMIN ------
-
-  // Service para listar todas las participaciones (admin)
-  // async listarTodasParticipaciones(estado?: string): Promise<any[]> {
-  //   const where: any = {};
-  //   if (estado) where.estado = estado;
-
-  //   const participaciones = await this.participacionRepo.find({
-  //     where,
-  //     order: { fecha: 'DESC' },
-  //   });
-
-  //   return participaciones.map((p) => ({
-  //     ...p,
-  //     horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
-  //   }));
-  // }
 
   // ----- ADMIN ------
   //Service para el administrador que actualiza el estado de una participación
@@ -189,10 +183,7 @@ export class VoluntariosService {
       dto.estado === 'rechazada' ? dto.motivoRechazo : undefined;
 
     const saved = await this.participacionRepo.save(participacion);
-    return {
-      ...saved,
-      horasRegistradas: this.calcularHoras(saved.horaInicio, saved.horaFin),
-    };
+    return this.serializarParticipacion(saved);
   }
 
   //Service que obtiene las horas con estado 'aprobada' de un voluntario
@@ -403,11 +394,13 @@ export class VoluntariosService {
     }
 
     if (dto.fechaDesde) {
-      query.andWhere('p.fecha >= :desde', { desde: dto.fechaDesde });
+      const fechaDesdeObj = this.parsearFechaSinZonaHoraria(dto.fechaDesde);
+      query.andWhere('p.fecha >= :desde', { desde: fechaDesdeObj });
     }
 
     if (dto.fechaHasta) {
-      query.andWhere('p.fecha <= :hasta', { hasta: dto.fechaHasta });
+      const fechaHastaObj = this.parsearFechaSinZonaHoraria(dto.fechaHasta);
+      query.andWhere('p.fecha <= :hasta', { hasta: fechaHastaObj });
     }
 
     if (dto.estado) {
@@ -424,10 +417,7 @@ export class VoluntariosService {
       .getMany();
 
     return {
-      data: result.map((p) => ({
-        ...p,
-        horasRegistradas: this.calcularHoras(p.horaInicio, p.horaFin),
-      })),
+      data: result.map((p) => this.serializarParticipacion(p)),
       total,
       page: dto.page,
       totalPages: Math.ceil(total / limit),

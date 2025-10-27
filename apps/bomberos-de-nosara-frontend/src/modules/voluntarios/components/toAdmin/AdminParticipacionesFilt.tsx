@@ -73,6 +73,15 @@ export default function AdminParticipacionesFilt() {
     });
   };
 
+   // Ordenar los datos: pendientes primero
+  const datosOrdenados = data?.data
+    ? [...data.data].sort((a, b) => {
+        if (a.estado === 'pendiente' && b.estado !== 'pendiente') return -1;
+        if (a.estado !== 'pendiente' && b.estado === 'pendiente') return 1;
+        return 0;
+      })
+    : [];
+
   return (
     <div className="w-full">
       {/* Filtros */}
@@ -130,7 +139,7 @@ export default function AdminParticipacionesFilt() {
         <select
           value={filtros.estado ?? ''}
           onChange={(e) =>
-            actualizarFiltro('estado', (e.target.value as any) || undefined)
+            actualizarFiltro('estado', (e.target.value as '') || undefined)
           }
           className="border border-gray-300 rounded-lg px-3 py-2"
         >
@@ -154,8 +163,32 @@ export default function AdminParticipacionesFilt() {
       {/* Cards */}
       {isLoading ? (
         <p className="text-gray-600">Cargando...</p>
+      ) : datosOrdenados.length === 0 ? (
+        <div className="text-center py-10 bg-white rounded-xl shadow border border-gray-200">
+          <div className="flex flex-col items-center justify-center">
+            <svg
+              className="h-16 w-16 text-gray-400 mb-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              No hay participaciones registradas
+            </h3>
+            <p className="text-sm text-gray-500">
+              No se encontraron participaciones con los filtros aplicados.
+            </p>
+          </div>
+        </div>
       ) : (
-        <AdminParticipacionesCards data={data?.data ?? []} />
+        <AdminParticipacionesCards data={datosOrdenados} />
       )}
 
       {/* Paginación */}
