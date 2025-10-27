@@ -34,7 +34,7 @@ logs/
 Thumbs.db
 
 # === pnpm & lock files ===
-pnpm-lock.yaml
+#pnpm-lock.yaml
 pnpm-debug.log*
 lerna-debug.log*
 
