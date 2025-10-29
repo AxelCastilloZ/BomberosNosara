@@ -1,43 +1,60 @@
-
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
   JoinColumn,
-  CreateDateColumn,
 } from 'typeorm';
 import { EquipoBomberil } from './equipo-bomberil.entity';
+import { BaseAuditEntity } from '../../common/entities/base-audit.entity';
+import { EstadoMantenimiento, TipoMantenimiento } from '../enums/mantenimiento.enums';
 
 @Entity('equipo_mantenimiento')
-export class EquipoMantenimiento {
+export class MantenimientoEquipo extends BaseAuditEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
-  equipoId!: string;
-
- 
-  @ManyToOne(() => EquipoBomberil, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'equipoId' })
+  // ==================== RELACIÓN CON EQUIPO ====================
+  @ManyToOne(() => EquipoBomberil, equipo => equipo.mantenimientos, {
+    onDelete: 'NO ACTION', // Permite que el mantenimiento persista aunque se elimine el equipo
+  })
+  @JoinColumn({ name: 'equipo_id' })
   equipo!: EquipoBomberil;
 
-  @Column({ type: 'date' })
-  fecha!: string;
+  @Column({ name: 'equipo_id', type: 'uuid' })
+  equipoId!: string;
 
-  @Column({ type: 'varchar', length: 300 })
+  // ==================== ESTADO DEL MANTENIMIENTO ====================
+  @Column({
+    type: 'enum',
+    enum: EstadoMantenimiento,
+    default: EstadoMantenimiento.PENDIENTE,
+    comment: 'Estado del ciclo de vida del mantenimiento'
+  })
+  estado!: EstadoMantenimiento;
+
+  // ==================== TIPO DE MANTENIMIENTO ====================
+  @Column({
+    type: 'enum',
+    enum: TipoMantenimiento,
+    comment: 'Tipo de mantenimiento: preventivo o correctivo'
+  })
+  tipo!: TipoMantenimiento;
+
+  // ==================== INFORMACIÓN BÁSICA ====================
+  @Column({ type: 'date' })
+  fecha!: Date;
+
+  @Column()
   descripcion!: string;
 
-  @Column({ type: 'varchar', length: 150 })
-  tecnico!: string;
+  // ==================== DATOS DE COMPLETADO (OPCIONALES HASTA COMPLETAR) ====================
+  @Column({ nullable: true })
+  tecnico?: string;
 
-
-  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
-  costo?: string;
+  @Column('decimal', { precision: 10, scale: 2, nullable: true })
+  costo?: number;
 
   @Column({ type: 'text', nullable: true })
   observaciones?: string;
-
-  @CreateDateColumn()
-  createdAt!: Date;
 }
