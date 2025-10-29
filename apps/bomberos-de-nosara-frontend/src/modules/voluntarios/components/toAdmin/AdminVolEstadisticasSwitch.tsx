@@ -1,4 +1,3 @@
-// src/components/ui/Administrativa/Voluntarios/VoluntariosEstadisticasSwitch.tsx
 import { useState } from 'react';
 import AdminEstadisticasMensuales from '../../../../modules/voluntarios/components/toAdmin/AdminEstadisticasMensuales';
 import AdminEstadisticasVoluntarios from '../../../../modules/voluntarios/components/toAdmin/AdminEstadisticasVoluntarios';
