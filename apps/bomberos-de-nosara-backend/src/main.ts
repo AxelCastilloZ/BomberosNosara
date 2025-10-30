@@ -11,6 +11,11 @@ import { IoAdapter } from '@nestjs/platform-socket.io';
 import { ServerOptions } from 'socket.io';
 
 
+if (typeof global.crypto === 'undefined') {
+  const crypto = require('crypto');
+  (global as any).crypto = crypto.webcrypto || crypto;
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
  
