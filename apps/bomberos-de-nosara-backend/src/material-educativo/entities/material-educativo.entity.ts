@@ -8,7 +8,7 @@ import {
   UpdateDateColumn,
   DeleteDateColumn,
 } from 'typeorm';
-import { User } from '../../users/entities/user.entity'; // Ajusta la ruta si cambia
+import { User } from '../../users/entities/user.entity';
 
 @Entity('material_educativo')
 export class MaterialEducativo {
@@ -43,16 +43,16 @@ export class MaterialEducativo {
   @Column({ name: 'deleted_by', type: 'int', nullable: true })
   deletedBy?: number | null;
 
-  // 👇 Este se cargará automáticamente al consultar el material
+  // === Relaciones con usuarios ===
   @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'created_by' })
   createdByUser!: User;
 
-  @ManyToOne(() => User, { eager: false })
+  @ManyToOne(() => User, { eager: true })
   @JoinColumn({ name: 'updated_by' })
   updatedByUser!: User;
 
-  @ManyToOne(() => User, { eager: false, nullable: true })
+  @ManyToOne(() => User, { eager: true, nullable: true })
   @JoinColumn({ name: 'deleted_by' })
   deletedByUser?: User;
 
