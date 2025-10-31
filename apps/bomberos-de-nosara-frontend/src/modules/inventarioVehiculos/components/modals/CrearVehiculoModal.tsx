@@ -71,7 +71,22 @@ export const CrearVehiculoModal: React.FC<CrearVehiculoModalProps> = ({
       onSuccess?.();
       handleClose();
     } catch (err: any) {
-      error(err?.message || 'Error al crear el vehículo');
+      // 🔥 La estructura correcta del error del backend
+      const errorCode = err?.response?.data?.code;
+      const errorMessage = err?.response?.data?.message;
+      
+      // Mostrar el mensaje apropiado
+      if (errorCode === 'DUPLICATE_KEY') {
+        error(
+          errorMessage || 'Esta placa ya está registrada. Use una diferente.',
+          {
+            title: 'Placa duplicada',
+            duration: 8000
+          }
+        );
+      } else {
+        error(errorMessage || err?.message || 'Error al crear el vehículo');
+      }
     }
   };
 

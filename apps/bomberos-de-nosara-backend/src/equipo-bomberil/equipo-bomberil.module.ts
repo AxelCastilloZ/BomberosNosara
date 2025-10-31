@@ -1,26 +1,26 @@
-// src/equipo-bomberil/equipo-bomberil.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
-import { EquipoBomberil } from './entities/equipo-bomberil.entity';
-import { CatalogoEquipo } from './entities/catalogo-equipo.entity';
-import { EquipoMantenimiento } from './entities/equipo-mantenimiento.entity';
-import { MantenimientoProgramado } from './entities/mantenimiento-programado.entity';
-
-import { EquipoBomberilController } from './equipo-bomberil.controller';
 import { EquipoBomberilService } from './equipo-bomberil.service';
+import { EquipoBomberilController } from './equipo-bomberil.controller';
+import { EquipoBomberilSchedulerService } from './equipo-bomberil-scheduler.service';
+import { EquipoBomberil } from './entities/equipo-bomberil.entity';
+import { MantenimientoEquipo } from './entities/equipo-mantenimiento.entity';
+import { User } from '../users/entities/user.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       EquipoBomberil,
-      CatalogoEquipo,
-      EquipoMantenimiento,
-      MantenimientoProgramado,
+      MantenimientoEquipo,
+      User, // Necesario para el scheduler (obtener emails de admins)
     ]),
   ],
   controllers: [EquipoBomberilController],
-  providers: [EquipoBomberilService],
-  exports: [EquipoBomberilService], // <- opcional
+  providers: [
+    EquipoBomberilService,
+    EquipoBomberilSchedulerService, // Tareas programadas
+  ],
+  exports: [EquipoBomberilService],
 })
 export class EquipoBomberilModule {}

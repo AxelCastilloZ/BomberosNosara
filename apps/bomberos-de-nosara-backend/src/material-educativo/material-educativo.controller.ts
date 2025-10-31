@@ -36,19 +36,25 @@ const MATERIAL_DIR = join(process.cwd(), 'uploads', 'material');
 export class MaterialEducativoController {
   constructor(private readonly service: MaterialEducativoService) {}
 
-  // ✅ Filtros: título, tipo, área
+  // ✅ Obtener todos con filtros
   @Get()
   async findAll(
     @Query('page') page = 1,
     @Query('limit') limit = 10,
-    @Query('titulo') titulo = '',
-    @Query('tipo') tipo = '',
-    @Query('area') area = '',
+    @Query('titulo') titulo?: string,
+    @Query('tipo') tipo?: string,
+    @Query('area') area?: string,
   ) {
-    return this.service.findAll(Number(page), Number(limit), titulo, tipo, area);
+    return this.service.findAll(
+      Number(page),
+      Number(limit),
+      titulo ?? '',
+      tipo ?? '',
+      area ?? '',
+    );
   }
 
-  // ✅ Crear material (ligado al usuario)
+  // ✅ Crear material (con archivo)
   @Post()
   @UseInterceptors(
     FileInterceptor('archivo', {
@@ -129,13 +135,13 @@ export class MaterialEducativoController {
     return res.sendFile(full);
   }
 
-  // ✅ Eliminar (soft delete con auditoría)
+  // ✅ Eliminar
   @Delete(':id')
   async remove(@Param('id', ParseIntPipe) id: number, @GetUser('id') userId: number) {
     return this.service.softDelete(id, userId);
   }
 
-  // ✅ Restaurar material eliminado (solo Admin o SuperUser)
+  // ✅ Restaurar
   @Post(':id/restore')
   async restore(@Param('id', ParseIntPipe) id: number, @GetUser('id') userId: number) {
     return this.service.restore(id, userId);

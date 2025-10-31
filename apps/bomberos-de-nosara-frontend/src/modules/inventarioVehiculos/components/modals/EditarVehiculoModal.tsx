@@ -118,7 +118,31 @@ export const EditarVehiculoModal: React.FC<EditarVehiculoModalProps> = ({
       onSuccess?.();
       handleClose();
     } catch (err: any) {
-      error(err?.message || 'Error al eliminar el vehículo');
+      // 🔥 Extraer información del error
+      const errorCode = err?.response?.data?.message?.code;
+      const errorMessage = err?.response?.data?.message?.message;
+      
+      // Extraer mensaje legible del stack si existe
+      let readableMessage = errorMessage;
+      if (err?.response?.data?.stack) {
+        const stackMatch = err.response.data.stack.match(/BadRequestException: (.+?)(?:\n|$)/);
+        if (stackMatch && stackMatch[1]) {
+          readableMessage = stackMatch[1];
+        }
+      }
+
+      if (errorCode === 'HAS_PENDING_MAINTENANCE') {
+        error(
+          readableMessage || 'No se puede eliminar el vehículo porque tiene mantenimientos pendientes',
+          {
+            title: ' No se puede eliminar',
+            duration: 10000
+          }
+        );
+        setShowDeleteConfirm(false);
+      } else {
+        error(readableMessage || err?.message || 'Error al eliminar el vehículo');
+      }
     }
   };
 

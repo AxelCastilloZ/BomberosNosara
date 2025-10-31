@@ -1004,35 +1004,38 @@ const ChatWindow=() => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh] sm:h-[65vh] md:h-[70vh] lg:h-[75vh] xl:h-[80vh]">
-        <FiLoader className="animate-spin text-red-500 text-2xl" />
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <FiLoader className="animate-spin text-red-500 text-3xl" />
       </div>
     );
   }
 
 
   return (
-    <div className="bg-gray-50 h-[calc(90vh-100px)] w-full min-w-full">
-      <div className="flex flex-col md:flex-row h-full overflow-hidden w-full">
+    <div className="bg-gray-50 h-screen w-full flex flex-col">
+      <div className="flex h-full overflow-hidden w-full">
 
         <div
-          className={`bg-white border-r border-gray-200 flex flex-col shadow-sm transition-all duration-300 ease-in-out ${isNavbarOpen? 'w-80':'w-20'} flex-shrink-0 h-full overflow-y-auto`}
+          className={`bg-white border-r border-gray-200 flex flex-col transition-all duration-300 ease-in-out ${selectedTarget? 'hidden md:flex md:w-80':'flex w-full md:w-80'
+            } flex-shrink-0 h-full overflow-hidden`}
         >
-          <div className="p-4 bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-            <div className="relative group">
+          {/* Header */}
+          <div className="p-4 bg-gradient-to-r from-red-50 to-white border-b border-gray-100">
+            <h1 className="text-gray-900 text-xl font-semibold mb-4">Chats</h1>
+            <div className="relative">
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Buscar conversaciones..."
-                className="w-full pl-11 pr-10 py-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-200 shadow-sm hover:shadow-md group-hover:border-gray-300"
+                placeholder="Buscar o iniciar un chat"
+                className="w-full pl-10 pr-10 py-2 bg-white border border-gray-200 text-gray-900 placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                 value={searchQuery}
                 onChange={handleSearchChange}
               />
-              <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 transition-colors duration-200 group-focus-within:text-red-500" />
+              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               {searchQuery&&(
                 <button
                   onClick={clearSearch}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-200"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   aria-label="Limpiar búsqueda"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1043,12 +1046,10 @@ const ChatWindow=() => {
             </div>
           </div>
 
-          {/* Enhanced tab navigation */}
+          {/* Tabs */}
           <div className="flex bg-gray-50 border-b border-gray-200">
             <button
-              className={`flex-1 py-4 px-4 font-medium text-sm transition-all duration-200 relative ${showGroups
-                ? 'text-red-600 bg-white shadow-sm'
-                :'text-gray-500 hover:bg-white hover:text-gray-700'
+              className={`flex-1 py-3 px-4 font-medium text-sm transition-all relative ${showGroups? 'text-red-600 bg-white':'text-gray-500'
                 }`}
               onClick={() => setShowGroups(true)}
             >
@@ -1057,13 +1058,11 @@ const ChatWindow=() => {
                 <span>Grupos</span>
               </div>
               {showGroups&&(
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-t-full"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600"></div>
               )}
             </button>
             <button
-              className={`flex-1 py-4 px-4 font-medium text-sm transition-all duration-200 relative ${!showGroups
-                ? 'text-red-600 bg-white shadow-sm'
-                :'text-gray-500 hover:bg-white hover:text-gray-700'
+              className={`flex-1 py-3 px-4 font-medium text-sm transition-all relative ${!showGroups? 'text-red-600 bg-white':'text-gray-500'
                 }`}
               onClick={() => setShowGroups(false)}
             >
@@ -1072,14 +1071,14 @@ const ChatWindow=() => {
                 <span>Usuarios</span>
               </div>
               {!showGroups&&(
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-t-full"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600"></div>
               )}
             </button>
           </div>
 
-          <div className="flex-1 overflow-y-auto bg-gray-50" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+          <div className="flex-1 overflow-y-auto bg-gray-50">
             {showGroups? (
-              <div className="p-2 space-y-1">
+              <div className="space-y-0">
                 {getVisibleGroups().map((group) => {
                   const isSelected=selectedTarget?.id===group.id&&selectedTarget?.type==='role';
                   const roleUsers=getUsersByRole(group.role as string, false);
@@ -1099,39 +1098,31 @@ const ChatWindow=() => {
                         setSelectedTarget(target);
                         await joinConversation(target);
                       }}
-                      className={`p-4 rounded-xl cursor-pointer flex items-center space-x-4 transition-all duration-200 group ${isSelected
-                        ? 'bg-red-50 border-2 border-red-200 shadow-md'
-                        :'bg-white hover:bg-gray-50 hover:shadow-md border-2 border-transparent hover:border-gray-200'
+                      className={`px-4 py-3 cursor-pointer flex items-center space-x-3 transition-colors border-b border-gray-100 ${isSelected? 'bg-red-50':'hover:bg-white'
                         }`}
                     >
-                      <div className="relative">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all duration-200 ${isSelected
-                          ? 'bg-gradient-to-br from-red-100 to-red-200'
-                          :'bg-gradient-to-br from-red-100 to-red-150 group-hover:shadow-md'
-                          }`}>
+                      <div className="relative flex-shrink-0">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-red-100 to-red-200">
                           <FiUsers className="w-6 h-6 text-red-600" />
                         </div>
                         {onlineCount>0&&(
-                          <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium shadow-sm">
+                          <div className="absolute -top-1 -right-1 bg-green-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center font-medium px-1">
                             {onlineCount}
                           </div>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-gray-900 truncate">{group.name}</p>
-                          {isSelected&&(
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          )}
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[15px] font-semibold text-gray-900 truncate">{group.name}</p>
                         </div>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <p className="text-xs text-gray-500">
+                        <div className="flex items-center space-x-2">
+                          <p className="text-[13px] text-gray-500">
                             {memberCount} {memberCount===1? 'miembro':'miembros'}
                           </p>
                           {onlineCount>0&&(
                             <>
                               <span className="text-gray-300">•</span>
-                              <p className="text-xs text-green-600 font-medium">
+                              <p className="text-[13px] text-green-600 font-medium">
                                 {onlineCount} en línea
                               </p>
                             </>
@@ -1146,61 +1137,46 @@ const ChatWindow=() => {
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                       <FiUsers className="w-8 h-8 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 font-medium">No hay grupos disponibles</p>
-                    <p className="text-xs text-gray-400 mt-1">Los grupos aparecerán aquí cuando estén disponibles</p>
+                    <p className="text-gray-700 font-medium">No hay grupos disponibles</p>
+                    <p className="text-xs text-gray-500 mt-1">Los grupos aparecerán aquí cuando estén disponibles</p>
                   </div>
                 )}
               </div>
             ):(
-              <div className="p-2 space-y-1">
+              <div className="space-y-0">
                 {filteredUsers.map((user: User) => (
                   user.id!==currentUser?.id&&(
                     <div
                       key={user.id}
                       onClick={() => handleSelectUser(user)}
-                      className={`p-4 rounded-xl cursor-pointer flex items-center space-x-4 transition-all duration-200 group ${selectedTarget?.id===user.id&&selectedTarget?.type==='user'
-                        ? 'bg-red-50 border-2 border-red-200 shadow-md'
-                        :'bg-white hover:bg-gray-50 hover:shadow-md border-2 border-transparent hover:border-gray-200'
+                      className={`px-4 py-3 cursor-pointer flex items-center space-x-3 transition-colors border-b border-gray-100 ${selectedTarget?.id===user.id&&selectedTarget?.type==='user'
+                          ? 'bg-red-50'
+                          :'hover:bg-white'
                         }`}
                     >
-                      <div className="relative">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm transition-all duration-200 ${selectedTarget?.id===user.id&&selectedTarget?.type==='user'
-                          ? 'bg-gradient-to-br from-red-100 to-red-200'
-                          :'bg-gradient-to-br from-red-100 to-red-150 group-hover:shadow-md'
-                          }`}>
+                      <div className="relative flex-shrink-0">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-red-100 to-red-200">
                           <FiUser className="w-6 h-6 text-red-600" />
                         </div>
                         <div
-                          className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-3 border-white shadow-md transition-all duration-300 ${onlineUserIds.has(user.id)? 'bg-green-500':'bg-gray-400'
+                          className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${onlineUserIds.has(user.id)? 'bg-green-500':'bg-gray-400'
                             }`}
                           title={onlineUserIds.has(user.id)? 'En línea':'Desconectado'}
-                        >
-                          {onlineUserIds.has(user.id)&&(
-                            <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-60"></div>
-                          )}
-                        </div>
+                        ></div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-[15px] font-semibold text-gray-900 truncate">
                             {user.name||user.username}
                           </p>
-                          {selectedTarget?.id===user.id&&selectedTarget?.type==='user'&&(
-                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          )}
                         </div>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <div className={`w-2 h-2 rounded-full ${onlineUserIds.has(user.id)? 'bg-green-500':'bg-gray-400'
-                            }`}></div>
-                          <p className={`text-xs font-medium ${onlineUserIds.has(user.id)? 'text-green-600':'text-gray-500'
-                            }`}>
-                            {onlineUserIds.has(user.id)
-                              ? 'En línea'
-                              :user.lastSeen
-                                ? `Visto ${new Date(user.lastSeen).toLocaleTimeString()}`
-                                :'Desconectado'}
-                          </p>
-                        </div>
+                        <p className="text-[13px] text-gray-500 truncate">
+                          {onlineUserIds.has(user.id)
+                            ? 'En línea'
+                            :user.lastSeen
+                              ? `Visto ${new Date(user.lastSeen).toLocaleTimeString()}`
+                              :'Desconectado'}
+                        </p>
                       </div>
                     </div>
                   )
@@ -1210,8 +1186,8 @@ const ChatWindow=() => {
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                       <FiUser className="w-8 h-8 text-gray-400" />
                     </div>
-                    <p className="text-gray-500 font-medium">No se encontraron usuarios</p>
-                    <p className="text-xs text-gray-400 mt-1">Intenta ajustar tu búsqueda</p>
+                    <p className="text-gray-700 font-medium">No se encontraron usuarios</p>
+                    <p className="text-xs text-gray-500 mt-1">Intenta ajustar tu búsqueda</p>
                   </div>
                 )}
               </div>
@@ -1219,113 +1195,80 @@ const ChatWindow=() => {
           </div>
         </div>
         {selectedTarget? (
-          <div className="flex-1 flex flex-col bg-white border-l border-gray-200 w-full max-w-full overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50 sticky top-0 z-10 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  {/* Avatar with enhanced styling */}
-                  <div className="relative">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-md transition-all duration-200 ${selectedTarget.type==='role'
-                      ? 'bg-gradient-to-br from-red-100 to-red-200 hover:shadow-lg'
-                      :'bg-gradient-to-br from-red-100 to-red-200 hover:shadow-lg'
-                      }`}>
-                      {selectedTarget.type==='role'? (
-                        <FiUsers className="w-6 h-6 text-red-600" />
-                      ):(
-                        <FiUser className="w-6 h-6 text-red-600" />
-                      )}
-                    </div>
-                    {/* Enhanced online status indicator for 1:1 chats */}
-                    {selectedTarget.type==='user'&&(
-                      <div className="absolute -bottom-1 -right-1">
-                        <div
-                          className={`w-4 h-4 rounded-full border-3 border-white shadow-lg transition-all duration-300 ${onlineUserIds.has(selectedTarget.id as number)
-                            ? 'bg-green-500 shadow-green-300'
-                            :'bg-gray-400 shadow-gray-300'
-                            }`}
-                          title={onlineUserIds.has(selectedTarget.id as number)? 'En línea':'Desconectado'}
-                        >
-                          {/* Enhanced pulse animation for online status */}
-                          {onlineUserIds.has(selectedTarget.id as number)&&(
-                            <div className="absolute inset-0 rounded-full bg-green-400 animate-ping opacity-60"></div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+          <div className={`flex-1 flex flex-col bg-white w-full overflow-hidden ${selectedTarget? 'flex':'hidden md:flex'
+            }`}>
+            {/* Chat header */}
+            <div className="px-4 py-3 bg-gradient-to-r from-red-50 to-white flex items-center space-x-3 border-b border-gray-100">
+              {/* Back button for mobile */}
+              <button
+                onClick={handleBackToList}
+                className="md:hidden text-gray-500 hover:text-gray-700 mr-2"
+              >
+                <FiChevronLeft className="w-6 h-6" />
+              </button>
 
-                  {/* Chat info section */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-3">
-                      <h2 className="text-lg font-semibold text-gray-900 truncate">
-                        {selectedTarget.name}
-                      </h2>
-
-                      {/* Role member count badge */}
-                      {selectedTarget.type==='role'&&(
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                          {(() => {
-                            const roleUsers=getUsersByRole(selectedTarget.role!, false);
-                            return `${roleUsers.length} ${roleUsers.length===1? 'miembro':'miembros'}`;
-                          })()}
-                        </span>
-                      )}
-
-                      {/* Online status badge for 1:1 chats */}
-                      {selectedTarget.type==='user'&&(
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors duration-200 ${onlineUserIds.has(selectedTarget.id as number)
-                          ? 'bg-green-100 text-green-800 border border-green-200'
-                          :'bg-gray-100 text-gray-600 border border-gray-200'
-                          }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${onlineUserIds.has(selectedTarget.id as number)? 'bg-green-500':'bg-gray-400'
-                            }`}></div>
-                          {onlineUserIds.has(selectedTarget.id as number)? 'En línea':'Desconectado'}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Status text */}
-                    {typingUsers.size>0? (
-                      <div className="flex items-center mt-1">
-                        <div className="flex space-x-1">
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                        </div>
-                        <p className="text-sm text-gray-500 ml-2 font-medium">Escribiendo...</p>
-                      </div>
-                    ):selectedTarget.type==='role'? (
-                      <div className="mt-1">
-                        <div className="text-xs text-gray-600">
-                          {(() => {
-                            const roleUsers=getUsersByRole(selectedTarget.role!, false);
-
-                            if (roleUsers.length===0) {
-                              return 'No hay otros usuarios disponibles en este grupo';
-                            }
-
-                            return roleUsers.map((user, index) => (
-                              <span key={user.id}>
-                                {getUserDisplayName(user)}
-                                {index<roleUsers.length-1? ', ':''}
-                              </span>
-                            ));
-                          })()}
-                        </div>
-                      </div>
-                    ):null}
-                  </div>
+              {/* Avatar */}
+              <div className="relative flex-shrink-0">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedTarget.type==='role'? 'bg-gradient-to-br from-red-100 to-red-200':'bg-gradient-to-br from-red-100 to-red-200'
+                  }`}>
+                  {selectedTarget.type==='role'? (
+                    <FiUsers className="w-5 h-5 text-red-600" />
+                  ):(
+                    <FiUser className="w-5 h-5 text-red-600" />
+                  )}
                 </div>
+                {selectedTarget.type==='user'&&(
+                  <div
+                    className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${onlineUserIds.has(selectedTarget.id as number)? 'bg-green-500':'bg-gray-400'
+                      }`}
+                  ></div>
+                )}
+              </div>
 
-                {/* Action buttons */}
-                <div className="flex items-center space-x-3">
+              {/* Chat info */}
+              <div className="flex-1 min-w-0">
+                <h2 className="text-[16px] font-semibold text-gray-900 truncate">
+                  {selectedTarget.name}
+                </h2>
+                {typingUsers.size>0? (
+                  <p className="text-[13px] text-red-600 flex items-center">
+                    <span>escribiendo</span>
+                    <span className="ml-1 flex space-x-0.5">
+                      <span className="animate-bounce">.</span>
+                      <span className="animate-bounce" style={{ animationDelay: '0.1s' }}>.</span>
+                      <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>.</span>
+                    </span>
+                  </p>
+                ):selectedTarget.type==='role'? (
+                  <p className="text-[13px] text-gray-500 truncate">
+                    {(() => {
+                      const roleUsers=getUsersByRole(selectedTarget.role!, false);
+                      return `${roleUsers.length} ${roleUsers.length===1? 'miembro':'miembros'}`;
+                    })()}
+                  </p>
+                ):(
+                  <p className="text-[13px] text-gray-500">
+                    {onlineUserIds.has(selectedTarget.id as number)? 'en línea':'desconectado'}
+                  </p>
+                )}
+              </div>
 
-
-                </div>
+              {/* Action buttons */}
+              <div className="flex items-center space-x-4">
+                <button className="text-gray-500 hover:text-gray-700">
+                  <FiSearch className="w-5 h-5" />
+                </button>
+                <button className="text-gray-500 hover:text-gray-700">
+                  <FiMoreVertical className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
-            <div ref={messagesContainerRef} className="flex-1 p-4 md:p-6 overflow-y-auto bg-gradient-to-b from-gray-50 to-white w-full h-[calc(100vh-350px)] min-w-0">
+            {/* Messages area */}
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto bg-gradient-to-b from-gray-50 to-white w-full"
+            >
               {isLoading? (
                 <div className="h-full flex items-center justify-center">
                   <div className="flex flex-col items-center space-y-4">
@@ -1334,32 +1277,22 @@ const ChatWindow=() => {
                   </div>
                 </div>
               ):(
-                <div className="h-full flex flex-col">
+                <div className="h-full flex flex-col py-4">
                   {messages.length===0? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-12">
-                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-6 shadow-sm">
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                      <div className="w-20 h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center mb-6">
                         <FiMessageSquare className="w-10 h-10 text-gray-400" />
                       </div>
-                      <h3 className="text-xl font-semibold text-gray-700 mb-2">💬 No hay mensajes aún</h3>
-                      <p className="text-gray-500 mb-6 max-w-md">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-2">💬 No hay mensajes aún</h3>
+                      <p className="text-gray-500 mb-6 max-w-md text-sm">
                         {selectedTarget?.type==='role'
                           ? '🚀 Sé el primero en enviar un mensaje al grupo'
                           :'👋 Inicia la conversación enviando un mensaje'
                         }
                       </p>
-                      <div className="flex items-center space-x-4 text-sm text-gray-400">
-                        <div className="flex items-center space-x-2">
-                          <span>⚡</span>
-                          <span>Mensajes en tiempo real</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <span>💾</span>
-                          <span>Historial guardado</span>
-                        </div>
-                      </div>
                     </div>
                   ):(
-                    <div className="space-y-4 pb-4">
+                    <div className="px-4">
                       {messages.map((message, index) => {
                         const isOwn=message.sender?.id===currentUser?.id;
                         const username=isOwn? 'Tú':message.sender?.username||'Usuario';
@@ -1374,20 +1307,64 @@ const ChatWindow=() => {
                           />
                         );
                       })}
-                      <div ref={messagesEndRef} className="h-0" />
+                      <div ref={messagesEndRef} className="h-4" />
                     </div>
                   )}
                 </div>
               )}
             </div>
 
-            <form onSubmit={handleSendMessage} className="p-6 bg-gradient-to-r from-white to-gray-50 border-t border-gray-100">
-              <div className="bg-white rounded-2xl border-2 border-gray-200 focus-within:border-red-500 focus-within:ring-4 focus-within:ring-red-100 transition-all duration-200 shadow-sm hover:shadow-md">
-                <div className="p-4">
+            {/* Input area */}
+            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-gray-100">
+              <div className="flex items-center space-x-2">
+                <div className="flex-1 flex items-center bg-gray-50 rounded-lg px-3 py-2 border border-gray-200 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-100 transition-all">
+                  {/* Emoji button with picker */}
+                  <div className="relative" ref={emojiPickerRef}>
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className="text-gray-500 hover:text-gray-700 transition-colors"
+                      title="Emojis"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
+
+                    {/* Emoji Picker */}
+                    {showEmojiPicker&&(
+                      <div className="absolute bottom-full left-0 mb-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-4 w-80 max-h-96 overflow-y-auto z-50">
+                        <div className="space-y-4">
+                          {Object.entries(emojiCategories).map(([category, emojis]) => (
+                            <div key={category}>
+                              <h4 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+                                {category}
+                              </h4>
+                              <div className="grid grid-cols-8 gap-1">
+                                {emojis.map((emoji, index) => (
+                                  <button
+                                    key={`${category}-${index}`}
+                                    type="button"
+                                    onClick={() => handleEmojiSelect(emoji)}
+                                    className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-lg transition-all duration-200 hover:scale-110"
+                                    title={emoji}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input field */}
                   <input
                     type="text"
-                    placeholder={`Escribe un mensaje ${selectedTarget?.type==='role'? 'al grupo':'a '+selectedTarget?.name}...`}
-                    className="w-full bg-transparent border-none focus:ring-0 text-gray-800 placeholder-gray-500 text-base resize-none"
+                    placeholder="Escribe un mensaje"
+                    className="flex-1 bg-transparent border-none focus:outline-none text-gray-800 placeholder-gray-500 text-[15px] mx-2"
                     value={inputValue}
                     onChange={handleInputChange}
                     onKeyPress={(e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -1406,131 +1383,58 @@ const ChatWindow=() => {
                     }}
                   />
                 </div>
-                <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
-                  <div className="flex items-center space-x-3">
-                    {/* Emoji button with picker */}
-                    <div className="relative" ref={emojiPickerRef}>
-                      <button
-                        type="button"
-                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                        className={`p-2 rounded-full transition-all duration-200 ${showEmojiPicker
-                          ? 'bg-red-100 text-red-600'
-                          :'hover:bg-gray-200 text-gray-500 hover:text-gray-700'
-                          }`}
-                        title="Emojis"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </button>
 
-                      {/* Emoji Picker */}
-                      {showEmojiPicker&&(
-                        <div className="absolute bottom-full left-0 mb-2 bg-white rounded-2xl shadow-2xl border-2 border-gray-200 p-4 w-80 max-h-96 overflow-y-auto z-50">
-                          <div className="space-y-4">
-                            {Object.entries(emojiCategories).map(([category, emojis]) => (
-                              <div key={category}>
-                                <h4 className="text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-                                  {category}
-                                </h4>
-                                <div className="grid grid-cols-8 gap-1">
-                                  {emojis.map((emoji, index) => (
-                                    <button
-                                      key={`${category}-${index}`}
-                                      type="button"
-                                      onClick={() => handleEmojiSelect(emoji)}
-                                      className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-lg transition-all duration-200 hover:scale-110"
-                                      title={emoji}
-                                    >
-                                      {emoji}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Picker footer */}
-                          <div className="p-4 border-t border-gray-100 bg-white w-full text-center">
-                            <p className="text-xs text-gray-500">
-                              Haz clic en un emoji para agregarlo 😊
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-
-                  </div>
-
-                  <div className="flex items-center space-x-3">
-                    {/* Character counter for long messages */}
-                    {inputValue.length>100&&(
-                      <span className={`text-xs font-medium ${inputValue.length>500? 'text-red-500':'text-gray-400'
-                        }`}>
-                        {inputValue.length}/1000
-                      </span>
-                    )}
-
-                    {/* Send button */}
-                    <button
-                      type="submit"
-                      className={`px-6 py-2.5 rounded-full font-semibold transition-all duration-200 flex items-center space-x-2 ${inputValue.trim()
-                        ? 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg transform hover:scale-105'
-                        :'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        }`}
-                      disabled={!inputValue.trim()}
-                    >
-                      <span>Enviar</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Typing indicator hint */}
-              <div className="mt-2 text-xs text-gray-400 text-center">
-                Presiona Enter para enviar • Shift + Enter para nueva línea
+                {/* Send button */}
+                <button
+                  type="submit"
+                  className={`p-2 rounded-full transition-all ${inputValue.trim()
+                      ? 'bg-red-600 hover:bg-red-700 text-white shadow-md'
+                      :'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                  disabled={!inputValue.trim()}
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </button>
               </div>
             </form>
           </div>
         ):(
           <div className="hidden md:flex flex-1 items-center justify-center bg-gradient-to-br from-gray-50 to-white h-full w-full">
             <div className="text-center p-12 max-w-lg">
-              {/* Enhanced icon with gradient background */}
-              <div className="w-24 h-24 mx-auto mb-8 rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center shadow-lg">
-                <FiMessageSquare className="w-12 h-12 text-red-600" />
+              {/* Icon */}
+              <div className="w-32 h-32 mx-auto mb-8 rounded-full bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center shadow-lg">
+                <FiMessageSquare className="w-16 h-16 text-red-600" />
               </div>
 
-              {/* Improved typography */}
+              {/* Typography */}
               <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                💬 Sistema de Chat Interno
+                💬 Chat Interno Bomberos
               </h3>
               <p className="text-gray-600 mb-8 leading-relaxed">
                 Comunícate con tu equipo de forma segura y eficiente
               </p>
 
-              {/* Simplified feature highlights */}
+              {/* Feature highlights */}
               <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-red-100 flex items-center justify-center">
-                    <span className="text-lg">👤</span>
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-red-100 flex items-center justify-center">
+                    <FiUser className="text-red-600 w-5 h-5" />
                   </div>
-                  <p className="text-xs font-medium text-gray-700">Chat Directo</p>
+                  <p className="text-sm font-medium text-gray-700">Chat Directo</p>
                 </div>
                 <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                  <div className="w-8 h-8 mx-auto mb-2 rounded-full bg-red-100 flex items-center justify-center">
-                    <span className="text-lg">👥</span>
+                  <div className="w-10 h-10 mx-auto mb-2 rounded-full bg-red-100 flex items-center justify-center">
+                    <FiUsers className="text-red-600 w-5 h-5" />
                   </div>
-                  <p className="text-xs font-medium text-gray-700">Grupos</p>
+                  <p className="text-sm font-medium text-gray-700">Grupos</p>
                 </div>
               </div>
 
               {/* Call to action */}
               <div className="mt-8 text-sm text-gray-500">
-                👆 Selecciona un contacto para comenzar
+                👆 Selecciona un chat para comenzar a enviar mensajes
               </div>
             </div>
           </div>
