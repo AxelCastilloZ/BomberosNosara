@@ -173,10 +173,14 @@ export const useDeleteMantenimiento = () => {
   return useMutation<DeleteResponse, Error, { id: string; equipoId?: string }>({
     mutationFn: ({ id }) => equipoBomberilService.softDeleteMantenimiento(id),
     onSuccess: (_, variables) => {
+      // Invalidar TODAS las queries relacionadas
+      qc.invalidateQueries({ queryKey: ['equipos'] });
       qc.invalidateQueries({ queryKey: TODOS_MANTENIMIENTOS_KEY });
       qc.invalidateQueries({ queryKey: MANTENIMIENTOS_PENDIENTES_KEY });
+      qc.invalidateQueries({ queryKey: MANTENIMIENTOS_DEL_DIA_KEY });
       if (variables.equipoId) {
         qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.equipoId) });
+        qc.invalidateQueries({ queryKey: PROXIMO_MANTENIMIENTO_KEY(variables.equipoId) });
       }
     },
   });

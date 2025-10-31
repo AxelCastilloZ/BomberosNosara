@@ -204,10 +204,14 @@ export const useDeleteMantenimiento = () => {
   return useMutation<DeleteResponse, Error, { id: string; vehiculoId?: string }>({
     mutationFn: ({ id }) => vehiculoService.softDeleteMantenimiento(id),
     onSuccess: (_, variables) => {
+      // Invalidar TODAS las queries relacionadas
+      qc.invalidateQueries({ queryKey: ['vehiculos'] });
       qc.invalidateQueries({ queryKey: TODOS_MANTENIMIENTOS_KEY });
       qc.invalidateQueries({ queryKey: MANTENIMIENTOS_PENDIENTES_KEY });
+      qc.invalidateQueries({ queryKey: MANTENIMIENTOS_DEL_DIA_KEY });
       if (variables.vehiculoId) {
         qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.vehiculoId) });
+        qc.invalidateQueries({ queryKey: PROXIMO_MANTENIMIENTO_KEY(variables.vehiculoId) });
       }
     },
   });

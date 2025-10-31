@@ -10,7 +10,7 @@ import { CompletarMantenimientoEquipoModal } from '../modals/CompletarMantenimie
 import { DetallesMantenimientoEquipoModal } from '../modals/DetallesMantenimientoEquipoModal';
 import { EditarMantenimientoModal } from '../modals/EditarMantenimientoModal';
 import { useNotifications } from '../../../../components/common/notifications/NotificationProvider';
-import { useMantenimientosFilters, useDeleteMantenimiento } from '../../hooks/useMantenimientos';
+import { useMantenimientosFilters, useDeleteMantenimiento } from '../../../inventarioEquipoBomberil/hooks/useMantenimientos';
 import { EstadoMantenimiento } from '../../../../types/mantenimientoEquipo.types';
 import type { MantenimientoEquipo } from '../../../../types/mantenimientoEquipo.types';
 

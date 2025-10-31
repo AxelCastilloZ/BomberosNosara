@@ -35,7 +35,6 @@ const ALL_ITEMS: SidebarItem[] = [
   { icon: <FaTruck />, label: "Inventario de Vehículos", href: "/admin/vehiculos", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL] },
   { icon: <FaWrench />, label: "Inventario de Equipo", href: "/admin/equipo", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL] },
   { icon: <FaRegNewspaper />, label: "Noticias", href: "/admin/noticias", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
-  { icon: <FaChartBar />, label: "Estadísticas", href: "/admin/estadisticas", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
   { icon: <FaHandshake />, label: "Registro Voluntarios", href: "/admin/registro-horas", roles: [RoleEnum.VOLUNTARIO] },
   { icon: <FaHandshake />, label: "Gestión Voluntarios", href: "/admin/voluntarios", roles: [RoleEnum.SUPERUSER] },
   { icon: <FaBook />, label: "Material Interno", href: "", roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL, RoleEnum.VOLUNTARIO] },
