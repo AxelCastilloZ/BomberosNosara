@@ -1,5 +1,3 @@
-
-
 // src/modules/inventarioEquipos/hooks/useReportes.ts
 
 import { useQuery } from '@tanstack/react-query';
@@ -12,10 +10,10 @@ import type {
 // ==================== QUERY KEYS ====================
 
 const COSTOS_MENSUALES_KEY = (mes: number, anio: number) => 
-  ['reportes', 'costos-mensuales', mes, anio] as const;
+  ['equipos-reportes', 'costos-mensuales', mes, anio] as const;
 
 const COSTOS_EQUIPO_KEY = (id: string, mes?: number, anio?: number) => 
-  ['reportes', 'costos-equipo', id, mes, anio] as const;
+  ['equipos-reportes', 'costos-equipo', id, mes, anio] as const;
 
 // ==================== HOOKS DE CONSULTA - REPORTES ====================
 
@@ -36,7 +34,7 @@ export const useCostosMensuales = (mes: number, anio: number) => {
  */
 export const useCostosPorEquipo = (equipoId?: string, mes?: number, anio?: number) => {
   return useQuery<ReporteCostosPorEquipo>({
-    queryKey: equipoId ? COSTOS_EQUIPO_KEY(equipoId, mes, anio) : ['reportes', 'disabled'],
+    queryKey: equipoId ? COSTOS_EQUIPO_KEY(equipoId, mes, anio) : ['equipos-reportes', 'disabled'],
     queryFn: () => equipoBomberilService.obtenerCostosPorEquipo(equipoId as string, mes, anio),
     enabled: !!equipoId,
     staleTime: 1000 * 60 * 15, // 15 minutos

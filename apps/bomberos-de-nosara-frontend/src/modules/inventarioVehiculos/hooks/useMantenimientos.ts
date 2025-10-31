@@ -21,11 +21,13 @@ interface DeleteResponse {
 
 // ==================== QUERY KEYS ====================
 
+// ==================== QUERY KEYS ====================
+
 const HISTORIAL_KEY = (id: string) => ['vehiculos', id, 'historial'] as const;
 const PROXIMO_MANTENIMIENTO_KEY = (id: string) => ['vehiculos', id, 'proximo-mantenimiento'] as const;
-const MANTENIMIENTOS_PENDIENTES_KEY = ['mantenimientos', 'pendientes'] as const;
-const MANTENIMIENTOS_DEL_DIA_KEY = ['mantenimientos', 'del-dia'] as const;
-const TODOS_MANTENIMIENTOS_KEY = ['mantenimientos', 'todos'] as const;
+const MANTENIMIENTOS_PENDIENTES_KEY = ['vehiculos-mantenimientos', 'pendientes'] as const;
+const MANTENIMIENTOS_DEL_DIA_KEY = ['vehiculos-mantenimientos', 'del-dia'] as const; 
+const TODOS_MANTENIMIENTOS_KEY = ['vehiculos-mantenimientos', 'todos'] as const; 
 
 // ==================== HOOKS DE CONSULTA - MANTENIMIENTOS ====================
 

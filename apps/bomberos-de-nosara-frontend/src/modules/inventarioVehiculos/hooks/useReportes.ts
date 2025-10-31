@@ -10,10 +10,10 @@ import type {
 // ==================== QUERY KEYS ====================
 
 const COSTOS_MENSUALES_KEY = (mes: number, anio: number) => 
-  ['reportes', 'costos-mensuales', mes, anio] as const;
+  ['vehiculos-reportes', 'costos-mensuales', mes, anio] as const;
 
 const COSTOS_VEHICULO_KEY = (id: string, mes?: number, anio?: number) => 
-  ['reportes', 'costos-vehiculo', id, mes, anio] as const;
+  ['vehiculos-reportes', 'costos-vehiculo', id, mes, anio] as const;
 
 // ==================== HOOKS DE CONSULTA - REPORTES ====================
 
@@ -34,7 +34,7 @@ export const useCostosMensuales = (mes: number, anio: number) => {
  */
 export const useCostosPorVehiculo = (vehiculoId?: string, mes?: number, anio?: number) => {
   return useQuery<ReporteCostosPorVehiculo>({
-    queryKey: vehiculoId ? COSTOS_VEHICULO_KEY(vehiculoId, mes, anio) : ['reportes', 'disabled'],
+    queryKey: vehiculoId ? COSTOS_VEHICULO_KEY(vehiculoId, mes, anio) : ['vehiculos-reportes', 'disabled'],
     queryFn: () => vehiculoService.obtenerCostosPorVehiculo(vehiculoId as string, mes, anio),
     enabled: !!vehiculoId,
     staleTime: 1000 * 60 * 15, // 15 minutos
