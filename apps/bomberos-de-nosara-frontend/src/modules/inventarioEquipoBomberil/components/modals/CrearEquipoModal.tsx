@@ -1,5 +1,3 @@
-
-
 // src/modules/inventarioEquipos/components/modals/CrearEquipoModal.tsx
 
 import React, { useEffect } from 'react';
@@ -76,7 +74,22 @@ export const CrearEquipoModal: React.FC<CrearEquipoModalProps> = ({
       onSuccess?.();
       handleClose();
     } catch (err: any) {
-      error(err?.message || 'Error al crear el equipo');
+      // 🔥 La estructura correcta del error del backend
+      const errorCode = err?.response?.data?.code;
+      const errorMessage = err?.response?.data?.message;
+      
+      // Mostrar el mensaje apropiado
+      if (errorCode === 'DUPLICATE_KEY') {
+        error(
+          errorMessage || 'Este número de serie ya está registrado. Use uno diferente.',
+          {
+            title: 'Número de serie duplicado',
+            duration: 8000
+          }
+        );
+      } else {
+        error(errorMessage || err?.message || 'Error al crear el equipo');
+      }
     }
   };
 

@@ -18,6 +18,7 @@ import { PaginatedVehiculoResponseDto } from './dto/paginated-response.dto';
 import { EstadoVehiculo } from './enums/vehiculo-bomberil.enums';
 import { EstadoMantenimiento } from './enums/mantenimiento.enums';
 import { RegistrarMantenimientoDto } from './dto/registrar-matenimiento.dto';
+import { EditMantenimientoDto } from './dto/edit-mantenimiento.dto';
 
 @Injectable()
 export class VehiculosService {
@@ -249,17 +250,33 @@ export class VehiculosService {
 
   // ==================== SOFT DELETE Y RESTAURACIÓN ====================
 
-  async softDelete(id: string, userId: number): Promise<{ message: string }> {
-    const vehiculo = await this.findOne(id);
+ async softDelete(id: string, userId: number): Promise<{ message: string }> {
+  const vehiculo = await this.findOne(id);
 
-    vehiculo.deletedBy = userId;
-    await this.vehiculoRepo.save(vehiculo);
-    await this.vehiculoRepo.softDelete(id);
+  // 🔥 VALIDAR QUE NO TENGA MANTENIMIENTOS PENDIENTES
+  const mantenimientosPendientes = await this.mantenimientoRepo.count({
+    where: [
+      { vehiculoId: id, estado: EstadoMantenimiento.PENDIENTE },
+      { vehiculoId: id, estado: EstadoMantenimiento.EN_REVISION }
+    ]
+  });
 
-    return { 
-      message: 'Vehículo eliminado correctamente. Los mantenimientos registrados se mantienen para reportes de costos.' 
-    };
+  if (mantenimientosPendientes > 0) {
+    throw new BadRequestException({
+      code: 'HAS_PENDING_MAINTENANCE',
+      message: `No se puede eliminar el vehículo porque tiene ${mantenimientosPendientes} mantenimiento(s) pendiente(s). Por favor, elimine o complete los mantenimientos primero.`,
+      count: mantenimientosPendientes
+    });
   }
+
+  vehiculo.deletedBy = userId;
+  await this.vehiculoRepo.save(vehiculo);
+  await this.vehiculoRepo.softDelete(id);
+
+  return { 
+    message: 'Vehículo eliminado correctamente. Los mantenimientos completados se mantienen para reportes de costos.' 
+  };
+}
 
   async restore(id: string, userId: number): Promise<Vehiculo> {
     const vehiculo = await this.vehiculoRepo.findOne({
@@ -439,6 +456,53 @@ export class VehiculosService {
     return await this.mantenimientoRepo.save(mantenimiento);
   }
 
+
+
+
+
+
+// ==================== MANTENIMIENTOS - EDITAR ====================
+
+async editarMantenimiento(
+  mantenimientoId: string,
+  dto: EditMantenimientoDto,
+  userId: number
+): Promise<Mantenimiento> {
+  const mantenimiento = await this.mantenimientoRepo.findOne({
+    where: { id: mantenimientoId },
+    relations: ['vehiculo'],
+  });
+
+  if (!mantenimiento) {
+    throw new NotFoundException('Mantenimiento no encontrado');
+  }
+
+  // Actualizar solo los campos que vienen en el DTO
+  if (dto.descripcion !== undefined) {
+    mantenimiento.descripcion = dto.descripcion;
+  }
+  if (dto.fecha !== undefined) {
+    mantenimiento.fecha = new Date(dto.fecha);
+  }
+  if (dto.observaciones !== undefined) {
+    mantenimiento.observaciones = dto.observaciones;
+  }
+  if (dto.tecnico !== undefined) {
+    mantenimiento.tecnico = dto.tecnico;
+  }
+  if (dto.costo !== undefined) {
+    mantenimiento.costo = dto.costo;
+  }
+
+  mantenimiento.updatedBy = userId;
+
+  return await this.mantenimientoRepo.save(mantenimiento);
+}
+
+
+
+
+
   // ==================== MANTENIMIENTOS - CAMBIAR ESTADO ====================
 
   async cambiarEstadoMantenimiento(
@@ -483,7 +547,6 @@ export class VehiculosService {
     return this.mantenimientoRepo.find({
       relations: ['vehiculo'],
       order: { fecha: 'DESC' },
-      withDeleted: true,
     });
   }
 
@@ -591,19 +654,30 @@ export class VehiculosService {
 
   // ==================== MANTENIMIENTOS - SOFT DELETE Y RESTAURACIÓN ====================
 
-  async softDeleteMantenimiento(id: string, userId: number): Promise<{ message: string }> {
-    const mantenimiento = await this.mantenimientoRepo.findOne({ where: { id } });
-    
-    if (!mantenimiento) {
-      throw new NotFoundException('Mantenimiento no encontrado');
-    }
-
-    mantenimiento.deletedBy = userId;
-    await this.mantenimientoRepo.save(mantenimiento);
-    await this.mantenimientoRepo.softDelete(id);
-
-    return { message: 'Mantenimiento eliminado correctamente' };
+ async softDeleteMantenimiento(id: string, userId: number): Promise<{ message: string }> {
+  const mantenimiento = await this.mantenimientoRepo.findOne({ 
+    where: { id },
+    withDeleted: true  // 👈 ESTE ES EL CAMBIO
+  });
+  
+  if (!mantenimiento) {
+    throw new NotFoundException('Mantenimiento no encontrado');
   }
+
+  // Validar que el mantenimiento no esté ya eliminado
+  if (mantenimiento.deletedAt) {
+    throw new BadRequestException({
+      code: 'ALREADY_DELETED',
+      message: 'El mantenimiento ya está eliminado'
+    });
+  }
+
+  mantenimiento.deletedBy = userId;
+  await this.mantenimientoRepo.save(mantenimiento);
+  await this.mantenimientoRepo.softDelete(id);
+
+  return { message: 'Mantenimiento eliminado correctamente' };
+}
 
   async restoreMantenimiento(id: string, userId: number): Promise<Mantenimiento> {
     const mantenimiento = await this.mantenimientoRepo.findOne({

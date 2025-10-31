@@ -134,3 +134,11 @@ export interface EstadisticasMantenimiento {
   preventivos: number;
   correctivos: number;
 }
+
+export interface EditMantenimientoDto {
+  descripcion?: string;
+  fecha?: string;
+  observaciones?: string;
+  tecnico?: string;
+  costo?: number;
+}

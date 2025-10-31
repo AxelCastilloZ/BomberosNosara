@@ -93,7 +93,7 @@ export const useExistsByNumeroSerie = (numeroSerie?: string) => {
  */
 export const useAddEquipo = () => {
   const qc = useQueryClient();
-  return useMutation<EquipoBomberil, Error, CreateEquipoDto>({
+  return useMutation<EquipoBomberil, any, CreateEquipoDto>({  
     mutationFn: (data: CreateEquipoDto) => equipoBomberilService.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: EQUIPOS_KEY });
@@ -120,7 +120,7 @@ export const useUpdateEquipo = () => {
  */
 export const useDeleteEquipo = () => {
   const qc = useQueryClient();
-  return useMutation<DeleteResponse, Error, string>({
+  return useMutation<DeleteResponse, any, string>({  // 👈 Cambiar Error por any
     mutationFn: (id: string) => equipoBomberilService.softDelete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: EQUIPOS_KEY });

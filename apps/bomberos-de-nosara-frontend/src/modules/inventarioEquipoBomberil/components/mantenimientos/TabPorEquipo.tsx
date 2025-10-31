@@ -1,9 +1,6 @@
-
-
-
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, Search, Wrench, MoreVertical, CheckCircle, Trash2, Eye } from 'lucide-react';
+import { Calendar, Search, Wrench, MoreVertical, CheckCircle, Trash2, Eye, Edit } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -11,6 +8,7 @@ import { Select } from '../../../../components/ui/select';
 import { Alert, AlertDescription } from '../../../../components/ui/alert';
 import { CompletarMantenimientoEquipoModal } from '../modals/CompletarMantenimientoEquipoModal';
 import { DetallesMantenimientoEquipoModal } from '../modals/DetallesMantenimientoEquipoModal';
+import { EditarMantenimientoModal } from '../modals/EditarMantenimientoModal';
 import { RegistrarMantenimientoModal } from '../modals/RegistrarMantenimientoModal';
 import { ProgramarMantenimientoModal } from '../modals/ProgramarMantenimientoModal';
 import { useNotifications } from '../../../../components/common/notifications/NotificationProvider';
@@ -39,6 +37,7 @@ export const TabPorEquipo: React.FC = () => {
   const [mantenimientoSeleccionado, setMantenimientoSeleccionado] = useState<MantenimientoEquipo | null>(null);
   const [showCompletarModal, setShowCompletarModal] = useState(false);
   const [showDetallesModal, setShowDetallesModal] = useState(false);
+  const [showEditarModal, setShowEditarModal] = useState(false);
   const [showRegistrarModal, setShowRegistrarModal] = useState(false);
   const [showProgramarModal, setShowProgramarModal] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
@@ -185,6 +184,12 @@ export const TabPorEquipo: React.FC = () => {
     }
   };
 
+  const handleEditar = useCallback((mantenimiento: MantenimientoEquipo) => {
+    setMantenimientoSeleccionado(mantenimiento);
+    setShowEditarModal(true);
+    closeMenu();
+  }, [closeMenu]);
+
   const handleCompletar = useCallback((mantenimiento: MantenimientoEquipo) => {
     setMantenimientoSeleccionado(mantenimiento);
     setShowCompletarModal(true);
@@ -227,7 +232,7 @@ export const TabPorEquipo: React.FC = () => {
     const button = event.currentTarget;
     const rect = button.getBoundingClientRect();
     
-    const MENU_HEIGHT = 120;
+    const MENU_HEIGHT = 160;
     const spaceBelow = window.innerHeight - rect.bottom;
     const openUpwards = spaceBelow < MENU_HEIGHT + 10;
     
@@ -625,6 +630,13 @@ export const TabPorEquipo: React.FC = () => {
 
               return (
                 <>
+                  <button
+                    onClick={() => handleEditar(mantenimiento)}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors"
+                  >
+                    <Edit className="h-4 w-4 text-blue-600" />
+                    Editar
+                  </button>
                   {puedeCompletar(mantenimiento.estado) && (
                     <button
                       onClick={() => handleCompletar(mantenimiento)}
@@ -675,6 +687,15 @@ export const TabPorEquipo: React.FC = () => {
         mantenimiento={mantenimientoSeleccionado}
         open={showDetallesModal}
         onOpenChange={setShowDetallesModal}
+      />
+
+      <EditarMantenimientoModal
+        mantenimiento={mantenimientoSeleccionado}
+        open={showEditarModal}
+        onOpenChange={setShowEditarModal}
+        onSuccess={() => {
+          setMantenimientoSeleccionado(null);
+        }}
       />
 
       <RegistrarMantenimientoModal

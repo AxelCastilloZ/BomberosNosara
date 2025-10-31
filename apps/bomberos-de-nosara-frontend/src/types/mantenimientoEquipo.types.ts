@@ -6,6 +6,18 @@ import type { EquipoBomberil } from './equipoBomberil.types';
 
 // ==================== ENUMS ====================
 
+
+
+export interface EditMantenimientoDto {
+  descripcion?: string;
+  fecha?: string;
+  observaciones?: string;
+  tecnico?: string;
+  costo?: number;
+}
+
+
+
 export enum EstadoMantenimiento {
   PENDIENTE = 'pendiente',
   EN_REVISION = 'en_revision',

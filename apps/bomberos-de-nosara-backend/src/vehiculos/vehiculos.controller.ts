@@ -25,6 +25,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { GetUser } from '../common/decorators/get-user.decorator';
 import { RoleEnum } from '../roles/role.enum';
+import { EditMantenimientoDto } from './dto/edit-mantenimiento.dto';
 
 @Controller('vehiculos')
 @UseGuards(JwtAuthGuard)
@@ -225,6 +226,24 @@ export class VehiculosController {
   ) {
     return this.service.completarMantenimiento(mantenimientoId, dto, userId);
   }
+
+
+
+
+ @Patch('mantenimientos/:mantenimientoId/editar')
+  @UseGuards(RolesGuard)
+  @Roles(RoleEnum.ADMIN, RoleEnum.SUPERUSER)
+  editarMantenimiento(
+    @Param('mantenimientoId') mantenimientoId: string,
+    @Body() dto: EditMantenimientoDto,
+    @GetUser('id') userId: number
+  ) {
+    return this.service.editarMantenimiento(mantenimientoId, dto, userId);
+  }
+
+
+
+
 
   @Patch('mantenimientos/:mantenimientoId/estado')
   @UseGuards(RolesGuard)

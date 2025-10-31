@@ -9,6 +9,7 @@ import type {
   RegistrarMantenimientoDto,
   CompletarMantenimientoDto,
   EstadoMantenimiento,
+  EditMantenimientoDto,
 } from '../../../types/mantenimiento.types';
 import type { MantenimientoFiltersLocal } from '../types';
 
@@ -142,6 +143,39 @@ export const useCompletarMantenimiento = () => {
     },
   });
 };
+
+
+
+
+
+
+/**
+ * Hook para editar un mantenimiento
+ */
+export const useEditMantenimiento = () => {
+  const qc = useQueryClient();
+  return useMutation<Mantenimiento, Error, { mantenimientoId: string; data: EditMantenimientoDto; vehiculoId?: string }>({
+    mutationFn: ({ mantenimientoId, data }) => vehiculoService.editarMantenimiento(mantenimientoId, data),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['vehiculos'] });
+      qc.invalidateQueries({ queryKey: MANTENIMIENTOS_PENDIENTES_KEY });
+      qc.invalidateQueries({ queryKey: MANTENIMIENTOS_DEL_DIA_KEY });
+      qc.invalidateQueries({ queryKey: TODOS_MANTENIMIENTOS_KEY });
+      if (variables.vehiculoId) {
+        qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.vehiculoId) });
+        qc.invalidateQueries({ queryKey: PROXIMO_MANTENIMIENTO_KEY(variables.vehiculoId) });
+      }
+    },
+  });
+};
+
+
+
+
+
+
+
+
 
 /**
  * Hook para cambiar el estado de un mantenimiento

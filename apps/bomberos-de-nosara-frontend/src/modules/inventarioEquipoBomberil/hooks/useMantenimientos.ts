@@ -11,6 +11,7 @@ import type {
   RegistrarMantenimientoDto,
   CompletarMantenimientoDto,
   EstadoMantenimiento,
+  EditMantenimientoDto,
 } from '../../../types/mantenimientoEquipo.types';
 import type { MantenimientoFiltersLocal } from '../types';
 
@@ -196,6 +197,35 @@ export const useRestoreMantenimiento = () => {
     },
   });
 };
+
+
+
+
+
+
+
+/**
+ * Hook para editar un mantenimiento
+ */
+export const useEditMantenimiento = () => {
+  const qc = useQueryClient();
+  return useMutation<MantenimientoEquipo, any, { mantenimientoId: string; data: EditMantenimientoDto; equipoId?: string }>({
+    mutationFn: ({ mantenimientoId, data }) => equipoBomberilService.editarMantenimiento(mantenimientoId, data),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ['equipos'] });
+      qc.invalidateQueries({ queryKey: MANTENIMIENTOS_PENDIENTES_KEY });
+      qc.invalidateQueries({ queryKey: MANTENIMIENTOS_DEL_DIA_KEY });
+      qc.invalidateQueries({ queryKey: TODOS_MANTENIMIENTOS_KEY });
+      if (variables.equipoId) {
+        qc.invalidateQueries({ queryKey: HISTORIAL_KEY(variables.equipoId) });
+        qc.invalidateQueries({ queryKey: PROXIMO_MANTENIMIENTO_KEY(variables.equipoId) });
+      }
+    },
+  });
+};
+
+
+
 
 // ==================== HOOK DE FILTROS - MANTENIMIENTOS ====================
 

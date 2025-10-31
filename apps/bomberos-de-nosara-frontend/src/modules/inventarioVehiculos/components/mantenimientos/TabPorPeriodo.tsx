@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Calendar, Filter, X, MoreVertical, CheckCircle, Trash2, Eye } from 'lucide-react';
+import { Calendar, Filter, X, MoreVertical, CheckCircle, Trash2, Eye, Edit } from 'lucide-react';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -10,6 +10,7 @@ import { Select } from '../../../../components/ui/select';
 import { Alert, AlertDescription } from '../../../../components/ui/alert';
 import { CompletarMantenimientoModal } from '../modals/CompletarMantenimientoModal';
 import { DetallesMantenimientoModal } from '../modals/DetallesMantenimientoModal';
+import { EditarMantenimientoModal } from '../modals/EditarMantenimientoModal';
 import { useNotifications } from '../../../../components/common/notifications/NotificationProvider';
 import { useMantenimientosFilters, useDeleteMantenimiento } from '../../hooks/useMantenimientos';
 import { EstadoMantenimiento } from '../../../../types/mantenimiento.types';
@@ -26,6 +27,7 @@ export const TabPorPeriodo: React.FC = () => {
   const [mantenimientoSeleccionado, setMantenimientoSeleccionado] = useState<Mantenimiento | null>(null);
   const [showCompletarModal, setShowCompletarModal] = useState(false);
   const [showDetallesModal, setShowDetallesModal] = useState(false);
+  const [showEditarModal, setShowEditarModal] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState<string | null>(null);
   const [confirmarEliminar, setConfirmarEliminar] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
@@ -105,6 +107,13 @@ export const TabPorPeriodo: React.FC = () => {
     }
   };
 
+  const handleEditar = (mantenimiento: Mantenimiento) => {
+    setMantenimientoSeleccionado(mantenimiento);
+    setShowEditarModal(true);
+    setMenuAbierto(null);
+    setMenuPosition(null);
+  };
+
   const handleCompletar = (mantenimiento: Mantenimiento) => {
     setMantenimientoSeleccionado(mantenimiento);
     setShowCompletarModal(true);
@@ -147,13 +156,13 @@ export const TabPorPeriodo: React.FC = () => {
       const button = event.currentTarget;
       const rect = button.getBoundingClientRect();
       
-      const MENU_HEIGHT = 120; // Altura aproximada del menú
+      const MENU_HEIGHT = 160;
       const spaceBelow = window.innerHeight - rect.bottom;
       const openUpwards = spaceBelow < MENU_HEIGHT + 10;
       
       setMenuPosition({
         top: openUpwards ? rect.top - MENU_HEIGHT - 5 : rect.bottom + 5,
-        left: rect.right - 192, // 192px = w-48
+        left: rect.right - 192,
         openUpwards,
       });
       
@@ -367,10 +376,17 @@ export const TabPorPeriodo: React.FC = () => {
 
               return (
                 <>
+                  <button
+                    onClick={() => handleEditar(mantenimiento)}
+                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors"
+                  >
+                    <Edit className="h-4 w-4 text-blue-600" />
+                    Editar
+                  </button>
                   {puedeCompletar(mantenimiento.estado) && (
                     <button
                       onClick={() => handleCompletar(mantenimiento)}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors"
                     >
                       <CheckCircle className="h-4 w-4 text-green-600" />
                       Completar
@@ -379,7 +395,7 @@ export const TabPorPeriodo: React.FC = () => {
                   {mantenimiento.estado === EstadoMantenimiento.COMPLETADO && (
                     <button
                       onClick={() => handleVerDetalles(mantenimiento)}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                      className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2 transition-colors"
                     >
                       <Eye className="h-4 w-4 text-blue-600" />
                       Ver Detalles
@@ -391,7 +407,7 @@ export const TabPorPeriodo: React.FC = () => {
                       setMenuAbierto(null);
                       setMenuPosition(null);
                     }}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                     Eliminar
@@ -418,6 +434,15 @@ export const TabPorPeriodo: React.FC = () => {
         mantenimiento={mantenimientoSeleccionado}
         open={showDetallesModal}
         onOpenChange={setShowDetallesModal}
+      />
+
+      <EditarMantenimientoModal
+        mantenimiento={mantenimientoSeleccionado}
+        open={showEditarModal}
+        onOpenChange={setShowEditarModal}
+        onSuccess={() => {
+          setMantenimientoSeleccionado(null);
+        }}
       />
     </div>
   );
