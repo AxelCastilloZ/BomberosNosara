@@ -22,6 +22,5 @@ const AppDataSource = new DataSource({
   migrations: [path.join(__dirname, 'migrations', '*.{ts,js}')],
   migrationsTableName: 'typeorm_migrations',
 });
-
 // ⬅️ IMPORTANTE: **solo una** exportación de DataSource
 export default AppDataSource;
