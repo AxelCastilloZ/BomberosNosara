@@ -75,7 +75,7 @@ export const EliminarUsuarioModal: React.FC<EliminarUsuarioModalProps> = ({
 
           <div className="bg-red-50 border border-red-200 rounded-md p-3">
             <p className="text-sm text-red-800">
-              <strong>⚠️ Advertencia:</strong> Esta acción no se puede deshacer. Toda la
+              <strong> Advertencia:</strong> Esta acción no se puede deshacer. Toda la
               información asociada a este usuario será eliminada permanentemente.
             </p>
           </div>

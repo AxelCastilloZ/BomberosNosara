@@ -2,12 +2,18 @@
 
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { X } from 'lucide-react';
 import { useNotifications } from '../../../../components/common/notifications/NotificationProvider';
 import { useUsuarios } from '../../hooks/useUsuarios';
 import { ROLES, ROLE_LABELS } from '../../../../constants/roles';
+import { 
+  updateUsuarioSchema, 
+  USUARIO_FIELD_LIMITS,
+  type UpdateUsuarioFormData 
+} from '../../utils/usuarioValidations';
 import type { RoleName } from '../../../../types/user.types';
-import type { EditarUsuarioModalProps, UpdateUsuarioDto } from '../../types';
+import type { EditarUsuarioModalProps } from '../../types';
 
 export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
   usuario,
@@ -21,22 +27,24 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
   const {
     register,
     handleSubmit,
-    setValue,
     watch,
     reset,
     setError,
     clearErrors,
     formState: { errors, isSubmitting },
-  } = useForm<UpdateUsuarioDto>({
+  } = useForm<UpdateUsuarioFormData>({
+    resolver: zodResolver(updateUsuarioSchema),
     defaultValues: {
       username: '',
       email: '',
       password: '',
-      roles: [],
+      role: '',
     },
   });
 
-  const selectedRoles = watch('roles') || [];
+  const usernameValue = watch('username');
+  const emailValue = watch('email');
+  const passwordValue = watch('password');
 
   // Cargar datos del usuario cuando se abre el modal
   useEffect(() => {
@@ -45,29 +53,20 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
         username: usuario.username,
         email: usuario.email,
         password: '',
-        roles: usuario.roles.map((r) => r.name as RoleName),
+        role: usuario.roles[0]?.name || '',
       });
     }
   }, [open, usuario, reset]);
 
-  const onSubmit = async (data: UpdateUsuarioDto) => {
+  const onSubmit = async (data: UpdateUsuarioFormData) => {
     if (!usuario) return;
-
-    // Validar que tenga al menos un rol
-    if (!data.roles || data.roles.length === 0) {
-      setError('roles', {
-        type: 'required',
-        message: 'Debes seleccionar al menos un rol',
-      });
-      return;
-    }
 
     try {
       // Construir el payload limpio
-      const updateData: UpdateUsuarioDto = {
+      const updateData: any = {
         username: data.username,
         email: data.email,
-        roles: data.roles,
+        roles: [data.role as RoleName],
       };
 
       // Solo incluir password si se escribió algo
@@ -98,15 +97,37 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
     }
   };
 
-  const handleRoleToggle = (role: RoleName) => {
-    const newRoles = selectedRoles.includes(role)
-      ? selectedRoles.filter((r) => r !== role)
-      : [...selectedRoles, role];
-    setValue('roles', newRoles, { shouldValidate: true });
+  const handleUsernameBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const value = e.target.value.trim();
+    if (!value || errors.username || value === usuario?.username) return;
+    
+    const res = await validateUnique('username', value, {
+      currentValue: usuario?.username,
+    });
+    if (res === false) {
+      setError('username', {
+        type: 'server',
+        message: 'Este nombre de usuario ya está en uso',
+      });
+    } else if (res === true) {
+      clearErrors('username');
+    }
+  };
 
-    // Limpiar error de roles si ahora tiene al menos uno
-    if (newRoles.length > 0) {
-      clearErrors('roles');
+  const handleEmailBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+    const value = e.target.value.trim();
+    if (!value || errors.email || value === usuario?.email) return;
+    
+    const res = await validateUnique('email', value, {
+      currentValue: usuario?.email,
+    });
+    if (res === false) {
+      setError('email', {
+        type: 'server',
+        message: 'Este correo electrónico ya está en uso',
+      });
+    } else if (res === true) {
+      clearErrors('email');
     }
   };
 
@@ -126,6 +147,7 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
           <button
             onClick={() => onOpenChange(false)}
             className="text-gray-400 hover:text-gray-600 transition-colors"
+            disabled={isSubmitting || update.isPending}
           >
             <X className="h-6 w-6" />
           </button>
@@ -142,81 +164,55 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
               {/* Username */}
               <div className="space-y-2">
                 <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                  Nombre de Usuario <span className="text-red-600">*</span>
+                  Nombre de Usuario <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="username"
                   type="text"
                   placeholder="Ej: jperez"
+                  maxLength={USUARIO_FIELD_LIMITS.username}
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                     errors.username
-                      ? 'border-red-300 focus:ring-red-500'
+                      ? 'border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-red-500'
                   }`}
-                  {...register('username', {
-                    required: 'El nombre de usuario es obligatorio',
-                    minLength: {
-                      value: 3,
-                      message: 'Debe tener al menos 3 caracteres',
-                    },
-                    onBlur: async (e) => {
-                      const res = await validateUnique('username', e.target.value, {
-                        currentValue: usuario.username,
-                      });
-                      if (res === false) {
-                        setError('username', {
-                          type: 'server',
-                          message: 'Este usuario ya existe',
-                        });
-                      } else if (res === true) {
-                        clearErrors('username');
-                      }
-                    },
-                  })}
+                  disabled={isSubmitting || update.isPending}
+                  {...register('username')}
+                  onBlur={handleUsernameBlur}
                 />
                 {errors.username && (
-                  <p className="text-sm text-red-600">{errors.username.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.username.message}</p>
                 )}
+                <p className="text-sm text-gray-500">
+                  {(usernameValue?.length || 0)}/{USUARIO_FIELD_LIMITS.username} caracteres
+                </p>
               </div>
 
               {/* Email */}
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Correo Electrónico <span className="text-red-600">*</span>
+                  Correo Electrónico <span className="text-red-500">*</span>
                 </label>
                 <input
                   id="email"
                   type="email"
                   placeholder="usuario@ejemplo.com"
+                  maxLength={USUARIO_FIELD_LIMITS.email}
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                     errors.email
-                      ? 'border-red-300 focus:ring-red-500'
+                      ? 'border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-red-500'
                   }`}
-                  {...register('email', {
-                    required: 'El correo es obligatorio',
-                    pattern: {
-                      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                      message: 'Correo inválido',
-                    },
-                    onBlur: async (e) => {
-                      const res = await validateUnique('email', e.target.value, {
-                        currentValue: usuario.email,
-                      });
-                      if (res === false) {
-                        setError('email', {
-                          type: 'server',
-                          message: 'Este correo ya existe',
-                        });
-                      } else if (res === true) {
-                        clearErrors('email');
-                      }
-                    },
-                  })}
+                  disabled={isSubmitting || update.isPending}
+                  {...register('email')}
+                  onBlur={handleEmailBlur}
                 />
                 {errors.email && (
-                  <p className="text-sm text-red-600">{errors.email.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>
                 )}
+                <p className="text-sm text-gray-500">
+                  {(emailValue?.length || 0)}/{USUARIO_FIELD_LIMITS.email} caracteres
+                </p>
               </div>
 
               {/* Password */}
@@ -228,56 +224,52 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
                   id="password"
                   type="password"
                   placeholder="Dejar vacío para no cambiar"
+                  maxLength={USUARIO_FIELD_LIMITS.password}
                   className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
                     errors.password
-                      ? 'border-red-300 focus:ring-red-500'
+                      ? 'border-red-500 focus:ring-red-500'
                       : 'border-gray-300 focus:ring-red-500'
                   }`}
-                  {...register('password', {
-                    minLength: {
-                      value: 8,
-                      message: 'Debe tener al menos 8 caracteres',
-                    },
-                  })}
+                  disabled={isSubmitting || update.isPending}
+                  {...register('password')}
                 />
                 {errors.password && (
-                  <p className="text-sm text-red-600">{errors.password.message}</p>
+                  <p className="text-sm text-red-500 mt-1">{errors.password.message}</p>
                 )}
                 <p className="text-xs text-gray-500">
-                  Solo completa este campo si deseas cambiar la contraseña
+                  Solo completa este campo si deseas cambiar la contraseña • {(passwordValue?.length || 0)}/{USUARIO_FIELD_LIMITS.password} caracteres
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Roles */}
+          {/* Rol */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Roles <span className="text-red-600">*</span>
+            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+              Rol <span className="text-red-500">*</span>
             </label>
             <p className="text-xs text-gray-500 mb-3">
-              Selecciona al menos un rol para el usuario
+              Selecciona el rol que tendrá el usuario en el sistema
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <select
+              id="role"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
+                errors.role
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-red-500'
+              }`}
+              disabled={isSubmitting || update.isPending}
+              {...register('role')}
+            >
+              <option value="">Selecciona un rol</option>
               {ROLES.map((role) => (
-                <label
-                  key={role}
-                  className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedRoles.includes(role as RoleName)}
-                    onChange={() => handleRoleToggle(role as RoleName)}
-                    className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    {ROLE_LABELS[role as RoleName]}
-                  </span>
-                </label>
+                <option key={role} value={role}>
+                  {ROLE_LABELS[role as RoleName]}
+                </option>
               ))}
-            </div>
-            {errors.roles && (
-              <p className="text-sm text-red-600 mt-2">{errors.roles.message}</p>
+            </select>
+            {errors.role && (
+              <p className="text-sm text-red-500 mt-2">{errors.role.message}</p>
             )}
           </div>
 
