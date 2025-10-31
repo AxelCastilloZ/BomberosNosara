@@ -23,11 +23,9 @@ const ALL_ITEMS: Omit<DashboardItem, 'href'>[]=[
   { icon: <FaUsers size={24} />, label: 'Gestión de Usuarios', roles: [RoleEnum.SUPERUSER] },
   { icon: <FaFireExtinguisher size={24} />, label: 'Inventario de Equipo', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL] },
   { icon: <FaTruck size={24} />, label: 'Inventario de Vehículos', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL] },
-  { icon: <FaChartBar size={24} />, label: 'Estadísticas', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
   { icon: <FaBook size={24} />, label: 'Material Interno', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL, RoleEnum.VOLUNTARIO] },
   { icon: <FaComments size={24} />, label: 'Chat Interno', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN, RoleEnum.PERSONAL_BOMBERIL, RoleEnum.VOLUNTARIO] },
   { icon: <FaNewspaper size={24} />, label: 'Administrar Noticias', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
-  { icon: <FaComments size={24} />, label: 'Sugerencias', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
   { icon: <FaHandshake size={24} />, label: 'Gestión de Voluntarios', roles: [RoleEnum.SUPERUSER, RoleEnum.ADMIN] },
   { icon: <FaHandshake size={24} />, label: 'Registro Voluntarios', roles: [RoleEnum.VOLUNTARIO] },
 ];
