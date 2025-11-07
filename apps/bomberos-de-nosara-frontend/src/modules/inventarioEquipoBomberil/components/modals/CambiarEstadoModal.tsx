@@ -1,18 +1,8 @@
-
-
-
 // src/modules/inventarioEquipos/components/modals/CambiarEstadoModal.tsx
 
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../components/ui/dialog';
+import { BaseModal } from '../../../../components/ui/base-modal';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
 import { Select } from '../../../../components/ui/select';
@@ -95,6 +85,15 @@ export const CambiarEstadoModal: React.FC<CambiarEstadoModalProps> = ({
   const onSubmit = async (data: FormData) => {
     if (!equipo || !data.nuevoEstado) return;
 
+    // Validación: No permitir cambiar al mismo estado
+    if (data.nuevoEstado === estadoActual) {
+      error(`El equipo ya está en estado: ${ESTADO_LABELS[estadoActual]}`, {
+        title: 'Estado sin cambios',
+        duration: 5000
+      });
+      return;
+    }
+
     try {
       if (cambiaABaja) {
         // Validar motivo
@@ -135,131 +134,123 @@ export const CambiarEstadoModal: React.FC<CambiarEstadoModalProps> = ({
 
   if (!equipo) return null;
 
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent
-        className="w-[95vw] max-w-2xl"
-        style={{
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 0,
-        }}
+  // Footer content con botones
+  const footerContent = (
+    <>
+      <Button type="button" variant="outline" onClick={handleClose}>
+        Cancelar
+      </Button>
+      <Button
+        type="submit"
+        form="cambiar-estado-equipo-form"
+        disabled={!nuevoEstado || updateEstadoMutation.isPending || darDeBajaMutation.isPending}
       >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Cambiar Estado del Equipo</DialogTitle>
-          <DialogDescription>
-            {equipo.nombre} • Estado actual:{' '}
-            <span className="font-semibold">
-              {estadoActual ? ESTADO_LABELS[estadoActual] : 'Sin estado'}
-            </span>
-          </DialogDescription>
-        </DialogHeader>
+        {updateEstadoMutation.isPending || darDeBajaMutation.isPending
+          ? 'Cambiando...'
+          : 'Cambiar Estado'}
+      </Button>
+    </>
+  );
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-          <div className="overflow-y-auto px-6 py-4 flex-1 space-y-4">
-            {/* Select Nuevo Estado */}
-            <div>
-              <Label htmlFor="nuevoEstado">
-                Nuevo Estado <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                id="nuevoEstado"
-                {...register('nuevoEstado', { required: 'Debe seleccionar un estado' })}
-                className={errors.nuevoEstado ? 'border-red-500' : ''}
-              >
-                <option value="">Seleccione un estado</option>
-                {Object.entries(ESTADO_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              {errors.nuevoEstado && (
-                <p className="text-sm text-red-500 mt-1">{errors.nuevoEstado.message}</p>
-              )}
-            </div>
-
-            {/* Select Motivo de Baja */}
-            {cambiaABaja && (
-              <div>
-                <Label htmlFor="motivoBaja">
-                  Motivo de Baja <span className="text-red-500">*</span>
-                </Label>
-                <Select
-                  id="motivoBaja"
-                  {...register('motivoBaja', { required: cambiaABaja })}
-                  className={errors.motivoBaja ? 'border-red-500' : ''}
-                >
-                  <option value="">Seleccione un motivo</option>
-                  {MOTIVOS_BAJA.map((motivo) => (
-                    <option key={motivo} value={motivo}>
-                      {motivo}
-                    </option>
-                  ))}
-                </Select>
-                {errors.motivoBaja && (
-                  <p className="text-sm text-red-500 mt-1">Debe seleccionar un motivo</p>
-                )}
-              </div>
-            )}
-
-            {/* Textarea Especificar Motivo */}
-            {cambiaABaja && esOtroMotivo && (
-              <div>
-                <Label htmlFor="especificarMotivo">
-                  Especificar Motivo <span className="text-red-500">*</span>
-                </Label>
-                <Textarea
-                  id="especificarMotivo"
-                  placeholder="Describa el motivo de la baja..."
-                  rows={3}
-                  {...register('especificarMotivo')}
-                  className={errors.especificarMotivo ? 'border-red-500' : ''}
-                />
-                <p className="text-xs text-gray-500 mt-1">Mínimo 10 caracteres</p>
-              </div>
-            )}
-
-            {/* Alert: Cambio a BAJA */}
-            {cambiaABaja && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  ⚠️ Al dar de baja el equipo, se registrará permanentemente en el historial.
-                  Esta acción es reversible.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Alert: Cambio desde BAJA */}
-            {cambiaDesdeBAJA && (
-              <Alert variant="warning">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  ⚠️ Este equipo está dado de baja. ¿Confirmas que volverá a estar operativo?
-                  Se registrará la restauración en el historial.
-                </AlertDescription>
-              </Alert>
+  return (
+    <BaseModal
+      open={open}
+      onOpenChange={handleClose}
+      title="Cambiar Estado del Equipo"
+      description={`${equipo.nombre} • Estado actual: ${
+        estadoActual ? ESTADO_LABELS[estadoActual] : 'Sin estado'
+      }`}
+      size="md"
+      footerContent={footerContent}
+    >
+      <form id="cambiar-estado-equipo-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-4">
+          {/* Select Nuevo Estado */}
+          <div>
+            <Label htmlFor="nuevoEstado">
+              Nuevo Estado <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              id="nuevoEstado"
+              {...register('nuevoEstado', { required: 'Debe seleccionar un estado' })}
+              className={errors.nuevoEstado ? 'border-red-500' : ''}
+            >
+              <option value="">Seleccione un estado</option>
+              {Object.entries(ESTADO_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </Select>
+            {errors.nuevoEstado && (
+              <p className="text-sm text-red-500 mt-1">{errors.nuevoEstado.message}</p>
             )}
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t">
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={!nuevoEstado || updateEstadoMutation.isPending || darDeBajaMutation.isPending}
-            >
-              {updateEstadoMutation.isPending || darDeBajaMutation.isPending
-                ? 'Cambiando...'
-                : 'Cambiar Estado'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          {/* Select Motivo de Baja */}
+          {cambiaABaja && (
+            <div>
+              <Label htmlFor="motivoBaja">
+                Motivo de Baja <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                id="motivoBaja"
+                {...register('motivoBaja', { required: cambiaABaja })}
+                className={errors.motivoBaja ? 'border-red-500' : ''}
+              >
+                <option value="">Seleccione un motivo</option>
+                {MOTIVOS_BAJA.map((motivo) => (
+                  <option key={motivo} value={motivo}>
+                    {motivo}
+                  </option>
+                ))}
+              </Select>
+              {errors.motivoBaja && (
+                <p className="text-sm text-red-500 mt-1">Debe seleccionar un motivo</p>
+              )}
+            </div>
+          )}
+
+          {/* Textarea Especificar Motivo */}
+          {cambiaABaja && esOtroMotivo && (
+            <div>
+              <Label htmlFor="especificarMotivo">
+                Especificar Motivo <span className="text-red-500">*</span>
+              </Label>
+              <Textarea
+                id="especificarMotivo"
+                placeholder="Describa el motivo de la baja..."
+                rows={3}
+                {...register('especificarMotivo')}
+                className={errors.especificarMotivo ? 'border-red-500' : ''}
+              />
+              <p className="text-xs text-gray-500 mt-1">Mínimo 10 caracteres</p>
+            </div>
+          )}
+
+          {/* Alert: Cambio a BAJA */}
+          {cambiaABaja && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                ⚠️ Al dar de baja el equipo, se registrará permanentemente en el historial.
+                Esta acción es reversible.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Alert: Cambio desde BAJA */}
+          {cambiaDesdeBAJA && (
+            <Alert variant="warning">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                ⚠️ Este equipo está dado de baja. ¿Confirmas que volverá a estar operativo?
+                Se registrará la restauración en el historial.
+              </AlertDescription>
+            </Alert>
+          )}
+        </div>
+      </form>
+    </BaseModal>
   );
 };

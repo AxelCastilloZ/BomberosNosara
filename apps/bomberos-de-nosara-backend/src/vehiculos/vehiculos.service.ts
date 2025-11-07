@@ -156,6 +156,19 @@ export class VehiculosService {
     return v;
   }
 
+
+   async findOneIncludingDeleted(id: string): Promise<Vehiculo | null> {
+  const v = await this.vehiculoRepo.findOne({ 
+    where: { id },
+    withDeleted: true  // 👈 Esta es la clave
+  });
+  
+  // No lanzamos NotFoundException, retornamos null si no existe
+  // Porque el vehículo podría estar eliminado permanentemente
+  return v;
+}
+
+
   async findAllWithDeleted(): Promise<Vehiculo[]> {
     return this.vehiculoRepo.find({ withDeleted: true });
   }

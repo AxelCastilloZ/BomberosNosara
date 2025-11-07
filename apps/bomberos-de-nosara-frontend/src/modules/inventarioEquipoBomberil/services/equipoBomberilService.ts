@@ -95,6 +95,20 @@ export const equipoBomberilService = {
     }
   },
 
+
+
+   getOneComplete: async (id: string): Promise<EquipoBomberil | null> => {
+  try {
+    const res = await api.get(`/equipos/${id}/complete`);
+    return res.data;
+  } catch (err) {
+    normalizeApiError(err);
+  }
+},
+
+
+
+
   create: async (equipo: CreateEquipoDto): Promise<EquipoBomberil> => {
     try {
       const res = await api.post('/equipos', equipo);

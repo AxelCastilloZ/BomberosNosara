@@ -119,6 +119,19 @@ export class EquipoBomberilController {
     return this.service.findOne(id);
   }
 
+
+
+
+
+@Get(':id/complete')
+async findOneComplete(@Param('id') id: string) {
+  return this.service.findOneIncludingDeleted(id);
+}
+
+
+
+
+
   @Patch(':id')
   edit(
     @Param('id') id: string,

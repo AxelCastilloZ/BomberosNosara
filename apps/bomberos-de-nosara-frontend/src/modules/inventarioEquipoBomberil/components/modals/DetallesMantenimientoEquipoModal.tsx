@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import {
   Dialog,
@@ -11,7 +9,7 @@ import {
 } from '../../../../components/ui/dialog';
 import { Button } from '../../../../components/ui/button';
 import { Calendar, Wrench, User, DollarSign, FileText } from 'lucide-react';
-import { useEquipo } from '../../hooks/useEquipos';
+import { useEquipoComplete } from '../../hooks/useEquipos';
 import { getTipoEquipoLabel, getEstadoEquipoLabel, formatCostoDolares } from '../../utils/equipoBomberilHelpers';
 import type { DetallesMantenimientoModalProps } from '../../types';
 
@@ -51,8 +49,8 @@ export const DetallesMantenimientoEquipoModal: React.FC<DetallesMantenimientoMod
   open,
   onOpenChange,
 }) => {
-  // Query para obtener info del equipo
-  const { data: equipo, isLoading: isLoadingEquipo } = useEquipo(mantenimiento?.equipoId);
+  // Query para obtener info del equipo (incluyendo eliminados)
+  const { data: equipo, isLoading: isLoadingEquipo } = useEquipoComplete(mantenimiento?.equipoId);
 
   if (!mantenimiento) {
     return null;
