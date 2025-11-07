@@ -22,7 +22,7 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
   onSuccess,
 }) => {
   const { success, error: showError } = useNotifications();
-  const { update, validateUnique } = useUsuarios();
+  const { update } = useUsuarios();
 
   const {
     register,
@@ -30,7 +30,6 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
     watch,
     reset,
     setError,
-    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<UpdateUsuarioFormData>({
     resolver: zodResolver(updateUsuarioSchema),
@@ -86,48 +85,47 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
       console.error('Error al actualizar usuario:', err);
 
       if (err?.code === 'DUPLICATE_KEY') {
-        const field = err.field as 'email' | 'username';
-        setError(field, {
+        const message = err.message || 'Ya existe un registro con ese valor';
+        
+        // Extraer el valor que está causando el conflicto del mensaje
+        // Buscar el valor entre comillas simples: 'VALOR'
+        const match = message.match(/'([^']+)'/);
+        const conflictValue = match ? match[1] : '';
+        
+        console.log('🔍 Valor en conflicto:', conflictValue);
+        console.log('🔍 Username actual:', data.username);
+        console.log('🔍 Email actual:', data.email);
+        
+        // Comparar el valor en conflicto con los campos del formulario
+        let correctField: 'email' | 'username' = 'username';
+        
+        if (conflictValue) {
+          // Si el valor coincide con el username
+          if (conflictValue.toLowerCase() === data.username.toLowerCase()) {
+            correctField = 'username';
+          }
+          // Si el valor coincide con el email
+          else if (conflictValue.toLowerCase() === data.email.toLowerCase()) {
+            correctField = 'email';
+          }
+          // Si no coincide con ninguno, usar el campo que viene del backend
+          else {
+            correctField = err.field as 'email' | 'username';
+          }
+        }
+        
+        // Mensaje personalizado según el campo
+        const customMessage = correctField === 'username'
+          ? `El nombre de usuario '${conflictValue}' ya está en uso`
+          : `El correo '${conflictValue}' ya está en uso`;
+        
+        setError(correctField, {
           type: 'server',
-          message: err.message || 'Ya existe un registro con ese valor',
+          message: customMessage,
         });
       } else {
         showError(err?.message || 'Error al actualizar el usuario');
       }
-    }
-  };
-
-  const handleUsernameBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const value = e.target.value.trim();
-    if (!value || errors.username || value === usuario?.username) return;
-    
-    const res = await validateUnique('username', value, {
-      currentValue: usuario?.username,
-    });
-    if (res === false) {
-      setError('username', {
-        type: 'server',
-        message: 'Este nombre de usuario ya está en uso',
-      });
-    } else if (res === true) {
-      clearErrors('username');
-    }
-  };
-
-  const handleEmailBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
-    const value = e.target.value.trim();
-    if (!value || errors.email || value === usuario?.email) return;
-    
-    const res = await validateUnique('email', value, {
-      currentValue: usuario?.email,
-    });
-    if (res === false) {
-      setError('email', {
-        type: 'server',
-        message: 'Este correo electrónico ya está en uso',
-      });
-    } else if (res === true) {
-      clearErrors('email');
     }
   };
 
@@ -178,7 +176,6 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
                   }`}
                   disabled={isSubmitting || update.isPending}
                   {...register('username')}
-                  onBlur={handleUsernameBlur}
                 />
                 {errors.username && (
                   <p className="text-sm text-red-500 mt-1">{errors.username.message}</p>
@@ -205,7 +202,6 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
                   }`}
                   disabled={isSubmitting || update.isPending}
                   {...register('email')}
-                  onBlur={handleEmailBlur}
                 />
                 {errors.email && (
                   <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>

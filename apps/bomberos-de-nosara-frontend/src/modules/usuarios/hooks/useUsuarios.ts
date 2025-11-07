@@ -1,5 +1,3 @@
-
-
 import { useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -8,6 +6,7 @@ import {
   createUsuario,
   updateUsuario,
   deleteUsuario,
+  restoreUsuario, // 🔥 NUEVO
   checkUnique,
 } from '../services/usuariosService';
 import type { User } from '../../../types/user.types';
@@ -63,9 +62,17 @@ export function useUsuarios() {
     },
   });
 
-  // Mutation: Eliminar usuario
+  // Mutation: Eliminar usuario (Soft Delete)
   const deleteMutation = useMutation<void, ApiFieldError, number>({
     mutationFn: deleteUsuario,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: USUARIOS_KEY });
+    },
+  });
+
+  // 🔥 NUEVO: Mutation: Restaurar usuario
+  const restoreMutation = useMutation<User, ApiFieldError, number>({
+    mutationFn: restoreUsuario,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: USUARIOS_KEY });
     },
@@ -84,17 +91,24 @@ export function useUsuarios() {
       if (!v) return 'skip';
       
       // No validar si es el mismo valor actual (en edición)
-      if (opts?.currentValue && opts.currentValue.trim() === v) return 'skip';
+      if (opts?.currentValue && opts.currentValue.trim().toLowerCase() === v.toLowerCase()) {
+        return 'skip';
+      }
       
       // Validaciones de formato antes de consultar al servidor
       if (field === 'username' && v.length < 3) return 'skip';
       if (field === 'email' && !isValidEmail(v)) return 'skip';
       
       try {
-        const unique = await checkUnique(field, v);
-        return unique ? true : false;
-      } catch {
-        return 'skip';
+        const isUnique = await checkUnique(field, v);
+        
+        // Si es único (true), retornar true
+        // Si NO es único (false), retornar false
+        return isUnique;
+      } catch (error) {
+        console.warn('Error en validateUnique, asumiendo único:', error);
+        // En caso de error, asumir que es único para no bloquear el formulario
+        return true;
       }
     },
     []
@@ -111,6 +125,7 @@ export function useUsuarios() {
     create: createMutation,
     update: updateMutation,
     delete: deleteMutation,
+    restore: restoreMutation, // 🔥 NUEVO
     validateUnique,
   };
 }

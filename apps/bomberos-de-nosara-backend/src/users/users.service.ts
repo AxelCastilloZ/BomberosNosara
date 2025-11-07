@@ -160,17 +160,59 @@ export class UsersService {
     await this.userRepo.update({ id: userId }, { password: hash });
   }
 
-  async remove(id: number): Promise<void> {
-    const user = await this.userRepo.findOne({ where: { id }, relations: ['roles'] });
-    if (!user) throw new NotFoundException('Usuario no encontrado');
+ /**
+ * Soft delete - Desactivar usuario
+ */
+async remove(id: number): Promise<void> {
+  const user = await this.userRepo.findOne({ 
+    where: { id }, 
+    relations: ['roles'],
+  });
+  
+  if (!user) throw new NotFoundException('Usuario no encontrado');
 
-    if (this.hasSuperRole(user.roles)) {
-      const others = await this.countSuperusers(user.id);
-      if (others === 0) {
-        throw new BadRequestException('No se puede eliminar al último SUPERUSER');
-      }
+  if (this.hasSuperRole(user.roles)) {
+    const others = await this.countSuperusers(user.id);
+    if (others === 0) {
+      throw new BadRequestException('No se puede eliminar al último SUPERUSER');
     }
-
-    await this.userRepo.delete(id);
   }
+
+  // Soft delete en lugar de delete permanente
+  await this.userRepo.softDelete(id);
+}
+
+/**
+ * Restaurar usuario desactivado
+ */
+async restore(id: number): Promise<User> {
+  const user = await this.userRepo.findOne({ 
+    where: { id }, 
+    relations: ['roles'],
+    withDeleted: true,
+  });
+  
+  if (!user) {
+    throw new NotFoundException('Usuario no encontrado');
+  }
+
+  if (!user.deletedAt) {
+    throw new BadRequestException('El usuario no está desactivado');
+  }
+
+  // Restaurar
+  await this.userRepo.restore(id);
+  
+  // Retornar el usuario restaurado
+  const restoredUser = await this.userRepo.findOne({ 
+    where: { id }, 
+    relations: ['roles'] 
+  });
+
+  if (!restoredUser) {
+    throw new NotFoundException('Error al restaurar usuario');
+  }
+
+  return restoredUser;
+}
 }
