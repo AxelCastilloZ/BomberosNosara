@@ -1,5 +1,5 @@
 import React from "react";
-import welcomeImage from "../../../images/welcome.png";
+import Welcome from "../../../images/Welcome.png";
 
 export default function WelcomeSection() {
   const scrollTo = (id: string) => {
@@ -12,7 +12,7 @@ export default function WelcomeSection() {
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: `url(${welcomeImage})`,
+          backgroundImage: `url(${Welcome})`,
         }}
       >
         <div className="absolute inset-0 bg-black/40" />
