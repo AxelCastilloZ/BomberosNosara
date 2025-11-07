@@ -1,5 +1,5 @@
 import React from "react";
-import welcomeImage from "../../../images/welcome.png";
+import welcomeImage from "../../../images/Welcome.png";
 
 export default function WelcomeSection() {
   const scrollTo = (id: string) => {
