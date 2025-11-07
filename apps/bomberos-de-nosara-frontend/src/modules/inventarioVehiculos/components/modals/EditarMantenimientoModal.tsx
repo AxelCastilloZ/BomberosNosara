@@ -1,22 +1,8 @@
-
-
-
-
-
-
-
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../../../../components/ui/dialog';
+import { BaseModal } from '../../../../components/ui/base-modal';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -137,144 +123,137 @@ export const EditarMantenimientoModal: React.FC<EditarMantenimientoModalProps> =
 
   const esCompletado = mantenimiento.estado === 'completado';
 
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent
-        className="w-[95vw] max-w-2xl"
-        style={{
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 0,
-        }}
+  // Footer content con botones
+  const footerContent = (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+        disabled={editMantenimientoMutation.isPending}
       >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Editar Mantenimiento</DialogTitle>
-          <DialogDescription>
-            {mantenimiento.vehiculo?.placa || 'Vehículo'} • 
-          </DialogDescription>
-        </DialogHeader>
+        Cancelar
+      </Button>
+      <Button
+        type="submit"
+        form="editar-mantenimiento-vehiculo-form"
+        disabled={editMantenimientoMutation.isPending}
+      >
+        {editMantenimientoMutation.isPending ? 'Guardando...' : 'Guardar cambios'}
+      </Button>
+    </>
+  );
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-          <div className="overflow-y-auto px-6 py-4 flex-1 space-y-4">
-            {/* Descripción */}
-            <div className="space-y-2">
-              <Label htmlFor="descripcion">
-                Descripción <span className="text-red-500">*</span>
-              </Label>
-              <Textarea
-                id="descripcion"
-                {...register('descripcion')}
-                placeholder="Ej: Cambio de aceite y filtros"
-                maxLength={500}
-                rows={3}
-                className={errors.descripcion ? 'border-red-500' : ''}
-                disabled={editMantenimientoMutation.isPending}
-              />
-              {errors.descripcion && (
-                <p className="text-sm text-red-500">{errors.descripcion.message}</p>
-              )}
-              <p className="text-sm text-gray-500">
-                {(descripcionValue?.length || 0)}/500 caracteres
-              </p>
-            </div>
-
-            {/* Fecha */}
-            <div className="space-y-2">
-              <Label htmlFor="fecha">
-                Fecha <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="fecha"
-                type="date"
-                max={getMaxDate()}
-                {...register('fecha')}
-                className={errors.fecha ? 'border-red-500' : ''}
-                disabled={editMantenimientoMutation.isPending}
-              />
-              {errors.fecha && (
-                <p className="text-sm text-red-500">{errors.fecha.message}</p>
-              )}
-            </div>
-
-            {/* Observaciones */}
-            <div className="space-y-2">
-              <Label htmlFor="observaciones">Observaciones</Label>
-              <Textarea
-                id="observaciones"
-                {...register('observaciones')}
-                placeholder="Observaciones adicionales..."
-                maxLength={1000}
-                rows={3}
-                className={errors.observaciones ? 'border-red-500' : ''}
-                disabled={editMantenimientoMutation.isPending}
-              />
-              {errors.observaciones && (
-                <p className="text-sm text-red-500">{errors.observaciones.message}</p>
-              )}
-              <p className="text-sm text-gray-500">
-                {(observacionesValue?.length || 0)}/1000 caracteres
-              </p>
-            </div>
-
-            {/* Técnico - Solo si está completado */}
-            {esCompletado && (
-              <div className="space-y-2">
-                <Label htmlFor="tecnico">Técnico</Label>
-                <Input
-                  id="tecnico"
-                  {...register('tecnico')}
-                  placeholder="Nombre del técnico"
-                  maxLength={200}
-                  className={errors.tecnico ? 'border-red-500' : ''}
-                  disabled={editMantenimientoMutation.isPending}
-                />
-                {errors.tecnico && (
-                  <p className="text-sm text-red-500">{errors.tecnico.message}</p>
-                )}
-              </div>
+  return (
+    <BaseModal
+      open={open}
+      onOpenChange={handleClose}
+      title="Editar Mantenimiento"
+      description={mantenimiento.vehiculo?.placa || 'Vehículo'}
+      size="md"
+      footerContent={footerContent}
+    >
+      <form id="editar-mantenimiento-vehiculo-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-4">
+          {/* Descripción */}
+          <div className="space-y-2">
+            <Label htmlFor="descripcion">
+              Descripción <span className="text-red-500">*</span>
+            </Label>
+            <Textarea
+              id="descripcion"
+              {...register('descripcion')}
+              placeholder="Ej: Cambio de aceite y filtros"
+              maxLength={500}
+              rows={3}
+              className={errors.descripcion ? 'border-red-500' : ''}
+              disabled={editMantenimientoMutation.isPending}
+            />
+            {errors.descripcion && (
+              <p className="text-sm text-red-500">{errors.descripcion.message}</p>
             )}
+            <p className="text-sm text-gray-500">
+              {(descripcionValue?.length || 0)}/500 caracteres
+            </p>
+          </div>
 
-            {/* Costo - Solo si está completado */}
-            {esCompletado && (
-              <div className="space-y-2">
-                <Label htmlFor="costo">Costo (₡)</Label>
-                <Input
-                  id="costo"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('costo', { valueAsNumber: true })}
-                  placeholder="0.00"
-                  className={errors.costo ? 'border-red-500' : ''}
-                  disabled={editMantenimientoMutation.isPending}
-                />
-                {errors.costo && (
-                  <p className="text-sm text-red-500">{errors.costo.message}</p>
-                )}
-              </div>
+          {/* Fecha */}
+          <div className="space-y-2">
+            <Label htmlFor="fecha">
+              Fecha <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="fecha"
+              type="date"
+              max={getMaxDate()}
+              {...register('fecha')}
+              className={errors.fecha ? 'border-red-500' : ''}
+              disabled={editMantenimientoMutation.isPending}
+            />
+            {errors.fecha && (
+              <p className="text-sm text-red-500">{errors.fecha.message}</p>
             )}
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
+          {/* Observaciones */}
+          <div className="space-y-2">
+            <Label htmlFor="observaciones">Observaciones</Label>
+            <Textarea
+              id="observaciones"
+              {...register('observaciones')}
+              placeholder="Observaciones adicionales..."
+              maxLength={1000}
+              rows={3}
+              className={errors.observaciones ? 'border-red-500' : ''}
               disabled={editMantenimientoMutation.isPending}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={editMantenimientoMutation.isPending}
-            >
-              {editMantenimientoMutation.isPending ? 'Guardando...' : 'Guardar cambios'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            />
+            {errors.observaciones && (
+              <p className="text-sm text-red-500">{errors.observaciones.message}</p>
+            )}
+            <p className="text-sm text-gray-500">
+              {(observacionesValue?.length || 0)}/1000 caracteres
+            </p>
+          </div>
+
+          {/* Técnico - Solo si está completado */}
+          {esCompletado && (
+            <div className="space-y-2">
+              <Label htmlFor="tecnico">Técnico</Label>
+              <Input
+                id="tecnico"
+                {...register('tecnico')}
+                placeholder="Nombre del técnico"
+                maxLength={200}
+                className={errors.tecnico ? 'border-red-500' : ''}
+                disabled={editMantenimientoMutation.isPending}
+              />
+              {errors.tecnico && (
+                <p className="text-sm text-red-500">{errors.tecnico.message}</p>
+              )}
+            </div>
+          )}
+
+          {/* Costo - Solo si está completado */}
+          {esCompletado && (
+            <div className="space-y-2">
+              <Label htmlFor="costo">Costo (₡)</Label>
+              <Input
+                id="costo"
+                type="number"
+                step="0.01"
+                min="0"
+                {...register('costo', { valueAsNumber: true })}
+                placeholder="0.00"
+                className={errors.costo ? 'border-red-500' : ''}
+                disabled={editMantenimientoMutation.isPending}
+              />
+              {errors.costo && (
+                <p className="text-sm text-red-500">{errors.costo.message}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </form>
+    </BaseModal>
   );
 };

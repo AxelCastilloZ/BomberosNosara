@@ -3,7 +3,11 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { X } from 'lucide-react';
+import { BaseModal } from '../../../../components/ui/base-modal';
+import { Button } from '../../../../components/ui/button';
+import { Input } from '../../../../components/ui/input';
+import { Label } from '../../../../components/ui/label';
+import { Select } from '../../../../components/ui/select';
 import { useNotifications } from '../../../../components/common/notifications/NotificationProvider';
 import { useUsuarios } from '../../hooks/useUsuarios';
 import { ROLES, ROLE_LABELS } from '../../../../constants/roles';
@@ -88,7 +92,6 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
         const message = err.message || 'Ya existe un registro con ese valor';
         
         // Extraer el valor que está causando el conflicto del mensaje
-        // Buscar el valor entre comillas simples: 'VALOR'
         const match = message.match(/'([^']+)'/);
         const conflictValue = match ? match[1] : '';
         
@@ -100,16 +103,11 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
         let correctField: 'email' | 'username' = 'username';
         
         if (conflictValue) {
-          // Si el valor coincide con el username
           if (conflictValue.toLowerCase() === data.username.toLowerCase()) {
             correctField = 'username';
-          }
-          // Si el valor coincide con el email
-          else if (conflictValue.toLowerCase() === data.email.toLowerCase()) {
+          } else if (conflictValue.toLowerCase() === data.email.toLowerCase()) {
             correctField = 'email';
-          }
-          // Si no coincide con ninguno, usar el campo que viene del backend
-          else {
+          } else {
             correctField = err.field as 'email' | 'username';
           }
         }
@@ -129,30 +127,46 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
     }
   };
 
-  if (!open || !usuario) return null;
+  const handleClose = () => {
+    if (!isSubmitting && !update.isPending) {
+      onOpenChange(false);
+    }
+  };
+
+  if (!usuario) return null;
+
+  // Footer content con botones
+  const footerContent = (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+        disabled={isSubmitting || update.isPending}
+      >
+        Cancelar
+      </Button>
+      <Button
+        type="submit"
+        form="editar-usuario-form"
+        disabled={isSubmitting || update.isPending}
+      >
+        {isSubmitting || update.isPending ? 'Guardando...' : 'Guardar Cambios'}
+      </Button>
+    </>
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Editar Usuario</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Actualiza la información de <span className="font-semibold">{usuario.username}</span>
-            </p>
-          </div>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={isSubmitting || update.isPending}
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
+    <BaseModal
+      open={open}
+      onOpenChange={handleClose}
+      title="Editar Usuario"
+      description={`Actualiza la información de ${usuario.username}`}
+      size="md"
+      footerContent={footerContent}
+    >
+      <form id="editar-usuario-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-6">
           {/* Información de Cuenta */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-3">
@@ -161,19 +175,15 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Username */}
               <div className="space-y-2">
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                <Label htmlFor="username">
                   Nombre de Usuario <span className="text-red-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   id="username"
                   type="text"
                   placeholder="Ej: jperez"
                   maxLength={USUARIO_FIELD_LIMITS.username}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                    errors.username
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:ring-red-500'
-                  }`}
+                  className={errors.username ? 'border-red-500' : ''}
                   disabled={isSubmitting || update.isPending}
                   {...register('username')}
                 />
@@ -187,19 +197,15 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
 
               {/* Email */}
               <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <Label htmlFor="email">
                   Correo Electrónico <span className="text-red-500">*</span>
-                </label>
-                <input
+                </Label>
+                <Input
                   id="email"
                   type="email"
                   placeholder="usuario@ejemplo.com"
                   maxLength={USUARIO_FIELD_LIMITS.email}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                    errors.email
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:ring-red-500'
-                  }`}
+                  className={errors.email ? 'border-red-500' : ''}
                   disabled={isSubmitting || update.isPending}
                   {...register('email')}
                 />
@@ -213,19 +219,15 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
 
               {/* Password */}
               <div className="space-y-2 md:col-span-2">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                <Label htmlFor="password">
                   Nueva Contraseña (Opcional)
-                </label>
-                <input
+                </Label>
+                <Input
                   id="password"
                   type="password"
                   placeholder="Dejar vacío para no cambiar"
                   maxLength={USUARIO_FIELD_LIMITS.password}
-                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                    errors.password
-                      ? 'border-red-500 focus:ring-red-500'
-                      : 'border-gray-300 focus:ring-red-500'
-                  }`}
+                  className={errors.password ? 'border-red-500' : ''}
                   disabled={isSubmitting || update.isPending}
                   {...register('password')}
                 />
@@ -240,20 +242,16 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
           </div>
 
           {/* Rol */}
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="space-y-2">
+            <Label htmlFor="role">
               Rol <span className="text-red-500">*</span>
-            </label>
-            <p className="text-xs text-gray-500 mb-3">
+            </Label>
+            <p className="text-xs text-gray-500 mb-2">
               Selecciona el rol que tendrá el usuario en el sistema
             </p>
-            <select
+            <Select
               id="role"
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 ${
-                errors.role
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-red-500'
-              }`}
+              className={errors.role ? 'border-red-500' : ''}
               disabled={isSubmitting || update.isPending}
               {...register('role')}
             >
@@ -263,32 +261,13 @@ export const EditarUsuarioModal: React.FC<EditarUsuarioModalProps> = ({
                   {ROLE_LABELS[role as RoleName]}
                 </option>
               ))}
-            </select>
+            </Select>
             {errors.role && (
-              <p className="text-sm text-red-500 mt-2">{errors.role.message}</p>
+              <p className="text-sm text-red-500 mt-1">{errors.role.message}</p>
             )}
           </div>
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting || update.isPending}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting || update.isPending}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {isSubmitting || update.isPending ? 'Guardando...' : 'Guardar Cambios'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        </div>
+      </form>
+    </BaseModal>
   );
 };
