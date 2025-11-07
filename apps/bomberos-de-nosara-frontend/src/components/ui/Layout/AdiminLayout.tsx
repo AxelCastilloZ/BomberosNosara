@@ -1,6 +1,6 @@
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { ReactNode, useMemo, useRef, useState, useEffect } from "react";
+import { ReactNode, useMemo, useRef, useState, useEffect, useCallback } from "react";
 import {
   FaBars,
   FaBook,
@@ -47,6 +47,100 @@ const BRAND = {
   itemActive: "bg-gray-100 text-gray-900 border-l-4 border-red-600 pl-3 sm:pl-4 font-medium",
 };
 
+// Componentes memoizados para mejor rendimiento
+const SidebarHeader = React.memo(({ isCollapsed, setCollapsed, setOpen }: {
+  isCollapsed: boolean;
+  setCollapsed: (value: boolean) => void;
+  setOpen: (value: boolean) => void;
+}) => (
+  <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 shrink-0">
+    <div className="flex items-center gap-3">
+      <img
+        src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRS3AApsPrmFD1mfS8zMR7ck1OhZrq5bA7yHQ&s"
+        alt="Bomberos Nosara"
+        className="w-8 h-8 rounded-lg"
+      />
+      {!isCollapsed && (
+        <span className="text-lg font-semibold text-gray-900 truncate">
+          Bomberos Nosara
+        </span>
+      )}
+    </div>
+
+    {/* Botón colapsar (desktop) */}
+    <button
+      onClick={() => setCollapsed(!isCollapsed)}
+      className="hidden lg:flex p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+      aria-label={isCollapsed ? "Expandir menú" : "Contraer menú"}
+    >
+      <FaChevronRight
+        className={`w-4 h-4 transition-transform ${
+          isCollapsed ? "" : "rotate-180"
+        }`}
+      />
+    </button>
+
+    {/* Botón cerrar (solo móvil) */}
+    <button
+      onClick={() => setOpen(false)}
+      className="lg:hidden p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+      aria-label="Cerrar menú"
+    >
+      <FaTimes className="w-4 h-4" />
+    </button>
+  </div>
+));
+
+const SidebarFooter = React.memo(({ isCollapsed, userRoles, handleLogout }: {
+  isCollapsed: boolean;
+  userRoles: RoleEnum[];
+  handleLogout: () => void;
+}) => {
+  if (isCollapsed) {
+    return (
+      <div className="border-t border-gray-200 py-3 flex flex-col items-center gap-2 shrink-0">
+        <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-semibold">
+          {userRoles[0]?.charAt(0) || "U"}
+        </div>
+        <button
+          onClick={handleLogout}
+          className="p-2 rounded-md text-red-600 hover:bg-red-50"
+          title="Cerrar sesión"
+        >
+          <FaSignOutAlt className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 border-t border-gray-200 shrink-0">
+      <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
+        <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-sm font-medium">
+          {userRoles[0]?.charAt(0) || "U"}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">
+            {userRoles[0] || "Usuario"}
+          </p>
+          <p className="text-xs text-gray-500 truncate">
+            {userRoles.includes(RoleEnum.SUPERUSER) || userRoles.includes(RoleEnum.ADMIN)
+              ? "Administrador"
+              : "Usuario"}
+          </p>
+        </div>
+        <button
+          onClick={handleLogout}
+          className="shrink-0 p-2 rounded-md text-red-600 hover:bg-red-50"
+          title="Cerrar sesión"
+        >
+          <FaSignOutAlt className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+});
+
 export default function AdminLayout() {
   const userRoles = useMemo(() => {
     try {
@@ -76,14 +170,14 @@ export default function AdminLayout() {
   const [isCollapsed, setCollapsedState] = useState(false);
   const [open, setOpenState] = useState(window.innerWidth >= 1024);
 
-  const setCollapsed = (value: boolean) => {
+  const setCollapsed = useCallback((value: boolean) => {
     if (window.innerWidth >= 1024) setCollapsedState(value);
-  };
+  }, []);
 
-  const setOpen = (value: boolean) => {
+  const setOpen = useCallback((value: boolean) => {
     if (window.innerWidth < 1024) setOpenState(value);
     else setOpenState(true);
-  };
+  }, []);
 
   // ✅ Ajusta automáticamente el sidebar al redimensionar
   useEffect(() => {
@@ -96,8 +190,18 @@ export default function AdminLayout() {
       }
     };
     handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+
+    let timeoutId: NodeJS.Timeout;
+    const debouncedResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleResize, 150);
+    };
+
+    window.addEventListener("resize", debouncedResize);
+    return () => {
+      window.removeEventListener("resize", debouncedResize);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -105,16 +209,16 @@ export default function AdminLayout() {
   const showSidebar = !isDashboard;
   const needsFullHeight = location.pathname.startsWith("/admin/chat");
 
-  const isActive = (href: string) => {
+  const isActive = useCallback((href: string) => {
     if (href === "/admin") return location.pathname === "/admin";
     return location.pathname === href || location.pathname.startsWith(href + "/");
-  };
+  }, [location.pathname]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     localStorage.clear();
     sessionStorage.clear();
     navigate({ to: "/login" });
-  };
+  }, [navigate]);
 
   // ✅ Cierra el sidebar al hacer clic fuera (en móvil)
   useEffect(() => {
@@ -156,54 +260,15 @@ export default function AdminLayout() {
               ${isCollapsed ? "w-16" : "w-64"}
               ${open ? "translate-x-0" : "-translate-x-full"}
               fixed lg:sticky top-0 left-0 z-40
-              transition-transform duration-300
               h-screen
             `}
-            initial={{ x: "-100%" }}
             animate={{
               x: open ? 0 : "-100%",
               width: isCollapsed ? "4rem" : "16rem",
             }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            transition={{ type: "tween", duration: 0.25, ease: "easeOut" }}
           >
-
-            {/* 🔹 Header del sidebar */}
-            <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200 shrink-0">
-              <div className="flex items-center gap-3">
-                <img
-                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRS3AApsPrmFD1mfS8zMR7ck1OhZrq5bA7yHQ&s"
-                  alt="Bomberos Nosara"
-                  className="w-8 h-8 rounded-lg"
-                />
-                {!isCollapsed && (
-                  <span className="text-lg font-semibold text-gray-900 truncate">
-                    Bomberos Nosara
-                  </span>
-                )}
-              </div>
-
-              {/* Botón colapsar (desktop) */}
-              <button
-                onClick={() => setCollapsed(!isCollapsed)}
-                className="hidden lg:flex p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                aria-label={isCollapsed ? "Expandir menú" : "Contraer menú"}
-              >
-                <FaChevronRight
-                  className={`w-4 h-4 transition-transform ${
-                    isCollapsed ? "" : "rotate-180"
-                  }`}
-                />
-              </button>
-
-              {/* Botón cerrar (solo móvil) */}
-              <button
-                onClick={() => setOpen(false)}
-                className="lg:hidden p-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                aria-label="Cerrar menú"
-              >
-                <FaTimes className="w-4 h-4" />
-              </button>
-            </div>
+            <SidebarHeader isCollapsed={isCollapsed} setCollapsed={setCollapsed} setOpen={setOpen} />
 
             {/* 🔹 Menú principal */}
             <div className="flex-1 overflow-y-auto p-2 sm:p-3 space-y-0.5">
@@ -213,12 +278,9 @@ export default function AdminLayout() {
                 </div>
               )}
               {items.map(({ icon, label, href }) => (
-                <motion.li
+                <li
                   key={href || label}
                   className={`relative ${isCollapsed ? "flex justify-center" : ""}`}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.2 }}
                 >
                   <Link
                     to={href}
@@ -231,50 +293,11 @@ export default function AdminLayout() {
                     <span className="text-lg">{icon}</span>
                     {!isCollapsed && <span className="font-medium text-sm">{label}</span>}
                   </Link>
-                </motion.li>
+                </li>
               ))}
             </div>
 
-            {/* 🔹 Perfil inferior */}
-            {isCollapsed ? (
-              <div className="border-t border-gray-200 py-3 flex flex-col items-center gap-2 shrink-0">
-                <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-semibold">
-                  {userRoles[0]?.charAt(0) || "U"}
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="p-2 rounded-md text-red-600 hover:bg-red-50"
-                  title="Cerrar sesión"
-                >
-                  <FaSignOutAlt className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="p-4 border-t border-gray-200 shrink-0">
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
-                  <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-sm font-medium">
-                    {userRoles[0]?.charAt(0) || "U"}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {userRoles[0] || "Usuario"}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {userRoles.includes(RoleEnum.SUPERUSER) || userRoles.includes(RoleEnum.ADMIN)
-                        ? "Administrador"
-                        : "Usuario"}
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    className="shrink-0 p-2 rounded-md text-red-600 hover:bg-red-50"
-                    title="Cerrar sesión"
-                  >
-                    <FaSignOutAlt className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
+            <SidebarFooter isCollapsed={isCollapsed} userRoles={userRoles} handleLogout={handleLogout} />
           </motion.aside>
         )}
 
