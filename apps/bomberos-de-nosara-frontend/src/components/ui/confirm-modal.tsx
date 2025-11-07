@@ -1,125 +1,113 @@
-
+// src/components/ui/confirm-modal.tsx
 
 import React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from './dialog';
 import { Button } from './button';
 
-type ConfirmVariant = 'default' | 'destructive' | 'warning';
-
-interface ConfirmModalProps {
-  // Control
+export interface ConfirmModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  
-  // Contenido
+  onConfirm: () => void | Promise<void>;
   title: string;
   description: string;
-  
-  // Acciones
-  onConfirm: () => void;
-  onCancel?: () => void;
-  
-  // Tipo de confirmación
-  variant?: ConfirmVariant;
-  
-  // Textos de botones
   confirmText?: string;
   cancelText?: string;
-  
-  // Estados
-  isLoading?: boolean;
-  
-  // Icon opcional
+  variant?: 'default' | 'destructive';
   icon?: React.ReactNode;
+  isLoading?: boolean;
+  details?: Array<{
+    label: string;
+    value: string;
+  }>;
 }
-
-const VARIANT_DEFAULTS: Record<ConfirmVariant, { confirmText: string; buttonVariant: 'default' | 'destructive' }> = {
-  default: {
-    confirmText: 'Confirmar',
-    buttonVariant: 'default',
-  },
-  destructive: {
-    confirmText: 'Eliminar',
-    buttonVariant: 'destructive',
-  },
-  warning: {
-    confirmText: 'Continuar',
-    buttonVariant: 'default',
-  },
-};
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   open,
   onOpenChange,
+  onConfirm,
   title,
   description,
-  onConfirm,
-  onCancel,
-  variant = 'default',
-  confirmText,
+  confirmText = 'Confirmar',
   cancelText = 'Cancelar',
-  isLoading = false,
+  variant = 'default',
   icon,
+  isLoading = false,
+  details,
 }) => {
-  const variantConfig = VARIANT_DEFAULTS[variant];
-  const finalConfirmText = confirmText || variantConfig.confirmText;
-
-  const handleCancel = () => {
-    if (onCancel) {
-      onCancel();
-    } else {
-      onOpenChange(false);
-    }
-  };
-
-  const handleConfirm = () => {
-    onConfirm();
+  const handleConfirm = async () => {
+    await onConfirm();
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="w-[95vw] max-w-md"
-        style={{
-          padding: 0,
-        }}
-      >
-        {/* Header con icon opcional */}
-        <DialogHeader className="px-6 pt-6 pb-4">
-          {icon && (
-            <div className="mb-4 flex justify-center">
-              {icon}
-            </div>
-          )}
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-md">
+        <div style={{ textAlign: 'center' }}>
+          <DialogHeader>
+            {icon && (
+              <div style={{
+                margin: '0 auto 1rem',
+                display: 'flex',
+                height: '3rem',
+                width: '3rem',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '9999px',
+                backgroundColor: variant === 'destructive' ? '#fee2e2' : '#dbeafe'
+              }}>
+                <div style={{ color: variant === 'destructive' ? '#dc2626' : '#2563eb' }}>
+                  {icon}
+                </div>
+              </div>
+            )}
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>
+              {description}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        {/* Footer con botones */}
-        <DialogFooter className="px-6 py-4 border-t">
+        {/* Sección de detalles - ESTRUCTURA FIJA Y ESTANDARIZADA */}
+        {details && details.length > 0 && (
+          <div style={{
+            backgroundColor: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: '0.375rem',
+            padding: '0.75rem',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.25rem'
+          }}>
+            {details.map((detail, index) => (
+              <p key={index} style={{ fontSize: '0.875rem', color: '#4b5563', margin: 0 }}>
+                <span style={{ fontWeight: 500 }}>{detail.label}:</span> {detail.value}
+              </p>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter className="sm:justify-center gap-2">
           <Button
             type="button"
             variant="outline"
-            onClick={handleCancel}
+            onClick={() => onOpenChange(false)}
             disabled={isLoading}
-            autoFocus
           >
             {cancelText}
           </Button>
           <Button
             type="button"
-            variant={variantConfig.buttonVariant}
+            variant={variant}
             onClick={handleConfirm}
             disabled={isLoading}
           >
-            {isLoading ? 'Procesando...' : finalConfirmText}
+            {confirmText}
           </Button>
         </DialogFooter>
       </DialogContent>

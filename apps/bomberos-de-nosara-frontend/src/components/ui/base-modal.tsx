@@ -18,7 +18,7 @@ interface BaseModalProps {
   onOpenChange: (open: boolean) => void;
   
   // Header
-  title: string;
+  title?: string;
   description?: string;
   
   // Contenido principal

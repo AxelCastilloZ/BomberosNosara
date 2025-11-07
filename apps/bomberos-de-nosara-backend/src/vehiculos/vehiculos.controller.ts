@@ -167,6 +167,18 @@ export class VehiculosController {
     return this.service.darDeBaja(id, motivo, userId);
   }
 
+
+
+
+
+@Get(':id/complete')
+async findOneComplete(@Param('id') id: string) {
+  return this.service.findOneIncludingDeleted(id);
+}
+
+
+
+
   // ==================== MANTENIMIENTOS - PROGRAMAR/REGISTRAR ====================
 
   @Post(':id/mantenimientos/programar')

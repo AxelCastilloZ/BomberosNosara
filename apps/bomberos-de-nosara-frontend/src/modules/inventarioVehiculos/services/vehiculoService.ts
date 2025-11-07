@@ -93,6 +93,22 @@ export const vehiculoService = {
     }
   },
 
+
+
+
+getOneComplete: async (id: string): Promise<Vehiculo | null> => {
+  try {
+    const res = await api.get(`/vehiculos/${id}/complete`);
+    return res.data;
+  } catch (err) {
+    normalizeApiError(err);
+  }
+},
+
+
+
+
+
   create: async (vehiculo: CreateVehiculoDto): Promise<Vehiculo> => {
     try {
       const res = await api.post('/vehiculos', vehiculo);
@@ -298,6 +314,12 @@ editarMantenimiento: async (mantenimientoId: string, data: EditMantenimientoDto)
       normalizeApiError(err);
     }
   },
+
+
+
+   
+
+
 
   restoreMantenimiento: async (id: string): Promise<Mantenimiento> => {
     try {

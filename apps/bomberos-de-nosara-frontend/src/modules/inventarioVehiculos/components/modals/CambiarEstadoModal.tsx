@@ -83,6 +83,15 @@ export const CambiarEstadoModal: React.FC<CambiarEstadoModalProps> = ({
   const onSubmit = async (data: FormData) => {
     if (!vehiculo || !data.nuevoEstado) return;
 
+    // Validación: No permitir cambiar al mismo estado
+    if (data.nuevoEstado === estadoActual) {
+      error(`El vehículo ya está en estado: ${ESTADO_LABELS[estadoActual]}`, {
+        title: 'Estado sin cambios',
+        duration: 5000
+      });
+      return;
+    }
+
     try {
       if (cambiaABaja) {
         // Validar motivo

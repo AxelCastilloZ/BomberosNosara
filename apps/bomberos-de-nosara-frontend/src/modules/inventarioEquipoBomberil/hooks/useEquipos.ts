@@ -40,6 +40,27 @@ export const useEquipos = () => {
   });
 };
 
+
+
+
+
+
+
+// Agregar después de useEquipo (línea ~68)
+
+/**
+ * Hook para obtener un equipo por ID incluyendo los eliminados (soft delete)
+ * Útil para mostrar historiales de mantenimiento de equipos eliminados
+ */
+export const useEquipoComplete = (id?: string) => {
+  return useQuery<EquipoBomberil | null>({
+    queryKey: [...EQUIPOS_KEY, 'complete', id],
+    queryFn: () => equipoBomberilService.getOneComplete(id as string),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+};
+
 /**
  * Hook para obtener equipos con paginación y filtros
  */

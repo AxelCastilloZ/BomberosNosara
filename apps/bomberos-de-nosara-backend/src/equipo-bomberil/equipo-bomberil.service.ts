@@ -160,6 +160,23 @@ export class EquipoBomberilService {
     return equipo;
   }
 
+
+
+/**
+ * Busca un equipo por ID incluyendo los eliminados (soft-deleted)
+ * Útil para mostrar historiales de mantenimiento de equipos eliminados
+ */
+async findOneIncludingDeleted(id: string): Promise<EquipoBomberil | null> {
+  const equipo = await this.equipoRepo.findOne({ 
+    where: { id },
+    withDeleted: true  
+  });
+  
+  // No lanzamos NotFoundException, retornamos null si no existe
+  return equipo;
+}
+
+
   async findAllWithDeleted(): Promise<EquipoBomberil[]> {
     return this.equipoRepo.find({ withDeleted: true });
   }

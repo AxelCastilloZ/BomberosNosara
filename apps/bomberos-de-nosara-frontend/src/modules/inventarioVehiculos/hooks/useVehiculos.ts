@@ -72,6 +72,25 @@ export const useVehiculo = (id?: string) => {
   });
 };
 
+
+
+
+
+export const useVehiculoComplete = (id?: string) => {
+  return useQuery<Vehiculo | null>({
+    queryKey: [...VEHICULOS_KEY, 'complete', id],
+    queryFn: () => vehiculoService.getOneComplete(id as string),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+};
+
+
+
+
+
+
+
 /**
  * Hook para verificar si existe un vehículo por placa
  */

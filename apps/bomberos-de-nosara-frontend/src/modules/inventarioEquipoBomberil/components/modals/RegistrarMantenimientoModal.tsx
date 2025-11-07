@@ -1,18 +1,9 @@
-
-
 // src/modules/inventarioEquipos/components/modals/RegistrarMantenimientoModal.tsx
 
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../../../../components/ui/dialog';
+import { BaseModal } from '../../../../components/ui/base-modal';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -133,205 +124,198 @@ export const RegistrarMantenimientoModal: React.FC<RegistrarMantenimientoModalPr
   // Calcular fecha máxima (hoy)
   const maxDate = new Date().toISOString().split('T')[0];
 
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent
-        className="w-[95vw] max-w-2xl"
-        style={{
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 0,
-        }}
+  // Footer content con botones
+  const footerContent = (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+        disabled={isSubmitting}
       >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Registrar Mantenimiento</DialogTitle>
-          <DialogDescription>
-            Registra un mantenimiento que ya se realizó
-          </DialogDescription>
-        </DialogHeader>
+        Cancelar
+      </Button>
+      <Button 
+        type="submit" 
+        form="registrar-mantenimiento-form"
+        disabled={isSubmitting || isLoadingEquipos}
+      >
+        {isSubmitting ? 'Registrando...' : 'Registrar'}
+      </Button>
+    </>
+  );
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="flex flex-col flex-1 overflow-hidden"
-        >
-          <div className="overflow-y-auto px-6 py-4 flex-1 space-y-4">
-            {/* Equipo */}
-            <div className="space-y-2">
-              <Label htmlFor="equipoId">
-                Equipo <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                id="equipoId"
-                {...register('equipoId')}
-                className={errors.equipoId ? 'border-red-500' : ''}
-                disabled={isLoadingEquipos || isSubmitting}
-              >
-                <option value="">Selecciona un equipo</option>
-                {equipos.map((equipo) => (
-                  <option key={equipo.id} value={equipo.id}>
-                    {equipo.nombre} - {getTipoEquipoLabel(equipo.tipo)}
-                  </option>
-                ))}
-              </Select>
-              {errors.equipoId && (
-                <p className="text-sm text-red-500 mt-1">{errors.equipoId.message}</p>
-              )}
-              {equipoSeleccionado && (
-                <p className="text-sm text-gray-500 mt-1">
-                  N° Serie: {equipoSeleccionado.numeroSerie}
-                </p>
-              )}
-            </div>
-
-            {/* Tipo de Mantenimiento */}
-            <div className="space-y-2">
-              <Label htmlFor="tipo">
-                Tipo de Mantenimiento <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                id="tipo"
-                {...register('tipo')}
-                className={errors.tipo ? 'border-red-500' : ''}
-                disabled={isSubmitting}
-              >
-                <option value={TipoMantenimiento.PREVENTIVO}>Preventivo</option>
-                <option value={TipoMantenimiento.CORRECTIVO}>Correctivo</option>
-              </Select>
-              {errors.tipo && (
-                <p className="text-sm text-red-500 mt-1">{errors.tipo.message}</p>
-              )}
-              <p className="text-sm text-gray-500">
-                Preventivo: mantenimiento planificado | Correctivo: reparación de falla
+  return (
+    <BaseModal
+      open={open}
+      onOpenChange={handleClose}
+      title="Registrar Mantenimiento"
+      description="Registra un mantenimiento que ya se realizó"
+      size="md"
+      footerContent={footerContent}
+    >
+      <form id="registrar-mantenimiento-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-4">
+          {/* Equipo */}
+          <div className="space-y-2">
+            <Label htmlFor="equipoId">
+              Equipo <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              id="equipoId"
+              {...register('equipoId')}
+              className={errors.equipoId ? 'border-red-500' : ''}
+              disabled={isLoadingEquipos || isSubmitting}
+            >
+              <option value="">Selecciona un equipo</option>
+              {equipos.map((equipo) => (
+                <option key={equipo.id} value={equipo.id}>
+                  {equipo.nombre} - {getTipoEquipoLabel(equipo.tipo)}
+                </option>
+              ))}
+            </Select>
+            {errors.equipoId && (
+              <p className="text-sm text-red-500 mt-1">{errors.equipoId.message}</p>
+            )}
+            {equipoSeleccionado && (
+              <p className="text-sm text-gray-500 mt-1">
+                N° Serie: {equipoSeleccionado.numeroSerie}
               </p>
-            </div>
+            )}
+          </div>
 
-            {/* Fecha del Mantenimiento */}
+          {/* Tipo de Mantenimiento */}
+          <div className="space-y-2">
+            <Label htmlFor="tipo">
+              Tipo de Mantenimiento <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              id="tipo"
+              {...register('tipo')}
+              className={errors.tipo ? 'border-red-500' : ''}
+              disabled={isSubmitting}
+            >
+              <option value={TipoMantenimiento.PREVENTIVO}>Preventivo</option>
+              <option value={TipoMantenimiento.CORRECTIVO}>Correctivo</option>
+            </Select>
+            {errors.tipo && (
+              <p className="text-sm text-red-500 mt-1">{errors.tipo.message}</p>
+            )}
+            <p className="text-sm text-gray-500">
+              Preventivo: mantenimiento planificado | Correctivo: reparación de falla
+            </p>
+          </div>
+
+          {/* Fecha del Mantenimiento */}
+          <div className="space-y-2">
+            <Label htmlFor="fecha">
+              Fecha del Mantenimiento <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="fecha"
+              type="date"
+              max={maxDate}
+              {...register('fecha')}
+              className={errors.fecha ? 'border-red-500' : ''}
+              disabled={isSubmitting}
+            />
+            {errors.fecha && (
+              <p className="text-sm text-red-500 mt-1">{errors.fecha.message}</p>
+            )}
+            <p className="text-sm text-gray-500">
+              Solo mantenimientos pasados o de hoy
+            </p>
+          </div>
+
+          {/* Descripción */}
+          <div className="space-y-2">
+            <Label htmlFor="descripcion">
+              Descripción <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="descripcion"
+              type="text"
+              maxLength={EQUIPO_FIELD_LIMITS.descripcion}
+              placeholder="Ej: Cambio de filtro de aire y ajuste de cadena"
+              {...register('descripcion')}
+              className={errors.descripcion ? 'border-red-500' : ''}
+              disabled={isSubmitting}
+            />
+            {errors.descripcion && (
+              <p className="text-sm text-red-500 mt-1">{errors.descripcion.message}</p>
+            )}
+            <p className="text-sm text-gray-500">
+              {(descripcionValue?.length || 0)}/{EQUIPO_FIELD_LIMITS.descripcion} caracteres
+            </p>
+          </div>
+
+          {/* Grid 2 columnas: Técnico y Costo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Técnico */}
             <div className="space-y-2">
-              <Label htmlFor="fecha">
-                Fecha del Mantenimiento <span className="text-red-500">*</span>
+              <Label htmlFor="tecnico">
+                Técnico <span className="text-red-500">*</span>
               </Label>
               <Input
-                id="fecha"
-                type="date"
-                max={maxDate}
-                {...register('fecha')}
-                className={errors.fecha ? 'border-red-500' : ''}
-                disabled={isSubmitting}
-              />
-              {errors.fecha && (
-                <p className="text-sm text-red-500 mt-1">{errors.fecha.message}</p>
-              )}
-              <p className="text-sm text-gray-500">
-                Solo mantenimientos pasados o de hoy
-              </p>
-            </div>
-
-            {/* Descripción */}
-            <div className="space-y-2">
-              <Label htmlFor="descripcion">
-                Descripción <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="descripcion"
+                id="tecnico"
                 type="text"
-                maxLength={EQUIPO_FIELD_LIMITS.descripcion}
-                placeholder="Ej: Cambio de filtro de aire y ajuste de cadena"
-                {...register('descripcion')}
-                className={errors.descripcion ? 'border-red-500' : ''}
+                maxLength={EQUIPO_FIELD_LIMITS.tecnico}
+                placeholder="Nombre del técnico"
+                {...register('tecnico')}
+                className={errors.tecnico ? 'border-red-500' : ''}
                 disabled={isSubmitting}
               />
-              {errors.descripcion && (
-                <p className="text-sm text-red-500 mt-1">{errors.descripcion.message}</p>
+              {errors.tecnico && (
+                <p className="text-sm text-red-500 mt-1">{errors.tecnico.message}</p>
               )}
               <p className="text-sm text-gray-500">
-                {(descripcionValue?.length || 0)}/{EQUIPO_FIELD_LIMITS.descripcion} caracteres
+                {(tecnicoValue?.length || 0)}/{EQUIPO_FIELD_LIMITS.tecnico} caracteres
               </p>
             </div>
 
-            {/* Grid 2 columnas: Técnico y Costo */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Técnico */}
-              <div className="space-y-2">
-                <Label htmlFor="tecnico">
-                  Técnico <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="tecnico"
-                  type="text"
-                  maxLength={EQUIPO_FIELD_LIMITS.tecnico}
-                  placeholder="Nombre del técnico"
-                  {...register('tecnico')}
-                  className={errors.tecnico ? 'border-red-500' : ''}
-                  disabled={isSubmitting}
-                />
-                {errors.tecnico && (
-                  <p className="text-sm text-red-500 mt-1">{errors.tecnico.message}</p>
-                )}
-                <p className="text-sm text-gray-500">
-                  {(tecnicoValue?.length || 0)}/{EQUIPO_FIELD_LIMITS.tecnico} caracteres
-                </p>
-              </div>
-
-              {/* Costo */}
-              <div className="space-y-2">
-                <Label htmlFor="costo">
-                  Costo (USD) <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="costo"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max={EQUIPO_FIELD_LIMITS.costo}
-                  placeholder="0.00"
-                  {...register('costo', { valueAsNumber: true })}
-                  className={errors.costo ? 'border-red-500' : ''}
-                  disabled={isSubmitting}
-                />
-                {errors.costo && (
-                  <p className="text-sm text-red-500 mt-1">{errors.costo.message}</p>
-                )}
-                <p className="text-sm text-gray-500">Ingresa el monto en dólares</p>
-              </div>
-            </div>
-
-            {/* Observaciones */}
+            {/* Costo */}
             <div className="space-y-2">
-              <Label htmlFor="observaciones">Observaciones (opcional)</Label>
-              <Textarea
-                id="observaciones"
-                rows={3}
-                maxLength={EQUIPO_FIELD_LIMITS.observacionesMantenimiento}
-                placeholder="Notas adicionales sobre el mantenimiento..."
-                {...register('observaciones')}
+              <Label htmlFor="costo">
+                Costo (USD) <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="costo"
+                type="number"
+                step="0.01"
+                min="0"
+                max={EQUIPO_FIELD_LIMITS.costo}
+                placeholder="0.00"
+                {...register('costo', { valueAsNumber: true })}
+                className={errors.costo ? 'border-red-500' : ''}
                 disabled={isSubmitting}
               />
-              {errors.observaciones && (
-                <p className="text-sm text-red-500 mt-1">{errors.observaciones.message}</p>
+              {errors.costo && (
+                <p className="text-sm text-red-500 mt-1">{errors.costo.message}</p>
               )}
-              <p className="text-sm text-gray-500">
-                {(observacionesValue?.length || 0)}/{EQUIPO_FIELD_LIMITS.observacionesMantenimiento} caracteres
-              </p>
+              <p className="text-sm text-gray-500">Ingresa el monto en dólares</p>
             </div>
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
+          {/* Observaciones */}
+          <div className="space-y-2">
+            <Label htmlFor="observaciones">Observaciones (opcional)</Label>
+            <Textarea
+              id="observaciones"
+              rows={3}
+              maxLength={EQUIPO_FIELD_LIMITS.observacionesMantenimiento}
+              placeholder="Notas adicionales sobre el mantenimiento..."
+              {...register('observaciones')}
               disabled={isSubmitting}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={isSubmitting || isLoadingEquipos}>
-              {isSubmitting ? 'Registrando...' : 'Registrar'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            />
+            {errors.observaciones && (
+              <p className="text-sm text-red-500 mt-1">{errors.observaciones.message}</p>
+            )}
+            <p className="text-sm text-gray-500">
+              {(observacionesValue?.length || 0)}/{EQUIPO_FIELD_LIMITS.observacionesMantenimiento} caracteres
+            </p>
+          </div>
+        </div>
+      </form>
+    </BaseModal>
   );
 };

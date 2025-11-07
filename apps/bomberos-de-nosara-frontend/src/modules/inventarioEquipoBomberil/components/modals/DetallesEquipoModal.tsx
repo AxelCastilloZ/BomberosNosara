@@ -1,16 +1,7 @@
-
-
 // src/modules/inventarioEquipos/components/modals/DetallesEquipoModal.tsx
 
 import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../../../../components/ui/dialog';
+import { BaseModal } from '../../../../components/ui/base-modal';
 import { Button } from '../../../../components/ui/button';
 import { Badge } from '../../../../components/ui/badge';
 import { 
@@ -39,107 +30,99 @@ export const DetallesEquipoModal: React.FC<DetallesEquipoProps> = ({
   const EquipoIcon = getEquipoIcon(equipo.tipo);
   const estadoColor = getEstadoEquipoColor(equipo.estadoActual);
 
+  // Footer content
+  const footerContent = (
+    <Button variant="outline" onClick={() => onOpenChange(false)}>
+      Cerrar
+    </Button>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="w-[95vw] max-w-3xl"
-        style={{ 
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 0
-        }}
-      >
-        {/* Header */}
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <EquipoIcon className="h-6 w-6 text-gray-700" />
-              </div>
-              <div>
-                <DialogTitle>
-                  {equipo.nombre}
-                </DialogTitle>
-                <DialogDescription>
-                  {equipo.numeroSerie} • {getTipoEquipoLabel(equipo.tipo)}
-                </DialogDescription>
-              </div>
+    <BaseModal
+      open={open}
+      onOpenChange={onOpenChange}
+      size="xl"
+      footerContent={footerContent}
+    >
+      {/* Custom Header */}
+      <div className="pb-4 mb-6 border-b">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <EquipoIcon className="h-6 w-6 text-gray-700" />
             </div>
-            <Badge className={estadoColor}>
-              {getEstadoEquipoLabel(equipo.estadoActual)}
-            </Badge>
+            <div>
+              <h2 className="text-lg font-semibold leading-none tracking-tight">
+                {equipo.nombre}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1.5">
+                {equipo.numeroSerie} • {getTipoEquipoLabel(equipo.tipo)}
+              </p>
+            </div>
           </div>
-        </DialogHeader>
+          <Badge className={estadoColor}>
+            {getEstadoEquipoLabel(equipo.estadoActual)}
+          </Badge>
+        </div>
+      </div>
 
-        {/* Contenido scrollable */}
-        <div className="overflow-y-auto px-6 flex-1">
-          <div className="space-y-6 py-4">
-            {/* Información General */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Información General
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <InfoCard
-                  icon={<Calendar className="h-4 w-4" />}
-                  label="Fecha de adquisición"
-                  value={formatFecha(equipo.fechaAdquisicion)}
-                />
-                <InfoCard
-                  label="Estado inicial"
-                  value={equipo.estadoInicial === 'nuevo' ? 'Nuevo' : 'Usado'}
-                />
-                <InfoCard
-                  label="Tipo de equipo"
-                  value={getTipoEquipoLabel(equipo.tipo)}
-                />
-                <InfoCard
-                  label="Estado actual"
-                  value={getEstadoEquipoLabel(equipo.estadoActual)}
-                />
+      {/* Contenido */}
+      <div className="space-y-6">
+        {/* Información General */}
+        <section>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Package className="h-4 w-4" />
+            Información General
+          </h3>
+          <div className="grid grid-cols-2 gap-3">
+            <InfoCard
+              icon={<Calendar className="h-4 w-4" />}
+              label="Fecha de adquisición"
+              value={formatFecha(equipo.fechaAdquisicion)}
+            />
+            <InfoCard
+              label="Estado inicial"
+              value={equipo.estadoInicial === 'nuevo' ? 'Nuevo' : 'Usado'}
+            />
+            <InfoCard
+              label="Tipo de equipo"
+              value={getTipoEquipoLabel(equipo.tipo)}
+            />
+            <InfoCard
+              label="Estado actual"
+              value={getEstadoEquipoLabel(equipo.estadoActual)}
+            />
+          </div>
+        </section>
+
+        {/* LOG AUTOMÁTICO - CARACTERÍSTICA PRINCIPAL */}
+        <section>
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <History className="h-4 w-4" />
+            Historial del Equipo
+          </h3>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            {equipo.observaciones ? (
+              <div className="bg-white rounded border border-gray-200 p-3 max-h-64 overflow-y-auto">
+                <pre className="text-sm text-gray-700 font-mono whitespace-pre-line leading-relaxed">
+                  {equipo.observaciones}
+                </pre>
               </div>
-            </section>
-
-            {/* LOG AUTOMÁTICO - CARACTERÍSTICA PRINCIPAL */}
-            <section>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Historial del Equipo
-              </h3>
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                {equipo.observaciones ? (
-                  <div className="bg-white rounded border border-gray-200 p-3 max-h-64 overflow-y-auto">
-                    <pre className="text-sm text-gray-700 font-mono whitespace-pre-line leading-relaxed">
-                      {equipo.observaciones}
-                    </pre>
-                  </div>
-                ) : (
-                  <div className="bg-white rounded border border-gray-200 p-4">
-                    <p className="text-sm text-gray-500 italic text-center">
-                      Sin eventos registrados aún
-                    </p>
-                  </div>
-                )}
-                <p className="text-xs text-gray-500 mt-3 italic flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />
-                  Este historial se actualiza automáticamente
+            ) : (
+              <div className="bg-white rounded border border-gray-200 p-4">
+                <p className="text-sm text-gray-500 italic text-center">
+                  Sin eventos registrados aún
                 </p>
               </div>
-            </section>
+            )}
+            <p className="text-xs text-gray-500 mt-3 italic flex items-center gap-1">
+              <AlertCircle className="h-3 w-3" />
+              Este historial se actualiza automáticamente
+            </p>
           </div>
-        </div>
-
-        {/* Footer */}
-        <DialogFooter className="px-6 py-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cerrar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </section>
+      </div>
+    </BaseModal>
   );
 };
 

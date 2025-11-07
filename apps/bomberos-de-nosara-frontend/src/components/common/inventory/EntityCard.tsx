@@ -34,53 +34,53 @@ export const EntityCard: React.FC<EntityCardProps> = ({
 }) => {
   return (
     <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
-      <CardContent className="p-4 sm:p-5 flex flex-col flex-1">
+      <CardContent className="p-3 sm:p-5 flex flex-col flex-1">
         {/* Header */}
-        <div className="flex items-start justify-between mb-3 sm:mb-4">
+        <div className="flex items-start justify-between gap-2 mb-3 sm:mb-4">
           <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
             {/* Icono opcional */}
             {icon && (
-              <div className="rounded-lg bg-gray-100 p-1.5 sm:p-2 mt-0.5 sm:mt-1 flex-shrink-0">
+              <div className="rounded-lg bg-gray-100 p-1.5 sm:p-2 flex-shrink-0">
                 {icon}
               </div>
             )}
             
             {/* Título y subtítulo */}
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-base sm:text-lg text-gray-900 truncate">
+              <h3 className="font-semibold text-sm sm:text-lg text-gray-900 truncate">
                 {title}
               </h3>
-              <p className="text-xs sm:text-sm text-gray-500 truncate">
+              <p className="text-xs sm:text-sm text-gray-500 truncate mt-0.5">
                 {subtitle}
               </p>
             </div>
           </div>
 
-          {/* Badge de estado */}
+          {/* Badge de estado - Más compacto en mobile */}
           <Badge 
             variant="outline" 
-            className={`${status.colorClasses} text-xs whitespace-nowrap ml-2 flex-shrink-0`}
+            className={`${status.colorClasses} text-[10px] sm:text-xs whitespace-nowrap flex-shrink-0 px-1.5 sm:px-2.5 py-0.5`}
           >
             {status.label}
           </Badge>
         </div>
 
-        {/* Metadata */}
+        {/* Metadata - Grid ajustado */}
         <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3 sm:mb-4">
           {metadata.map((item, index) => (
             <div key={index} className="min-w-0">
-              <p className="text-xs text-gray-500 mb-0.5 truncate">
+              <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 truncate">
                 {item.label}
               </p>
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-xs sm:text-sm font-medium text-gray-900 truncate">
                 {item.value}
               </p>
             </div>
           ))}
         </div>
 
-        {/* Actions - Responsive según breakpoint */}
-        <div className="flex items-center gap-2 pt-3 border-t border-gray-100 mt-auto">
+        {/* Actions - Responsive */}
+        <div className="flex items-center gap-1.5 sm:gap-2 pt-2 sm:pt-3 border-t border-gray-100 mt-auto">
           {/* Desktop: Botones con texto */}
           <div className="hidden sm:flex items-center gap-2 w-full">
             <Button
@@ -115,26 +115,26 @@ export const EntityCard: React.FC<EntityCardProps> = ({
             )}
           </div>
 
-          {/* Mobile: Solo iconos con tooltips */}
-          <div className="flex sm:hidden items-center gap-2 w-full">
+          {/* Mobile: Solo iconos más compactos */}
+          <div className="flex sm:hidden items-center gap-1.5 w-full">
             <Button
               variant="outline"
               size="sm"
               onClick={onView}
-              className="flex-1"
+              className="flex-1 h-8 px-2"
               title="Ver detalles"
             >
-              <Eye className="h-4 w-4" />
+              <Eye className="h-3.5 w-3.5" />
             </Button>
             
             <Button
               variant="outline"
               size="sm"
               onClick={onEdit}
-              className="flex-1"
+              className="flex-1 h-8 px-2"
               title="Editar"
             >
-              <Pencil className="h-4 w-4" />
+              <Pencil className="h-3.5 w-3.5" />
             </Button>
 
             {onChangeStatus && (
@@ -142,14 +142,15 @@ export const EntityCard: React.FC<EntityCardProps> = ({
                 variant="outline"
                 size="sm"
                 onClick={onChangeStatus}
-                className="flex-1"
+                className="flex-1 h-8 px-2"
                 title="Cambiar estado"
               >
-                <ArrowRightLeft className="h-4 w-4" />
+                <ArrowRightLeft className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>
         </div>
       </CardContent>
     </Card>
-  );}
+  );
+};

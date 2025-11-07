@@ -1,5 +1,8 @@
+// src/modules/usuarios/components/modals/EliminarUsuarioModal.tsx
+
 import React from 'react';
-import { AlertTriangle, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { ConfirmModal } from '../../../../components/ui/confirm-modal';
 import { useNotifications } from '../../../../components/common/notifications/NotificationProvider';
 import { useUsuarios } from '../../hooks/useUsuarios';
 import type { EliminarUsuarioModalProps } from '../../types';
@@ -27,70 +30,35 @@ export const EliminarUsuarioModal: React.FC<EliminarUsuarioModalProps> = ({
     }
   };
 
-  if (!open || !usuario) return null;
+  if (!usuario) return null;
+
+  // 🎯 Construir detalles en formato estandarizado
+  const details: Array<{ label: string; value: string }> = [];
+  
+  if (usuario.email) {
+    details.push({ label: 'Email', value: usuario.email });
+  }
+  
+  if (usuario.roles && usuario.roles.length > 0) {
+    details.push({ 
+      label: 'Roles', 
+      value: usuario.roles.map((r) => r.name).join(', ') 
+    });
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md m-4">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">Desactivar Usuario</h2>
-          </div>
-          <button
-            onClick={() => onOpenChange(false)}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            disabled={deleteUsuario.isPending}
-          >
-            <X className="h-6 w-6" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          <p className="text-gray-700">
-            ¿Estás seguro de que deseas desactivar al usuario{' '}
-            <span className="font-semibold text-gray-900">{usuario.username}</span>?
-          </p>
-
-          {usuario.email && (
-            <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
-              <p className="text-sm text-gray-600">
-                <span className="font-medium">Email:</span> {usuario.email}
-              </p>
-              {usuario.roles && usuario.roles.length > 0 && (
-                <p className="text-sm text-gray-600 mt-1">
-                  <span className="font-medium">Roles:</span>{' '}
-                  {usuario.roles.map((r) => r.name).join(', ')}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50 rounded-b-lg">
-          <button
-            type="button"
-            onClick={() => onOpenChange(false)}
-            disabled={deleteUsuario.isPending}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleEliminar}
-            disabled={deleteUsuario.isPending}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {deleteUsuario.isPending ? 'Desactivando...' : 'Desactivar Usuario'}
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmModal
+      open={open}
+      onOpenChange={onOpenChange}
+      onConfirm={handleEliminar}
+      title="Desactivar Usuario"
+      description={`¿Estás seguro de que deseas desactivar al usuario ${usuario.username}?`}
+      confirmText={deleteUsuario.isPending ? 'Desactivando...' : 'Desactivar Usuario'}
+      cancelText="Cancelar"
+      variant="destructive"
+      icon={<AlertTriangle className="h-5 w-5" />}
+      isLoading={deleteUsuario.isPending}
+      details={details.length > 0 ? details : undefined}
+    />
   );
 };
