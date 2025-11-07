@@ -1,6 +1,3 @@
-
-
-
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
 import { useNotifications } from '../../../../components/common/notifications/NotificationProvider';
@@ -21,12 +18,12 @@ export const EliminarUsuarioModal: React.FC<EliminarUsuarioModalProps> = ({
 
     try {
       await deleteUsuario.mutateAsync(usuario.id);
-      success('Usuario eliminado exitosamente');
+      success('Usuario desactivado exitosamente');
       onSuccess?.();
       onOpenChange(false);
     } catch (err: any) {
-      console.error('Error al eliminar usuario:', err);
-      showError(err?.message || 'Error al eliminar el usuario');
+      console.error('Error al desactivar usuario:', err);
+      showError(err?.message || 'Error al desactivar el usuario');
     }
   };
 
@@ -41,7 +38,7 @@ export const EliminarUsuarioModal: React.FC<EliminarUsuarioModalProps> = ({
             <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
               <AlertTriangle className="h-5 w-5 text-red-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900">Eliminar Usuario</h2>
+            <h2 className="text-xl font-bold text-gray-900">Desactivar Usuario</h2>
           </div>
           <button
             onClick={() => onOpenChange(false)}
@@ -55,7 +52,7 @@ export const EliminarUsuarioModal: React.FC<EliminarUsuarioModalProps> = ({
         {/* Content */}
         <div className="p-6 space-y-4">
           <p className="text-gray-700">
-            ¿Estás seguro de que deseas eliminar al usuario{' '}
+            ¿Estás seguro de que deseas desactivar al usuario{' '}
             <span className="font-semibold text-gray-900">{usuario.username}</span>?
           </p>
 
@@ -72,13 +69,6 @@ export const EliminarUsuarioModal: React.FC<EliminarUsuarioModalProps> = ({
               )}
             </div>
           )}
-
-          <div className="bg-red-50 border border-red-200 rounded-md p-3">
-            <p className="text-sm text-red-800">
-              <strong> Advertencia:</strong> Esta acción no se puede deshacer. Toda la
-              información asociada a este usuario será eliminada permanentemente.
-            </p>
-          </div>
         </div>
 
         {/* Footer */}
@@ -97,7 +87,7 @@ export const EliminarUsuarioModal: React.FC<EliminarUsuarioModalProps> = ({
             disabled={deleteUsuario.isPending}
             className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            {deleteUsuario.isPending ? 'Eliminando...' : 'Eliminar Usuario'}
+            {deleteUsuario.isPending ? 'Desactivando...' : 'Desactivar Usuario'}
           </button>
         </div>
       </div>

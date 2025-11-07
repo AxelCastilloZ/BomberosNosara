@@ -1,5 +1,3 @@
-
-
 import api from '../../../api/apiConfig';
 import type { User } from '../../../types/user.types';
 import type { CreateUsuarioDto, UpdateUsuarioDto, ApiFieldError } from '../types';
@@ -51,7 +49,7 @@ export const updateUsuario = async (
   dto: UpdateUsuarioDto
 ): Promise<User> => {
   try {
-    const { data } = await api.patch<User>(`${BASE_URL}/${id}`, dto);
+    const { data } = await api.put<User>(`${BASE_URL}/${id}`, dto);
     return data;
   } catch (error: any) {
     // Manejo de error de duplicado
@@ -68,10 +66,18 @@ export const updateUsuario = async (
 };
 
 /**
- * Eliminar un usuario
+ * Eliminar un usuario (Soft Delete)
  */
 export const deleteUsuario = async (id: number): Promise<void> => {
   await api.delete(`${BASE_URL}/${id}`);
+};
+
+/**
+ * Restaurar un usuario desactivado
+ */
+export const restoreUsuario = async (id: number): Promise<User> => {
+  const { data } = await api.post<User>(`${BASE_URL}/${id}/restore`);
+  return data;
 };
 
 /**
@@ -87,9 +93,19 @@ export const checkUnique = async (
       `${BASE_URL}/check-unique`,
       { params: { field, value } }
     );
-    return data.unique;
-  } catch (error) {
-    console.error('Error checking unique:', error);
-    return false;
+    
+    return data.unique === true;
+  } catch (error: any) {
+    console.warn('Error al verificar unicidad, asumiendo único:', error);
+    
+    if (error.response?.status === 404) {
+      return true;
+    }
+    
+    if (!error.response) {
+      return true;
+    }
+    
+    return true;
   }
 };

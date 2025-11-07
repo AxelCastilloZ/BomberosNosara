@@ -61,11 +61,20 @@ export class UsersController {
   }
 
   /**
-   * Eliminar usuario por ID
+   * Eliminar usuario por ID (Soft Delete)
    */
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
+  }
+
+  /**
+   * Restaurar usuario desactivado
+   * POST /users/5/restore
+   */
+  @Post(':id/restore')
+  restore(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.restore(id);
   }
 
   /**
