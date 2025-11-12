@@ -14,7 +14,7 @@ export const NoticiaCard = ({ noticia }: Props) => {
       {/* Imagen */}
       <div className="relative h-[320px] sm:h-[420px] md:h-[480px] lg:h-[520px]">
         <img
-          src={noticia.url}
+          src={`${import.meta.env.VITE_API_URL}${noticia.url}`}
           alt={noticia.titulo}
           className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
         />
