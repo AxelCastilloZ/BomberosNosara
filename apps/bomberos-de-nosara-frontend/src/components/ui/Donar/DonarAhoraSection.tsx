@@ -15,7 +15,7 @@ export const DonarAhoraSection = () => (
         href="https://www.classy.org/give/216044/#!/donation/checkout"
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-block bg-[#B22222] hover:bg-[#8B1B1B] text-white font-bold py-3 px-8 rounded-2xl text-lg transition-all duration-300 transform hover:-translate-y-1 shadow-lg"
+        className="inline-block px-6 py-3 bg-red-800 backdrop-blur-sm border border-white/30 text-white font-medium rounded-3xl hover:bg-red-700 transition shadow-md hover:shadow-lg"
       >
         DONAR AHORA
       </a>

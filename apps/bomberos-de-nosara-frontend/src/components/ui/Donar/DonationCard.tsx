@@ -17,7 +17,7 @@ export const DonationCard: React.FC<DonationCardProps> = ({
     : `bg-white shadow-lg hover:shadow-xl ${baseClasses}`;
 
   const iconContainer = highlighted
-    ? "bg-[#B22222] text-white"
+    ? "bg-red-800 backdrop-blur-sm border border-white/30 text-white"
     : "bg-gray-700 text-white";
 
   const titleClasses = highlighted
@@ -25,12 +25,12 @@ export const DonationCard: React.FC<DonationCardProps> = ({
     : "text-2xl font-bold text-[#111111] text-center mb-4";
 
   const buttonClasses = highlighted
-    ? "bg-[#B22222] hover:bg-[#8B1B1B]"
-    : "bg-gray-700 hover:bg-gray-800";
+    ? "bg-red-800 backdrop-blur-sm border border-white/30 text-white font-medium rounded-3xl hover:bg-red-700 transition"
+    : "bg-gray-700 text-white font-medium rounded-3xl hover:bg-gray-800 transition";
 
   return (
     <div className={cardClasses}>
-      {/* Contenido superior */}
+      {/* Parte superior */}
       <div className="flex flex-col items-center flex-grow">
         <div
           className={`${iconContainer} rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-6`}
@@ -46,7 +46,7 @@ export const DonationCard: React.FC<DonationCardProps> = ({
           <ul className="text-sm text-gray-600 mb-6 space-y-2 text-left mx-auto">
             {benefits.map((b, i) => (
               <li key={i} className="flex items-start">
-                <span className="mr-2 text-[#B22222]">✓</span>
+                <span className="mr-2 text-red-700">✓</span>
                 {b}
               </li>
             ))}
@@ -54,11 +54,11 @@ export const DonationCard: React.FC<DonationCardProps> = ({
         )}
       </div>
 
-      {/* Botón fijo abajo */}
+      {/* Botón */}
       <div className="mt-auto pt-4">
         <button
           onClick={onButtonClick}
-          className={`${buttonClasses} w-full text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300`}
+          className={`${buttonClasses} w-full py-3 px-6 shadow-md hover:shadow-lg`}
         >
           {buttonText}
         </button>

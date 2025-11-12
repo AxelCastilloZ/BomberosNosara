@@ -24,14 +24,12 @@ export const NoticiaCard = ({ noticia }: Props) => {
         <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 lg:p-8">
           {/* Fecha */}
           <div className="flex items-center text-white mb-3">
-            <FaCalendarAlt className="text-[#B22222] mr-2 text-sm sm:text-base" />
-            <span className="text-xs sm:text-sm lg:text-base">
-              {noticia.fecha}
-            </span>
+            <FaCalendarAlt className="text-red-800 mr-2 text-sm sm:text-base" />
+            <span className="text-xs sm:text-sm lg:text-base">{noticia.fecha}</span>
           </div>
 
           {/* Título */}
-          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 leading-tight hover:text-[#B22222] transition-colors">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 leading-tight hover:text-red-800 transition-colors">
             {noticia.titulo}
           </h2>
 
@@ -47,7 +45,8 @@ export const NoticiaCard = ({ noticia }: Props) => {
           {/* Botón Leer más */}
           <button
             onClick={() => setShowFull(!showFull)}
-            className="mt-4 bg-[#B22222] text-white px-4 py-1.5 rounded-full hover:bg-[#8B1B1B] text-xs sm:text-sm font-medium shadow-md transition-colors duration-300"
+            className="mt-4 px-4 py-1.5 bg-red-800 backdrop-blur-sm border border-white/30 
+            text-white font-medium rounded-3xl hover:bg-red-700 transition text-xs sm:text-sm shadow-md"
           >
             {showFull ? "Ver menos" : "Leer más"}
           </button>

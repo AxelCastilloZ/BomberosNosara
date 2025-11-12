@@ -1,107 +1,102 @@
-import React, { useState } from "react";
-import { Flame, Users, Medal } from "lucide-react"; // Íconos
-import { heroText } from "../../../data/aboutData";
+"use client";
+
+import React, { useState, useRef } from "react";
+import { Flame, ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "../button";
+import { aboutParagraphs } from "../../../data/aboutData";
+import Img2 from "../../../images/Img2.jpeg";
 
 export default function AboutSection() {
-  const cards = [
-    {
-      id: 1,
-      title: "Nuestro Origen",
-      icon: <Flame className="w-6 h-6 text-red-800" />,
-      short:
-        "Hace sólo una década, la atención de un grave incendio en Nosara requería esperar que el departamento regional de Bomberos viajara más de una hora...",
-      full: `Hace sólo una década, la atención de un grave incendio en Nosara requería esperar que el departamento regional de Bomberos viajara más de una hora en carreteras en mal estado. A pesar de los mejores esfuerzos, su hora de llegada a menudo es demasiado tarde.`,
-    },
-    {
-      id: 2,
-      title: "Nuestro Compromiso",
-      icon: <Users className="w-6 h-6 text-red-800" />,
-      short:
-        "Una década después de su formación, estos voluntarios han salvado innumerables hogares, vidas y medios de sustento...",
-      full: `Una década después de su formación, estos voluntarios han salvado innumerables hogares, vidas y medios de sustento y se han convertido en un recurso comunitario indispensable y muy utilizado.`,
-    },
-    {
-      id: 3,
-      title: "Nuestra Preparación",
-      icon: <Medal className="w-6 h-6 text-red-800" />,
-      short:
-        "Aunque han recibido capacitaciones de alto nivel, estos hombres y mujeres, muchos de los cuales tienen familias propias...",
-      full: `Aunque han recibido capacitaciones de alto nivel, estos hombres y mujeres, muchos de los cuales tienen trabajos a tiempo completo y/o familias, no son profesionales. Al principio, los gastos como equipo de protección, herramientas, transporte, suministros y mucho más, salieron de su propio bolsillo. A medida que aumentaba el volumen de llamadas, este modelo de financiación se volvió insostenible.`,
-    },
-  ];
+  const [isExpanded, setIsExpanded] = useState(false);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
 
-  const [expanded, setExpanded] = useState<number | null>(null);
-
-  const toggleCard = (id: number) => {
-    setExpanded(expanded === id ? null : id);
+  const handleToggle = () => {
+    setIsExpanded((prev) => !prev);
+    setTimeout(() => {
+      sectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 300);
   };
 
   return (
     <section
       id="about-us"
-      className="w-full bg-white py-16 px-6 font-[Poppins] text-gray-800"
+      ref={sectionRef}
+      className="w-full bg-white py-10 md:py-12 px-6 font-[Poppins]"
     >
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center gap-12">
-        {/* ---- Texto e información ---- */}
-        <div className="w-full md:w-1/2 space-y-8">
-          <div className="text-center md:text-left">
-            <h2 className="text-4xl md:text-5xl font-semibold text-red-800 mb-4">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start gap-8 md:gap-12">
+        {/* ---- Columna Izquierda ---- */}
+        <div className="w-full md:w-1/2 space-y-5">
+          <div>
+            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900">
               Sobre Nosotros
             </h2>
-            <p className="text-lg md:text-xl text-gray-700 font-light">
-              {heroText}
+            <p className="text-lg text-gray-700 mt-2 leading-relaxed">
+              Los bomberos son esenciales para la seguridad de nuestras comunidades locales.
             </p>
           </div>
 
-          {/* ---- Cards ---- */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {cards.map((card) => (
-              <div
-                key={card.id}
-                className="bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 p-6 relative"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2 bg-red-50 rounded-xl">{card.icon}</div>
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {card.title}
-                  </h3>
-                </div>
-
-                <p className="text-sm text-gray-700 leading-relaxed mb-4">
-                  {expanded === card.id ? card.full : card.short}
-                </p>
-
-                <button
-                  onClick={() => toggleCard(card.id)}
-                  className="text-red-800 font-medium text-sm hover:underline flex items-center gap-1"
-                >
-                  {expanded === card.id ? "Ver menos" : "Ver más"}
-                  <span
-                    className={`transform transition-transform duration-300 ${
-                      expanded === card.id ? "rotate-180" : ""
-                    }`}
-                  >
-                    ▼
-                  </span>
-                </button>
-
-                {/* Línea decorativa lateral */}
-                <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-red-700 to-red-400 rounded-l-xl opacity-80"></div>
-              </div>
+          {/* ---- Texto con expansión ---- */}
+          <div className="text-gray-700 leading-relaxed space-y-3">
+            {/* 🔹 Mostrar los 3 primeros párrafos visibles siempre */}
+            {aboutParagraphs.slice(0, 3).map((p) => (
+              <p key={p.id}>{p.content}</p>
             ))}
+
+            {/* 🔹 Mostrar el resto al presionar “Ver Más” */}
+            <div
+              className={`overflow-hidden transition-all duration-700 ease-in-out ${
+                isExpanded ? "max-h-[700px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="space-y-3 mt-2">
+                {aboutParagraphs.slice(3).map((p, i) => (
+                  <p
+                    key={p.id}
+                    style={{ transitionDelay: `${i * 100}ms` }}
+                    className="animate-in fade-in slide-in-from-top-2 duration-500"
+                  >
+                    {p.content}
+                  </p>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* ---- Botón ---- */}
+          <div className="pt-2">
+            <Button
+              onClick={handleToggle}
+              variant="outline"
+              className="group border-2 border-red-800/20 hover:border-red-800 hover:bg-red-800 text-red-800 hover:text-white font-semibold px-6 py-4 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md"
+            >
+              <span className="mr-2">{isExpanded ? "Ver Menos" : "Ver Más"}</span>
+              {isExpanded ? (
+                <ChevronUp className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5" />
+              ) : (
+                <ChevronDown className="h-4 w-4 transition-transform duration-300 group-hover:translate-y-0.5" />
+              )}
+            </Button>
           </div>
         </div>
 
-        {/* ---- Imagen ---- */}
-        <div className="w-full md:w-1/2 flex justify-center">
-          <div className="relative w-full max-w-md rounded-3xl overflow-hidden shadow-lg">
-            <img
-              src="https://png.pngtree.com/thumb_back/fh260/background/20241210/pngtree-firefighters-in-action-with-water-hose-and-rescue-operations-image_16745921.jpg"
-              alt="Bomberos Nosara"
-              className="object-cover w-full h-[450px]"
-              loading="lazy"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        {/* ---- Columna Derecha (Imagen) ---- */}
+        <div className="relative w-full md:w-1/2 flex justify-center items-start md:mt-[0.8rem]">
+          <div className="absolute -top-5 right-8 z-20 animate-pulse">
+          </div>
+
+          <div className="relative w-full max-w-md mt-0">
+            <div className="relative rounded-2xl overflow-hidden shadow-2xl transform hover:scale-[1.02] transition-transform duration-500">
+              <img
+                src={Img2}
+                alt="Bomberos Voluntarios de Nosara"
+                className="w-full h-[600px] object-contain md:object-cover object-center rounded-2xl transition-all duration-500"
+              />
+            </div>
+
+            <div className="absolute -bottom-4 -right-4 w-20 h-20 bg-red-800/10 rounded-full blur-2xl" />
           </div>
         </div>
       </div>

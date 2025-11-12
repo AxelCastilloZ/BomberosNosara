@@ -22,7 +22,7 @@ export default function Home() {
           <AboutUsPage />
         </section>
 
-        <section className="w-full px-8 mt-16">
+        <section className="w-full mt-16 px-0 overflow-x-hidden">
           <NuestroTrabajoPage />
         </section>
 
