@@ -1,5 +1,6 @@
 import React from "react";
-import welcomeImage from "../../../images/Welcome.png";
+import Welcome from "../../../images/Welcome.png";
+
 
 export default function WelcomeSection() {
   const scrollTo = (id: string) => {
@@ -7,12 +8,12 @@ export default function WelcomeSection() {
   };
 
   return (
-    <section className="relative w-full h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative w-full h-screen flex items-center justify-center overflow-hidden font-[Poppins]">
       {/* Imagen de fondo */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: `url(${welcomeImage})`,
+          backgroundImage: `url(${Welcome})`,
         }}
       >
         <div className="absolute inset-0 bg-black/40" />
@@ -20,16 +21,16 @@ export default function WelcomeSection() {
 
       {/* Contenido centrado */}
       <div className="relative z-10 px-6 text-center text-white max-w-4xl">
-        <h1 className="text-4xl md:text-6xl font-serif font-light mb-4">
+        <h1 className="text-5xl md:text-6xl font-semibold mb-6 drop-shadow-lg">
           Bienvenido a Bomberos Nosara
         </h1>
-        <p className="text-lg md:text-xl leading-relaxed mb-8">
+        <p className="text-lg md:text-xl font-light leading-relaxed mb-10 text-gray-200">
           Nos dedicamos a servir a la comunidad de Nosara con compromiso,
           integridad y acción. Conocé más sobre nuestros aliados y cómo podés
           apoyar nuestra labor.
         </p>
 
-        {/* Botones */}
+        {/* Botones (colores originales) */}
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
           <button
             onClick={() => scrollTo("about-us")}
