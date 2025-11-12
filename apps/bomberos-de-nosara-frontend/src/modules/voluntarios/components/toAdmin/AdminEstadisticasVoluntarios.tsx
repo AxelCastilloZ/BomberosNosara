@@ -1,7 +1,8 @@
 // src/components/ui/Administrativa/Voluntarios/EstadisticasVoluntarios.tsx
 import { useEstadisticasVolGenerales } from '../../Hooks/useVoluntarios';
-import { BarChart3, Users, Clock, CheckCircle } from 'lucide-react';
+import { BarChart3, Users, Clock, CheckCircle, ClipboardList } from 'lucide-react';
 import { EstadisticasVoluntariosDto } from '../../types/voluntarios';
+import ParticipacionesPieChart from '../charts/ParticipacionesPieChart';
 
 export default function AdminEstadisticasVoluntarios() {
   const { data, isLoading } = useEstadisticasVolGenerales();
@@ -21,10 +22,10 @@ export default function AdminEstadisticasVoluntarios() {
   const {
     totalHoras,
     voluntariosActivos,
-    promedioHorasPorVoluntario,
     tasaAprobacion,
     topVoluntarios,
     participacionesPorTipo,
+    totalParticipaciones,
   } = data as EstadisticasVoluntariosDto;
 
    const fmtHoras = (dec: number) => {
@@ -55,10 +56,10 @@ export default function AdminEstadisticasVoluntarios() {
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
-          <BarChart3 className="h-8 w-8 text-purple-600" />
+          <ClipboardList className="h-8 w-8 text-purple-600" />
           <div>
-            <p className="text-sm text-gray-600">Promedio general</p>
-            <p className="text-2xl font-bold">{fmtHoras(promedioHorasPorVoluntario)}</p>
+            <p className="text-sm text-gray-600">Total Participaciones</p>
+            <p className="text-2xl font-bold">{totalParticipaciones || 0}</p>
           </div>
         </div>
 
@@ -84,17 +85,7 @@ export default function AdminEstadisticasVoluntarios() {
           </ul>
         </div>
 
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h3 className="font-bold text-gray-800 mb-2">Participaciones por Tipo</h3>
-          <ul className="space-y-2">
-            {Object.entries(participacionesPorTipo).map(([tipo, cantidad]) => (
-              <li key={tipo} className="flex justify-between">
-                <span>{tipo}</span>
-                <span className="font-semibold">{cantidad} participaciones</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ParticipacionesPieChart participacionesPorTipo={participacionesPorTipo} />
       </div>
     </div>
   );
