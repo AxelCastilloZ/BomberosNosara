@@ -12,7 +12,7 @@ export interface AlertAction {
 
 export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: AlertVariant;
-  actions?: AlertAction[]; // ✅ Nuevo: acciones opcionales
+  actions?: AlertAction[];
 }
 
 export interface AlertDescriptionProps extends React.HTMLAttributes<HTMLDivElement> {}
@@ -35,12 +35,12 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
       >
         {children}
         
-        {/* ✅ Nuevo: Renderizar acciones si existen */}
         {actions && actions.length > 0 && (
           <div className="flex gap-2 mt-3">
             {actions.map((action, index) => (
               <button
                 key={index}
+                type="button"  // 🔥 ESTE ES EL CAMBIO CRÍTICO
                 onClick={action.onClick}
                 disabled={action.disabled}
                 className={`

@@ -83,7 +83,7 @@ const Toast: React.FC<ToastProps> = ({
             {title}
           </div>
         )}
-        <div className="text-sm text-gray-700">
+        <div className="text-sm text-gray-700 break-words">
           {message}
         </div>
         
@@ -164,7 +164,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     return addNotification({
       type: 'error',
       message,
-      duration: 7000, // Los errores duran más
+      duration: 10000, // 🔥 Cambiado de 7000 a 10000 (10 segundos)
       ...options
     });
   }, [addNotification]);

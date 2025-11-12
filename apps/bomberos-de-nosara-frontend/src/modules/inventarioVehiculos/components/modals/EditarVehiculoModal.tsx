@@ -3,14 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '../../../../components/ui/dialog';
+import { BaseModal } from '../../../../components/ui/base-modal';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
 import { Label } from '../../../../components/ui/label';
@@ -118,7 +111,31 @@ export const EditarVehiculoModal: React.FC<EditarVehiculoModalProps> = ({
       onSuccess?.();
       handleClose();
     } catch (err: any) {
-      error(err?.message || 'Error al eliminar el vehículo');
+      // 🔥 Extraer información del error
+      const errorCode = err?.response?.data?.message?.code;
+      const errorMessage = err?.response?.data?.message?.message;
+      
+      // Extraer mensaje legible del stack si existe
+      let readableMessage = errorMessage;
+      if (err?.response?.data?.stack) {
+        const stackMatch = err.response.data.stack.match(/BadRequestException: (.+?)(?:\n|$)/);
+        if (stackMatch && stackMatch[1]) {
+          readableMessage = stackMatch[1];
+        }
+      }
+
+      if (errorCode === 'HAS_PENDING_MAINTENANCE') {
+        error(
+          readableMessage || 'No se puede eliminar el vehículo porque tiene mantenimientos pendientes',
+          {
+            title: 'No se puede eliminar',
+            duration: 10000
+          }
+        );
+        setShowDeleteConfirm(false);
+      } else {
+        error(readableMessage || err?.message || 'Error al eliminar el vehículo');
+      }
     }
   };
 
@@ -130,7 +147,6 @@ export const EditarVehiculoModal: React.FC<EditarVehiculoModalProps> = ({
     }
   };
 
-  // Calcular fecha máxima (hoy)
   const getMaxDate = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -138,169 +154,162 @@ export const EditarVehiculoModal: React.FC<EditarVehiculoModalProps> = ({
 
   if (!vehiculo) return null;
 
-  return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent
-        className="w-[95vw] max-w-3xl"
-        style={{
-          maxHeight: '90vh',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: 0,
-        }}
+  // Footer content con botones
+  const footerContent = (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleClose}
+        disabled={updateVehiculoMutation.isPending || deleteVehiculoMutation.isPending}
       >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b">
-          <DialogTitle>Editar Vehículo</DialogTitle>
-          <DialogDescription>
-            Placa: <span className="font-semibold">{vehiculo.placa}</span>
-          </DialogDescription>
-        </DialogHeader>
+        Cancelar
+      </Button>
+      <Button
+        type="submit"
+        form="editar-vehiculo-form"
+        disabled={updateVehiculoMutation.isPending || deleteVehiculoMutation.isPending}
+      >
+        {updateVehiculoMutation.isPending ? 'Guardando...' : 'Guardar cambios'}
+      </Button>
+    </>
+  );
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-          <div className="overflow-y-auto px-6 py-4 flex-1 space-y-6">
-            {/* Campos editables */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Placa */}
-              <div className="space-y-2">
-                <Label htmlFor="placa">Placa</Label>
-                <Input
-                  id="placa"
-                  {...register('placa')}
-                  placeholder="ABC-123"
-                  maxLength={VEHICULO_FIELD_LIMITS.placa}
-                  className={errors.placa ? 'border-red-500' : ''}
-                  disabled={updateVehiculoMutation.isPending}
-                />
-                {errors.placa && (
-                  <p className="text-sm text-red-500 mt-1">{errors.placa.message}</p>
-                )}
-                <p className="text-sm text-gray-500">
-                  {(placaValue?.length || 0)}/{VEHICULO_FIELD_LIMITS.placa} caracteres
-                </p>
-              </div>
-
-              {/* Tipo */}
-              <div className="space-y-2">
-                <Label htmlFor="tipo">Tipo de vehículo</Label>
-                <Select
-                  id="tipo"
-                  {...register('tipo')}
-                  className={errors.tipo ? 'border-red-500' : ''}
-                  disabled={updateVehiculoMutation.isPending}
-                >
-                  <option value="">Selecciona un tipo</option>
-                  {TIPO_VEHICULO_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </Select>
-                {errors.tipo && (
-                  <p className="text-sm text-red-500 mt-1">{errors.tipo.message}</p>
-                )}
-              </div>
-
-              {/* Fecha de Adquisición */}
-              <div className="space-y-2">
-                <Label htmlFor="fechaAdquisicion">Fecha de adquisición</Label>
-                <Input
-                  id="fechaAdquisicion"
-                  type="date"
-                  max={getMaxDate()}
-                  {...register('fechaAdquisicion')}
-                  className={errors.fechaAdquisicion ? 'border-red-500' : ''}
-                  disabled={updateVehiculoMutation.isPending}
-                />
-                {errors.fechaAdquisicion && (
-                  <p className="text-sm text-red-500 mt-1">
-                    {errors.fechaAdquisicion.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Kilometraje */}
-              <div className="space-y-2">
-                <Label htmlFor="kilometraje">Kilometraje (km)</Label>
-                <Input
-                  id="kilometraje"
-                  type="number"
-                  {...register('kilometraje', {
-                    valueAsNumber: true,
-                  })}
-                  placeholder="0"
-                  min="0"
-                  max={VEHICULO_FIELD_LIMITS.kilometraje}
-                  className={errors.kilometraje ? 'border-red-500' : ''}
-                  disabled={updateVehiculoMutation.isPending}
-                />
-                {errors.kilometraje && (
-                  <p className="text-sm text-red-500 mt-1">{errors.kilometraje.message}</p>
-                )}
-                <p className="text-sm text-gray-500">
-                  Kilometraje actual: {vehiculo.kilometraje.toLocaleString()} km
-                </p>
-              </div>
+  return (
+    <BaseModal
+      open={open}
+      onOpenChange={handleClose}
+      title="Editar Vehículo"
+      description={`Placa: ${vehiculo.placa}`}
+      size="xl"
+      footerContent={footerContent}
+    >
+      <form id="editar-vehiculo-form" onSubmit={handleSubmit(onSubmit)}>
+        <div className="space-y-6">
+          {/* Campos editables */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Placa */}
+            <div className="space-y-2">
+              <Label htmlFor="placa">Placa</Label>
+              <Input
+                id="placa"
+                {...register('placa')}
+                placeholder="ABC-123"
+                maxLength={VEHICULO_FIELD_LIMITS.placa}
+                className={errors.placa ? 'border-red-500' : ''}
+                disabled={updateVehiculoMutation.isPending}
+              />
+              {errors.placa && (
+                <p className="text-sm text-red-500 mt-1">{errors.placa.message}</p>
+              )}
+              <p className="text-sm text-gray-500">
+                {(placaValue?.length || 0)}/{VEHICULO_FIELD_LIMITS.placa} caracteres
+              </p>
             </div>
 
-            {/* DangerZone */}
-            <DangerZone
-              title="Zona de Peligro"
-              description="Eliminar este vehículo lo moverá a la papelera"
-            >
-              {!showDeleteConfirm ? (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={updateVehiculoMutation.isPending || deleteVehiculoMutation.isPending}
-                >
-                  Eliminar vehículo
-                </Button>
-              ) : (
-                <Alert
-                  variant="destructive"
-                  actions={[
-                    {
-                      label: 'Cancelar',
-                      onClick: () => setShowDeleteConfirm(false),
-                      variant: 'default',
-                    },
-                    {
-                      label: 'Mover a papelera',
-                      onClick: handleDelete,
-                      variant: 'destructive',
-                      disabled: deleteVehiculoMutation.isPending,
-                    },
-                  ]}
-                >
-                  <AlertDescription>
-                    El vehículo será movido a la papelera y dejará de aparecer en las listas
-                    principales. Podrás restaurarlo en cualquier momento si lo necesitas.
-                  </AlertDescription>
-                </Alert>
+            {/* Tipo */}
+            <div className="space-y-2">
+              <Label htmlFor="tipo">Tipo de vehículo</Label>
+              <Select
+                id="tipo"
+                {...register('tipo')}
+                className={errors.tipo ? 'border-red-500' : ''}
+                disabled={updateVehiculoMutation.isPending}
+              >
+                <option value="">Selecciona un tipo</option>
+                {TIPO_VEHICULO_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </Select>
+              {errors.tipo && (
+                <p className="text-sm text-red-500 mt-1">{errors.tipo.message}</p>
               )}
-            </DangerZone>
+            </div>
+
+            {/* Fecha de Adquisición */}
+            <div className="space-y-2">
+              <Label htmlFor="fechaAdquisicion">Fecha de adquisición</Label>
+              <Input
+                id="fechaAdquisicion"
+                type="date"
+                max={getMaxDate()}
+                {...register('fechaAdquisicion')}
+                className={errors.fechaAdquisicion ? 'border-red-500' : ''}
+                disabled={updateVehiculoMutation.isPending}
+              />
+              {errors.fechaAdquisicion && (
+                <p className="text-sm text-red-500 mt-1">
+                  {errors.fechaAdquisicion.message}
+                </p>
+              )}
+            </div>
+
+            {/* Kilometraje */}
+            <div className="space-y-2">
+              <Label htmlFor="kilometraje">Kilometraje (km)</Label>
+              <Input
+                id="kilometraje"
+                type="number"
+                {...register('kilometraje', {
+                  valueAsNumber: true,
+                })}
+                placeholder="0"
+                min="0"
+                max={VEHICULO_FIELD_LIMITS.kilometraje}
+                className={errors.kilometraje ? 'border-red-500' : ''}
+                disabled={updateVehiculoMutation.isPending}
+              />
+              {errors.kilometraje && (
+                <p className="text-sm text-red-500 mt-1">{errors.kilometraje.message}</p>
+              )}
+              <p className="text-sm text-gray-500">
+                Kilometraje actual: {vehiculo.kilometraje.toLocaleString()} km
+              </p>
+            </div>
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={updateVehiculoMutation.isPending || deleteVehiculoMutation.isPending}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={updateVehiculoMutation.isPending || deleteVehiculoMutation.isPending}
-            >
-              {updateVehiculoMutation.isPending ? 'Guardando...' : 'Guardar cambios'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          {/* DangerZone */}
+          <DangerZone
+            title="Zona de Peligro"
+            description="Eliminar este vehículo lo moverá a la papelera"
+          >
+            {!showDeleteConfirm ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={updateVehiculoMutation.isPending || deleteVehiculoMutation.isPending}
+              >
+                Eliminar vehículo
+              </Button>
+            ) : (
+              <Alert
+                variant="destructive"
+                actions={[
+                  {
+                    label: 'Cancelar',
+                    onClick: () => setShowDeleteConfirm(false),
+                    variant: 'default',
+                  },
+                  {
+                    label: 'Mover a papelera',
+                    onClick: handleDelete,
+                    variant: 'destructive',
+                    disabled: deleteVehiculoMutation.isPending,
+                  },
+                ]}
+              >
+                <AlertDescription>
+                  El vehículo será movido a la papelera y dejará de aparecer en las listas
+                  principales. Podrás restaurarlo en cualquier momento si lo necesitas.
+                </AlertDescription>
+              </Alert>
+            )}
+          </DangerZone>
+        </div>
+      </form>
+    </BaseModal>
   );
 };

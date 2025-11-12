@@ -18,6 +18,7 @@ import type {
   EstadoMantenimiento,
   ReporteCostosMensuales,
   ReporteCostosPorVehiculo,
+  EditMantenimientoDto,
 } from '../../../types/mantenimiento.types';
 
 // ==================== TYPES DE RESPUESTAS ====================
@@ -39,21 +40,8 @@ interface ApiErrorPayload {
 // ==================== HELPER DE ERRORES ====================
 
 function normalizeApiError(err: unknown): never {
-  const axErr = err as AxiosError<ApiErrorPayload>;
-  const payload = axErr?.response?.data;
-
-  if (payload?.message || payload?.code) {
-    const e = new Error(payload.message || 'Error de servidor');
-    (e as any).code = payload.code;
-    (e as any).field = payload.field;
-    (e as any).status = axErr?.response?.status;
-    (e as any).raw = payload;
-    throw e;
-  }
-
-  const e = new Error(axErr?.message || 'Error de red o del servidor');
-  (e as any).status = axErr?.response?.status;
-  throw e;
+  
+  throw err;
 }
 
 // ==================== SERVICE ====================
@@ -104,6 +92,22 @@ export const vehiculoService = {
       normalizeApiError(err);
     }
   },
+
+
+
+
+getOneComplete: async (id: string): Promise<Vehiculo | null> => {
+  try {
+    const res = await api.get(`/vehiculos/${id}/complete`);
+    return res.data;
+  } catch (err) {
+    normalizeApiError(err);
+  }
+},
+
+
+
+
 
   create: async (vehiculo: CreateVehiculoDto): Promise<Vehiculo> => {
     try {
@@ -191,6 +195,22 @@ export const vehiculoService = {
       normalizeApiError(err);
     }
   },
+
+
+
+editarMantenimiento: async (mantenimientoId: string, data: EditMantenimientoDto): Promise<Mantenimiento> => {
+  try {
+    const res = await api.patch(`/vehiculos/mantenimientos/${mantenimientoId}/editar`, data);
+    return res.data;
+  } catch (err) {
+    normalizeApiError(err);
+  }
+},
+
+
+
+
+
 
   // ==================== MANTENIMIENTOS - CAMBIAR ESTADO ====================
 
@@ -294,6 +314,12 @@ export const vehiculoService = {
       normalizeApiError(err);
     }
   },
+
+
+
+   
+
+
 
   restoreMantenimiento: async (id: string): Promise<Mantenimiento> => {
     try {

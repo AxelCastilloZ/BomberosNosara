@@ -1,6 +1,7 @@
 import React from "react";
 import Welcome from "../../../images/Welcome.png";
 
+
 export default function WelcomeSection() {
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });

@@ -51,30 +51,30 @@ const EditUser: React.FC<Props> = ({ user, onClose }) => {
 
   const selected = watch('roles') ?? [];
 
-  const onSubmit = async (v: FormValues) => {
-    try {
-      await edit.mutateAsync({
-        id: user.id,
-        data: {
-          username: v.username,
-          email: v.email,
-          roles: v.roles,
-          password: v.password || undefined,
-        },
+ const onSubmit = async (v: FormValues) => {
+  try {
+    await edit.mutateAsync({
+      id: user.id,
+      data: {
+        username: v.username,
+        email: v.email,
+        roles: v.roles,
+        password: v.password || undefined,
+      },
+    });
+    onClose(); // Cerrar modal
+  } catch (err: any) {
+    if (err?.code === 'DUPLICATE_KEY' && (err.field === 'email' || err.field === 'username')) {
+      setError(err.field as 'email' | 'username', {
+        type: 'server',
+        message: err.message || 'Ya existe.',
       });
-      onClose();
-    } catch (err: any) {
-      if (err?.code === 'DUPLICATE_KEY' && (err.field === 'email' || err.field === 'username')) {
-        setError(err.field as 'email' | 'username', {
-          type: 'server',
-          message: err.message || 'Ya existe.',
-        });
-      } else {
-        setError('root', { type: 'server', message: err?.message || 'No se pudo actualizar.' });
-      }
+    } else {
+      setError('root', { type: 'server', message: err?.message || 'No se pudo actualizar.' });
     }
-  };
-
+    // ❌ NO cerrar si hay error de validación
+  }
+};
   return (
     <div className="border rounded-xl p-4 bg-white shadow-sm">
       <div className="flex items-center justify-between mb-2">
