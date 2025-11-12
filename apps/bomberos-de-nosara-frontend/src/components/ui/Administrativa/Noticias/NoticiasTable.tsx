@@ -27,9 +27,15 @@ export default function NoticiasTable({ noticias, onEdit, onDelete }: Props) {
       accessorKey: "url",
       cell: ({ row }) => (
         <img
-          src={row.original.url}
+          src={`${import.meta.env.VITE_API_URL}${row.original.url}`}
           alt={row.original.titulo}
           className="h-20 w-20 object-contain"
+          onError={(e) => {
+            // Fallback to the original URL if the prefixed one fails
+            if (e.currentTarget.src !== row.original.url) {
+              e.currentTarget.src = row.original.url;
+            }
+          }}
         />
       ),
     },
