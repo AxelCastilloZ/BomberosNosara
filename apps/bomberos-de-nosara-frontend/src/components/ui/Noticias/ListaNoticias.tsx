@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { NoticiaCard } from "./NoticiaCard";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
@@ -29,6 +30,7 @@ const FlechaCarrusel = ({
 );
 
 export const ListaNoticias = () => {
+  const { t } = useTranslation();
   const limit = 5;
   const { data, isLoading, error } = useNoticias(1, limit);
 
@@ -41,8 +43,8 @@ export const ListaNoticias = () => {
 
   if (error)
     return (
-      <div className="text-center text-red-800 p-6 font-[Poppins]">
-        <p className="text-base sm:text-lg">No se pudieron cargar las noticias</p>
+      <div className="text-center text-red-800 p-6">
+        <p className="text-base sm:text-lg">{t('news.error')}</p>
       </div>
     );
 
@@ -62,7 +64,7 @@ export const ListaNoticias = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 font-[Poppins]">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <Slider {...configuracionCarrusel}>
         {data?.data.map((noticia: Noticia) => (
           <div key={noticia.id} className="px-2 sm:px-4">

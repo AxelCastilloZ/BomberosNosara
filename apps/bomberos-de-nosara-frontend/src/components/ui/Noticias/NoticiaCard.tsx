@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Noticia } from "../../../types/news";
 import { FaCalendarAlt } from "react-icons/fa";
 import { useState } from "react";
@@ -7,10 +8,11 @@ type Props = {
 };
 
 export const NoticiaCard = ({ noticia }: Props) => {
+  const { t } = useTranslation();
   const [showFull, setShowFull] = useState(false);
 
   return (
-    <div className="relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 font-[Poppins]">
+    <div className="relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500">
       {/* Imagen */}
       <div className="relative h-[320px] sm:h-[420px] md:h-[480px] lg:h-[520px]">
         <img
@@ -48,7 +50,7 @@ export const NoticiaCard = ({ noticia }: Props) => {
             className="mt-4 px-4 py-1.5 bg-red-800 backdrop-blur-sm border border-white/30 
             text-white font-medium rounded-3xl hover:bg-red-700 transition text-xs sm:text-sm shadow-md"
           >
-            {showFull ? "Ver menos" : "Leer más"}
+            {showFull ? t('news.readLess') : t('news.readMore')}
           </button>
         </div>
       </div>

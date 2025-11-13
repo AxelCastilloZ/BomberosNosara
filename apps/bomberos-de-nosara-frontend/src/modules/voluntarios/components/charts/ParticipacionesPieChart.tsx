@@ -33,14 +33,14 @@ export default function ParticipacionesPieChart({
           participacionesPorTipo.Simulacros,
         ],
         backgroundColor: [
-          'rgba(5, 66, 163, 0.8)',  // Azul para Entrenamiento
-          'rgba(164, 15, 10, 0.87)',   // Rojo para Emergencia
-          'rgb(144, 142, 142)',  // gris para Simulacros
+          '#0542a3cc',  // Azul para Entrenamiento
+          '#a40f0ade',   // Rojo para Emergencia
+          '#908e8e',  // gris para Simulacros
         ],
         borderColor: [
-          'rgba(59, 130, 246, 1)',
-          'rgba(239, 68, 68, 1)',
-          'rgb(138, 138, 138)',
+          '#3c83f6ff',
+          '#ef4343ff',
+          '#787878',
         ],
         borderWidth: 2,
       },

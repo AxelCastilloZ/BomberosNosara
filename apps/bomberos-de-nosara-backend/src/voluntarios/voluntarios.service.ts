@@ -98,6 +98,7 @@ export class VoluntariosService {
     const query = this.participacionRepo
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.voluntario', 'voluntario')
+      .withDeleted() // Incluir usuarios eliminados
       .where('voluntario.id = :userId', { userId: user.id })
       .orderBy('p.fecha', 'DESC');
 
@@ -151,6 +152,8 @@ export class VoluntariosService {
   ): Promise<any> {
     const participacion = await this.participacionRepo.findOne({
       where: { id },
+      relations: ['voluntario'],
+      withDeleted: true, // Incluir usuarios eliminados
     });
     if (!participacion) {
       throw new NotFoundException('Participación no encontrada');
@@ -175,6 +178,7 @@ export class VoluntariosService {
   async obtenerHorasAprobadasPorVoluntario(userId: number): Promise<number> {
     const participaciones = await this.participacionRepo.find({
       where: { voluntario: { id: userId }, estado: 'aprobada' },
+      withDeleted: true, // Incluir usuarios eliminados
     });
 
     return participaciones.reduce((total, p) => {
@@ -186,6 +190,7 @@ export class VoluntariosService {
   async obtenerHorasPendientesPorVoluntario(userId: number): Promise<number> {
     const participaciones = await this.participacionRepo.find({
       where: { voluntario: { id: userId }, estado: 'pendiente' },
+      withDeleted: true, // Incluir usuarios eliminados
     });
 
     return participaciones.reduce((total, p) => {
@@ -199,6 +204,7 @@ export class VoluntariosService {
     const aprobadas = await this.participacionRepo.find({
       where: { estado: 'aprobada' },
       relations: ['voluntario'],
+      withDeleted: true, // Incluir usuarios eliminados
     });
 
     // 2. Total de horas
@@ -277,6 +283,7 @@ export class VoluntariosService {
         fecha: Between(inicio, fin),
       },
       relations: ['voluntario'],
+      withDeleted: true, // Incluir usuarios eliminados
     });
 
     // Total de horas
@@ -356,6 +363,7 @@ export class VoluntariosService {
     const query = this.participacionRepo
       .createQueryBuilder('p')
       .leftJoinAndSelect('p.voluntario', 'voluntario')
+      .withDeleted() // Incluir usuarios eliminados
       .orderBy('p.fecha', 'DESC');
 
     if (dto.descripcion) {

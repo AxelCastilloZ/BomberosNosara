@@ -58,18 +58,18 @@ export default function TopVoluntariosBarChart({
         label: 'Horas trabajadas',
         data: topVoluntarios.map((v) => v.horas),
         backgroundColor: [
-          'rgba(234, 179, 8, 0.8)',   // Oro para el 1ro
-          'rgba(168, 162, 158, 0.8)', // Plata para el 2do
-          'rgba(194, 120, 84, 0.8)',  // Bronce para el 3ro
-          'rgba(7, 86, 213, 0.8)',  // Azul para el 4to
-          'rgba(197, 23, 17, 0.8)',  // Rojo para el 5to
+          '#feeba0',   // Oro para el 1ro
+          '#b3aca8', // Plata para el 2do
+          '#dfa486cc',  // Bronce para el 3ro
+          '#9af66fcc',  // verde para el 4to
+          '#fcb0b0',  // Rojo para el 5to
         ],
         borderColor: [
-          'rgba(234, 179, 8, 1)',
-          'rgba(168, 162, 158, 1)',
-          'rgba(194, 120, 84, 1)',
-          'rgba(59, 130, 246, 1)',
-          'rgba(196, 24, 18, 0.8)',
+          '#fadf8e',
+          '#a8a29fff',
+          '#de9d7d',
+          '#88f679d9',
+          '#fba2a2',
         ],
         borderWidth: 2,
         borderRadius: 5,

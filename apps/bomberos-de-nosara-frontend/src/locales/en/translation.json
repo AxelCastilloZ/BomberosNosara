@@ -1,0 +1,16 @@
+
+
+
+
+{
+  "nav": {
+    "aboutUs": "About Us",
+    "ourWork": "Our Work",
+    "donors": "Donors",
+    "news": "News",
+    "donate": "Donate"
+  },
+  "hero": {
+    "title": "Welcome to Bomberos Nosara"
+  }
+}

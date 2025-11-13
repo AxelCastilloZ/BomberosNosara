@@ -1,5 +1,6 @@
 // ⬇️ Debe ser el primer import del archivo
 import './config/yupLocale';
+import './i18n'; 
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
