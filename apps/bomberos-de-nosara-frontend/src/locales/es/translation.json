@@ -1,0 +1,142 @@
+
+
+
+{
+  "nav": {
+    "aboutUs": "Sobre Nosotros",
+    "ourWork": "Nuestro Trabajo",
+    "donors": "Donantes",
+    "news": "Noticias",
+    "donate": "Donar"
+  },
+  "hero": {
+    "title": "Bienvenido a Bomberos Nosara",
+    "description": "Nos dedicamos a servir a la comunidad de Nosara con compromiso, integridad y acción. Conocé más sobre nuestros aliados y cómo podés apoyar nuestra labor.",
+    "btnLearnMore": "Conócenos",
+    "btnSupport": "¿Cómo apoyar?"
+  },
+  "about": {
+    "title": "Sobre Nosotros",
+    "subtitle": "Los bomberos son esenciales para la seguridad de nuestras comunidades locales.",
+    "ourHistory": "Nuestra Historia",
+    "paragraph1": "Hace sólo una década, la atención de un grave incendio en Nosara requería esperar que el departamento regional de Bomberos viajara más de una hora en carreteras en mal estado. A pesar de los mejores esfuerzos, su hora de llegada a menudo es demasiado tarde.",
+    "paragraph2": "En noviembre de 2009, un residente local decidió que este retraso no era aceptable en una situación de vida o muerte y que era necesaria una respuesta local. Armado con equipo básico de bomberos donado, pidió la ayuda de más voluntarios. La llamada fue respondida por un pequeño y comprometido equipo de servidores públicos desinteresados y listos para emprender la lucha.",
+    "paragraph3": "Una década después de su formación, estos voluntarios han salvado innumerables hogares, vidas y medios de sustento y se han convertido en un recurso comunitario indispensable y muy utilizado."
+  },
+  "work": {
+    "title": "Nuestro Trabajo",
+    "subtitle": "Comprometidos con la seguridad y bienestar de nuestra comunidad",
+    "services": {
+      "fires": {
+        "title": "Combate de Incendios",
+        "description": "Incendios forestales, estructurales, basura, eléctricos"
+      },
+      "medical": {
+        "title": "Atención Médica",
+        "description": "Atención médica de emergencia y primeros auxilios"
+      },
+      "coastal": {
+        "title": "Emergencias Costeras",
+        "description": "Respuesta rápida a emergencias en el mar y playa"
+      },
+      "disasters": {
+        "title": "Desastres Naturales",
+        "description": "Respuesta a desastres naturales y catástrofes"
+      },
+      "accidents": {
+        "title": "Accidentes Vehiculares",
+        "description": "Rescate y atención en accidentes de tránsito"
+      },
+      "wildlife": {
+        "title": "Rescate de Animales Salvajes",
+        "description": "Reubicación segura de fauna silvestre"
+      },
+      "education": {
+        "title": "Programas Educativos",
+        "description": "Capacitación y prevención en la comunidad"
+      },
+      "community": {
+        "title": "Servicio Comunitario",
+        "description": "Apoyo y asistencia a la comunidad de Nosara"
+      },
+      "lifeguard": {
+        "title": "Guardia Costera",
+        "description": "Vigilancia y rescate en zonas costeras"
+      }
+    }
+  },
+  "news": {
+    "title": "Últimas Noticias",
+    "subtitle": "Mantente informado sobre nuestras actividades y logros recientes",
+    "readMore": "Leer más",
+    "loading": "Cargando noticias...",
+    "error": "No se pudieron cargar las noticias"
+  },
+  "donors": {
+    "title": "Quiénes nos apoyan",
+    "subtitle": "Si desea formar parte de este selecto grupo, envíe un correo a:",
+    "email": "donaciones@bomberosdenosara.org",
+    "readMore": "Leer más",
+    "loading": "Cargando donantes...",
+    "error": "Error cargando donantes"
+  },
+  "donate": {
+    "hero": {
+      "save": "Salva",
+      "lives": "Vidas",
+      "withYourHelp": "Con Tu Ayuda",
+      "description": "Cada donación fortalece nuestra capacidad de respuesta ante emergencias y protege a nuestra comunidad. Únete a nuestra misión de servicio y protección."
+    },
+    "sectionTitle": "Elige cómo quieres ayudar",
+    "types": {
+      "resources": {
+        "title": "Donación de Recursos",
+        "description": "Contribuye con equipo, vehículos y recursos materiales para nuestras operaciones de emergencia.",
+        "btnText": "Ver Más Información"
+      },
+      "monetary": {
+        "title": "Donación Monetaria",
+        "description": "La forma más directa y efectiva de apoyar nuestras operaciones y salvar vidas.",
+        "btnText": "Donar Ahora",
+        "benefits": {
+          "certified": "Organización 501(c)(3) Certificada",
+          "taxDeductible": "Deducible de impuestos en EE. UU.",
+          "secure": "Seguro y rápido",
+          "immediate": "Impacto inmediato en la comunidad"
+        }
+      }
+    },
+    "info": {
+      "paragraph1": "Como organización voluntaria, puede ser una verdadera lucha adquirir el equipo de seguridad, suministros, mantenimiento de vehículos y combustible que necesitamos. Todo esto requiere de financiamiento, que solo se puede recaudar a través de sus donaciones.",
+      "paragraph2": "La Asociación Bomberos de Nosara opera como una organización sin fines de lucro afiliada a",
+      "nonprofit": "Amigos Of Costa Rica (501(c)(3) exenta de impuestos)",
+      "paragraph3": "Su donación es deducible dentro de las pautas de la ley de EE. UU. Conserve su recibo de donación como comprobante oficial.",
+      "costaRica": "Para donaciones deducibles de impuestos en Costa Rica, contacte:"
+    }
+  },
+  "footer": {
+    "title": "BOMBEROS DE NOSARA",
+    "subtitle": "THE VOLUNTEER FIREFIGHTERS OF NOSARA",
+    "association": "Asociación Bomberos de Nosara",
+    "description": "Garantizamos servicios de emergencia oportunos para la comunidad, porque en caso de emergencia,",
+    "everySecond": "¡cada segundo cuenta!",
+    "contact": "Contáctanos",
+    "phone": "+506 8709 0614",
+    "email": "info@bomberosnosara.org",
+    "callButton": "Llamar +506 8709 0614",
+    "copyright": "Bomberos de Nosara. Todos los derechos reservados."
+  },
+  "common": {
+    "loading": "Cargando...",
+    "error": "Error",
+    "close": "Cerrar",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "confirm": "Confirmar",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "back": "Volver"
+  }
+}
