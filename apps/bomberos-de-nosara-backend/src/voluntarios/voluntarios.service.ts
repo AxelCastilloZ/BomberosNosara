@@ -260,6 +260,7 @@ export class VoluntariosService {
       tasaAprobacion: parseFloat(tasaAprobacion.toFixed(1)),
       topVoluntarios, // ← TODOS
       participacionesPorTipo,
+      totalParticipaciones: aprobadas.length,
     };
   }
 
@@ -343,6 +344,7 @@ export class VoluntariosService {
       tasaAprobacion: parseFloat(tasaAprobacion.toFixed(1)),
       topVoluntarios,
       participacionesPorTipo,
+      totalParticipaciones: aprobadas.length,
     };
   }
 

@@ -44,6 +44,7 @@ export type EstadisticasVoluntariosDto = {
   Emergencia: number;
   Simulacros: number;
   };
+  totalParticipaciones?: number;
 };
 
 export type PaginatedDto = {

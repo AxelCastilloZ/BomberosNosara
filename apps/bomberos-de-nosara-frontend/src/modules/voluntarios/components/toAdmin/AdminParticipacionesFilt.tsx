@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminParticipacionesCards from './AdminParticipacionesCards';
 import { TipoActividad } from '../../types/voluntarios';
 import { useParticipacionesPaginadas } from '../../Hooks/useVoluntarios';
+import { Alert, AlertDescription } from '../../../../components/ui/alert';
 
 export type FiltrosForm = {
   descripcion?: string;
@@ -23,15 +24,43 @@ export default function AdminParticipacionesFilt() {
     fechaHasta: '',
     estado: undefined,
     page: 1,
-    limit: 6,
+    limit: 12,
   });
 
   // Estados temporales para debounce
   const [searchDesc, setSearchDesc] = useState('');
   const [searchVol, setSearchVol] = useState('');
 
+  // Estados para alertas
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [successAlertType, setSuccessAlertType] = useState<'aprobada' | 'rechazada'>('aprobada');
+  const [showErrorAlert, setShowErrorAlert] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   const { data, isLoading } = useParticipacionesPaginadas(filtros);
   const totalPages = data?.totalPages ?? 1;
+
+  const handleSuccess = (tipoEstado: 'aprobada' | 'rechazada') => {
+    setSuccessAlertType(tipoEstado);
+    setShowSuccessAlert(true);
+    setShowErrorAlert(false);
+
+    // Ocultar alerta después de 2s
+    setTimeout(() => {
+      setShowSuccessAlert(false);
+    }, 2000);
+  };
+
+  const handleError = (message: string) => {
+    setErrorMessage(message);
+    setShowErrorAlert(true);
+    setShowSuccessAlert(false);
+
+    // Ocultar alerta después de 30s
+    setTimeout(() => {
+      setShowErrorAlert(false);
+    }, 30000);
+  };
 
   // Debounce para descripción
   useEffect(() => {
@@ -69,21 +98,59 @@ export default function AdminParticipacionesFilt() {
       fechaHasta: '',
       estado: undefined,
       page: 1,
-      limit: 6,
+      limit: 12,
     });
   };
 
-   // Ordenar los datos: pendientes primero
-  const datosOrdenados = data?.data
-    ? [...data.data].sort((a, b) => {
-        if (a.estado === 'pendiente' && b.estado !== 'pendiente') return -1;
-        if (a.estado !== 'pendiente' && b.estado === 'pendiente') return 1;
-        return 0;
-      })
-    : [];
-
   return (
     <div className="w-full">
+      {/* Alertas flotantes */}
+      {showSuccessAlert && (
+        <div className="fixed top-4 right-4 z-[9999] w-96 animate-[slideInRight_0.3s_ease-out]">
+          <Alert variant={successAlertType === 'aprobada' ? 'success' : 'warning'}>
+            <AlertDescription>
+              {successAlertType === 'aprobada' ? (
+                <>
+                  <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <strong className="font-semibold">¡Participación aprobada!</strong>
+                    <p className="mt-1">El estado se ha actualizado correctamente.</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 text-yellow-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>
+                    <strong className="font-semibold">Participación rechazada</strong>
+                    <p className="mt-1">El estado se ha actualizado correctamente.</p>
+                  </div>
+                </>
+              )}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {showErrorAlert && (
+        <div className="fixed top-4 right-4 z-[9999] w-96 animate-[slideInRight_0.3s_ease-out]">
+          <Alert variant="destructive">
+            <AlertDescription>
+              <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <strong className="font-semibold">Error al actualizar</strong>
+                <p className="mt-1">{errorMessage}</p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="bg-white rounded-xl shadow border  p-4 mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
         {/* Buscar por descripción */}
@@ -139,7 +206,7 @@ export default function AdminParticipacionesFilt() {
         <select
           value={filtros.estado ?? ''}
           onChange={(e) =>
-            actualizarFiltro('estado', (e.target.value as '') || undefined)
+            actualizarFiltro('estado', e.target.value === '' ? undefined : e.target.value as 'aprobada' | 'pendiente' | 'rechazada')
           }
           className="border border-gray-300 rounded-lg px-3 py-2"
         >
@@ -163,7 +230,7 @@ export default function AdminParticipacionesFilt() {
       {/* Cards */}
       {isLoading ? (
         <p className="text-gray-600">Cargando...</p>
-      ) : datosOrdenados.length === 0 ? (
+      ) : (data?.data ?? []).length === 0 ? (
         <div className="text-center py-10 bg-white rounded-xl shadow border border-gray-200">
           <div className="flex flex-col items-center justify-center">
             <svg
@@ -188,7 +255,11 @@ export default function AdminParticipacionesFilt() {
           </div>
         </div>
       ) : (
-        <AdminParticipacionesCards data={datosOrdenados} />
+        <AdminParticipacionesCards
+          data={data?.data ?? []}
+          onSuccess={handleSuccess}
+          onError={handleError}
+        />
       )}
 
       {/* Paginación */}
@@ -223,6 +294,19 @@ export default function AdminParticipacionesFilt() {
           </button>
         </div>
       )}
+
+      <style>{`
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

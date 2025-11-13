@@ -11,9 +11,11 @@ const MAX_UBICACION = 20;
 
 type Props = {
   data: Participacion[];
+  onSuccess: (tipoEstado: 'aprobada' | 'rechazada') => void;
+  onError: (message: string) => void;
 };
 
-export default function AdminParticipacionesCards({ data }: Props) {
+export default function AdminParticipacionesCards({ data, onSuccess, onError }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const [modalData, setModalData] = useState<Participacion | null>(null);
 
@@ -129,6 +131,8 @@ export default function AdminParticipacionesCards({ data }: Props) {
           id={selected}
           motivoActual={data.find((p) => p.id === selected)?.motivoRechazo || ''}
           onClose={() => setSelected(null)}
+          onSuccess={onSuccess}
+          onError={onError}
         />
       )}
     </>

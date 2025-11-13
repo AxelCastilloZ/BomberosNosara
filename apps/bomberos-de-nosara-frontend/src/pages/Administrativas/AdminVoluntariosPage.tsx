@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { BarChart3, Users, ArrowLeft } from 'lucide-react';
-//import AdminEstadisticasVoluntarios from '../../components/ui/Administrativa/Voluntarios/AdminEstadisticasVoluntarios';
 import AdminParticipacionesFilt from '../../modules/voluntarios/components/toAdmin/AdminParticipacionesFilt';
 import AdminVolEstadisticasSwitch from '../../modules/voluntarios/components/toAdmin/AdminVolEstadisticasSwitch';
 
@@ -10,11 +9,11 @@ export default function AdminVoluntariosPage() {
   const [viewMode, setViewMode] = useState<VoluntarioView>('dashboard');
 
   return (
-    <div className="min-h-screen px-6 py-8 w-full bg-[#f9fafb] pt-14">
+    <div className="min-h-screen px-6 py-8 w-full bg-white pt-14">
       {viewMode !== 'dashboard' && (
         <button
           onClick={() => setViewMode('dashboard')}
-          className="flex items-center gap-2 mb-4 text-red-700 hover:underline"
+          className="flex items-center gap-2 mb-1 text-red-700 hover:underline"
         >
           <ArrowLeft className="h-5 w-5" /> Volver
         </button>
@@ -57,10 +56,10 @@ export default function AdminVoluntariosPage() {
 
       {/* Lista de participaciones */}
       {viewMode === 'lista' && (
-        <div className="bg-white border border-gray-200 shadow rounded-lg p-6 mt-6">
+        <div className="bg-white  border-gray-200 shadow rounded-lg p-6 mt-6">
           <div className='mb-8'>
             <div className='flex items-center gap-2 mb-2 font-bold'>
-              <h1>Bienvenido</h1>
+              <h3>Bienvenido</h3>
             </div>
           <span>Gestiona aqui las participaciones, aprueba o rechaza los registros.</span>
           </div>
