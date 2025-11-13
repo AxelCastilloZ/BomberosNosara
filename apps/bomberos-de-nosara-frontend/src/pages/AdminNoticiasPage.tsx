@@ -91,12 +91,21 @@ const handleFilter = (newFilters: typeof filters) => {
       setShowSuccess(true);
       setIsFormOpen(false);
       setEditingNoticia(null);
-    } catch (error) {
-      setSuccessMsg(
-        `Error: ${
-          error instanceof Error ? error.message : "Ocurrió un error"
-        }`
-      );
+    } catch (error: any) {
+      // Extraer mensaje de error más descriptivo
+      let errorMsg = "No se pudo guardar la noticia";
+
+      if (error?.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error?.response?.status === 404) {
+        errorMsg = "La noticia no existe";
+      } else if (error?.response?.status === 400) {
+        errorMsg = "Datos inválidos. Por favor, verifica la información ingresada";
+      } else if (error?.message) {
+        errorMsg = error.message;
+      }
+
+      setSuccessMsg(`Error: ${errorMsg}`);
       setShowSuccess(true);
     } finally {
       setShowLoading(false);
@@ -113,14 +122,29 @@ const handleFilter = (newFilters: typeof filters) => {
               setSuccessMsg("Noticia eliminada correctamente");
               resolve();
             },
-            onError: (error) => reject(error),
+            onError: (error: any) => {
+              // Extraer mensaje de error más descriptivo
+              let errorMsg = "No se pudo eliminar la noticia";
+
+              if (error?.response?.data?.message) {
+                errorMsg = error.response.data.message;
+              } else if (error?.response?.status === 404) {
+                errorMsg = "La noticia no existe o ya fue eliminada";
+              } else if (error?.response?.status === 400) {
+                errorMsg = "No se pudo completar la eliminación. Por favor, intenta nuevamente";
+              } else if (error?.message) {
+                errorMsg = error.message;
+              }
+
+              reject(new Error(errorMsg));
+            },
           });
         });
       }
     } catch (error) {
       setSuccessMsg(
         `Error: ${
-          error instanceof Error ? error.message : "Ocurrió un error al eliminar"
+          error instanceof Error ? error.message : "Ocurrió un error inesperado al eliminar la noticia"
         }`
       );
     } finally {

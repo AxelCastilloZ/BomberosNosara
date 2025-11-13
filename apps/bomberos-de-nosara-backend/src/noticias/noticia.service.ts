@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Noticia } from './entities/noticia.entity';
@@ -77,20 +72,36 @@ export class NoticiaService {
   async delete(id: number): Promise<void> {
     this.logger.log(`Intentando eliminar noticia con id: ${id}`);
     const noticia = await this.findOne(id);
+
+    // Intentar eliminar la imagen asociada si existe
     if (noticia.url) {
-      const filename = noticia.url.replace(
-        `http://localhost:3000/uploads/`,
-        '',
-      );
-      const isDeleted = await this.uploadService.deleteFile(filename);
-      if (!isDeleted) {
-        throw new BadRequestException('Error al eliminar la imagen');
+      try {
+        // Extraer el nombre del archivo de la URL
+        const filename = noticia.url.replace(
+          `http://localhost:3000/uploads/`,
+          '',
+        );
+        const isDeleted = await this.uploadService.deleteFile(filename);
+        if (isDeleted) {
+          this.logger.log(`Imagen ${filename} eliminada exitosamente`);
+        } else {
+          this.logger.warn(
+            `La imagen ${filename} no existe o ya fue eliminada previamente`,
+          );
+        }
+      } catch (error) {
+        // Si hay error al eliminar la imagen, solo registrarlo pero continuar
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.warn(`No se pudo eliminar la imagen: ${message}`);
       }
     }
+
+    // Eliminar la noticia (soft delete) independientemente del estado de la imagen
     const result = await this.noticiaRepository.softDelete(id);
     if (result.affected === 0) {
       throw new NotFoundException(`Noticia with ID ${id} not found`);
     }
+
     this.logger.log(
       `Noticia con id: ${id} eliminada exitosamente (soft delete)`,
     );
