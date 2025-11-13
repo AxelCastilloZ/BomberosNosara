@@ -3,11 +3,15 @@ import ParticipacionForm from "../../modules/voluntarios/components/toVoluntario
 import { useHorasAprobadas, useHorasPendientes } from "../../modules/voluntarios/Hooks/useVoluntarios";
 import VoluntariosParticipaciones from "../../modules/voluntarios/components/toVoluntarios/VoluntariosParticipaciones";
 import { CheckCircle, Clock, X, ArrowLeft } from 'lucide-react';
+import { Alert, AlertDescription } from "../../components/ui/alert";
 
 export default function VoluntariosPage() {
 	const { data: horasAprobadas = 0, isLoading: isLoadingHorasA } = useHorasAprobadas();
 	const { data: horasPendientes = 0, isLoading: isLoadingHorasP } = useHorasPendientes();
 	const [showForm, setShowForm] = useState(false);
+	const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+	const [showErrorAlert, setShowErrorAlert] = useState(false);
+	const [errorMessage, setErrorMessage] = useState("");
 
 	const fmtHoras = (dec: number) => {
 		const h = Math.floor(dec);
@@ -15,8 +19,69 @@ export default function VoluntariosPage() {
 		return `${h} h ${m} min`;
 	};
 
+	const handleSuccess = () => {
+		// Mostrar alerta
+		setShowSuccessAlert(true);
+		setShowErrorAlert(false);
+
+		// Cerrar modal después de 0.5ms
+		setTimeout(() => {
+			setShowForm(false);
+		}, 50);
+
+		// Ocultar alerta después de 2s
+		setTimeout(() => {
+			setShowSuccessAlert(false);
+		}, 2000);
+	};
+
+	const handleError = (message: string) => {
+		// Mostrar alerta de error
+		setErrorMessage(message);
+		setShowErrorAlert(true);
+		setShowSuccessAlert(false);
+
+		// Ocultar alerta después de 30s
+		setTimeout(() => {
+			setShowErrorAlert(false);
+		}, 2000);
+	};
+
 	return (
 		<div className="p-2 space-y-4 pt-18">
+			{/* Alertas flotantes */}
+			{showSuccessAlert && (
+				<div className="fixed top-4 right-4 z-[9999] w-96 animate-[slideInRight_0.3s_ease-out]">
+					<Alert variant="success">
+						<AlertDescription>
+							<svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+							<div>
+								<strong className="font-semibold">¡Participación registrada!</strong>
+								<p className="mt-1">La participación se ha registrado exitosamente.</p>
+							</div>
+						</AlertDescription>
+					</Alert>
+				</div>
+			)}
+
+			{showErrorAlert && (
+				<div className="fixed top-4 right-4 z-[9999] w-96 animate-[slideInRight_0.3s_ease-out]">
+					<Alert variant="destructive">
+						<AlertDescription>
+							<svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+							<div>
+								<strong className="font-semibold">Error al registrar</strong>
+								<p className="mt-1">{errorMessage}</p>
+							</div>
+						</AlertDescription>
+					</Alert>
+				</div>
+			)}
+
 			{/* Botón volver */}
 			<button
 				onClick={() => window.history.back()}
@@ -107,7 +172,7 @@ export default function VoluntariosPage() {
 
 							{/* Contenido con scroll */}
 							<div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-								<ParticipacionForm onSuccess={() => setShowForm(false)} />
+								<ParticipacionForm onSuccess={handleSuccess} onError={handleError} />
 							</div>
 						</div>
 					</div>
@@ -123,6 +188,16 @@ export default function VoluntariosPage() {
 					to {
 						opacity: 1;
 						transform: scale(1);
+					}
+				}
+				@keyframes slideInRight {
+					from {
+						opacity: 0;
+						transform: translateX(100%);
+					}
+					to {
+						opacity: 1;
+						transform: translateX(0);
 					}
 				}
 			`}</style>

@@ -55,6 +55,10 @@ export const useActualizarEstado = () => {
       qc.invalidateQueries({ queryKey: ['mis-participaciones'] });
       qc.invalidateQueries({ queryKey: ['mis-horas'] });
       qc.invalidateQueries({ queryKey: ['participaciones-paginado'] });
+      qc.invalidateQueries({ queryKey: ['estadisticas-voluntarios'] });
+      qc.invalidateQueries({ queryKey: ['estadisticasMensuales'] });
+      qc.invalidateQueries({ queryKey: ['mis-participaciones-paginado'] });
+      qc.invalidateQueries({ queryKey: ['mis-horas-pendientes'] });
     },
   });
 };

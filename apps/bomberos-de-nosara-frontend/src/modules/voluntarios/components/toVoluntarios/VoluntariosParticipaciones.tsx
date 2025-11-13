@@ -21,7 +21,7 @@ export default function VoluntariosParticipaciones() {
     fechaHasta: '',
     estado: undefined,
     page: 1,
-    limit: 6,
+    limit: 12,
   });
 
   // Estado temporal solo para el campo de búsqueda (para debounce)
@@ -55,7 +55,7 @@ export default function VoluntariosParticipaciones() {
       fechaHasta: '',
       estado: undefined,
       page: 1,
-      limit: 6,
+      limit: 12,
     });
   };
 
@@ -108,7 +108,7 @@ export default function VoluntariosParticipaciones() {
         <select
           value={filtros.estado ?? ''}
           onChange={(e) =>
-            actualizarFiltro('estado', (e.target.value as any) || undefined)
+            actualizarFiltro('estado', e.target.value === '' ? undefined : e.target.value as 'aprobada' | 'pendiente' | 'rechazada')
           }
           className="border border-gray-300 rounded-lg px-3 py-2"
         >

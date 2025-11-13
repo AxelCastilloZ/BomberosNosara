@@ -1,8 +1,10 @@
 // src/components/ui/Administrativa/Voluntarios/EstadisticasVoluntariosMensuales.tsx
 import { useEstadisticasVolMensuales} from '../../Hooks/useVoluntarios';
-import { BarChart3, Users, Clock, CheckCircle } from 'lucide-react';
+import { BarChart3, Users, Clock, CheckCircle, ClipboardList } from 'lucide-react';
 import { EstadisticasVoluntariosDto } from '../../types/voluntarios';
 import { useState } from 'react';
+import ParticipacionesPieChart from '../charts/ParticipacionesPieChart';
+import TopVoluntariosBarChart from '../charts/TopVoluntariosBarChart';
 
 export default function AdminEstadisticasMensuales() {
   const [mes, setMes] = useState(new Date().toISOString().slice(0, 7));
@@ -61,10 +63,10 @@ export default function AdminEstadisticasMensuales() {
             </div>
 
             <div className="bg-white p-4 rounded-lg shadow flex items-center gap-4">
-              <BarChart3 className="h-8 w-8 text-purple-600" />
+              <ClipboardList className="h-8 w-8 text-purple-600" />
               <div>
-                <p className="text-sm text-gray-600">Promedio</p>
-                <p className="text-2xl font-bold">{fmtHoras((data as EstadisticasVoluntariosDto).promedioHorasPorVoluntario)}</p>
+                <p className="text-sm text-gray-600">Participaciones del Mes</p>
+                <p className="text-2xl font-bold">{(data as EstadisticasVoluntariosDto).totalParticipaciones || 0}</p>
               </div>
             </div>
 
@@ -78,29 +80,9 @@ export default function AdminEstadisticasMensuales() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h3 className="font-semibold text-gray-800 mb-2">Top 5 Voluntarios</h3>
-              <ul className="space-y-2">
-                {(data as EstadisticasVoluntariosDto).topVoluntarios.map((v, index) => (
-                  <li key={index} className="flex justify-between">
-                    <span>{v.nombre}</span>
-                    <span className="font-semibold">{fmtHoras(v.horas)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <TopVoluntariosBarChart topVoluntarios={(data as EstadisticasVoluntariosDto).topVoluntarios} titulo="Top 5 Voluntarios" />
 
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h3 className="font-bold text-gray-800 mb-2">Participaciones por Tipo (Mes)</h3>
-              <ul className="space-y-2">
-                {Object.entries((data as EstadisticasVoluntariosDto).participacionesPorTipo).map(([tipo, cantidad]) => (
-                  <li key={tipo} className="flex justify-between">
-                    <span>{tipo}</span>
-                    <span className="font-semibold">{cantidad} participaciones</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <ParticipacionesPieChart participacionesPorTipo={(data as EstadisticasVoluntariosDto).participacionesPorTipo} />
           </div>
         </>
       )}

@@ -20,6 +20,7 @@ import {
 import { getUserRoles } from "../../../service/auth";
 import { RoleEnum } from "../../../types/role.enum";
 import React from "react";
+import { useAuth } from "../../../hooks/useAuth";
 
 type SidebarItem = {
   icon: ReactNode;
@@ -91,16 +92,22 @@ const SidebarHeader = React.memo(({ isCollapsed, setCollapsed, setOpen }: {
   </div>
 ));
 
-const SidebarFooter = React.memo(({ isCollapsed, userRoles, handleLogout }: {
+const SidebarFooter = React.memo(({ isCollapsed, username, userRoles, handleLogout }: {
   isCollapsed: boolean;
+  username: string;
   userRoles: RoleEnum[];
   handleLogout: () => void;
 }) => {
+  // Obtener iniciales del username
+  const initials = username
+    ? username.slice(0, 2).toUpperCase()
+    : (userRoles[0]?.charAt(0) || "U");
+
   if (isCollapsed) {
     return (
       <div className="border-t border-gray-200 py-3 flex flex-col items-center gap-2 shrink-0">
         <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-xs font-semibold">
-          {userRoles[0]?.charAt(0) || "U"}
+          {initials}
         </div>
         <button
           onClick={handleLogout}
@@ -117,16 +124,14 @@ const SidebarFooter = React.memo(({ isCollapsed, userRoles, handleLogout }: {
     <div className="p-4 border-t border-gray-200 shrink-0">
       <div className="flex items-center gap-3 p-2 rounded-lg bg-gray-50">
         <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white text-sm font-medium">
-          {userRoles[0]?.charAt(0) || "U"}
+          {initials}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 truncate">
-            {userRoles[0] || "Usuario"}
+            {username || "Usuario"}
           </p>
           <p className="text-xs text-gray-500 truncate">
-            {userRoles.includes(RoleEnum.SUPERUSER) || userRoles.includes(RoleEnum.ADMIN)
-              ? "Administrador"
-              : "Usuario"}
+            {userRoles[0] || "Sin rol"}
           </p>
         </div>
         <button
@@ -142,6 +147,8 @@ const SidebarFooter = React.memo(({ isCollapsed, userRoles, handleLogout }: {
 });
 
 export default function AdminLayout() {
+  const { user } = useAuth();
+
   const userRoles = useMemo(() => {
     try {
       return getUserRoles();
@@ -149,6 +156,8 @@ export default function AdminLayout() {
       return [];
     }
   }, []);
+
+  const username = user?.username || user?.name || user?.email?.split('@')[0] || "Usuario";
 
   const items = useMemo(() => {
     return ALL_ITEMS
@@ -297,7 +306,7 @@ export default function AdminLayout() {
               ))}
             </div>
 
-            <SidebarFooter isCollapsed={isCollapsed} userRoles={userRoles} handleLogout={handleLogout} />
+            <SidebarFooter isCollapsed={isCollapsed} username={username} userRoles={userRoles} handleLogout={handleLogout} />
           </motion.aside>
         )}
 
