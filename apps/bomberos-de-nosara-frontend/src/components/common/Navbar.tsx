@@ -1,11 +1,14 @@
 // src/components/layout/Navbar.tsx
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import UserButton from '../ui/ProfileButton/UserButton.js';
+import LanguageSelector from './LanguageSelector';
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { location } = useRouterState();
+  const { t } = useTranslation();
 
   // ⛔️ Oculta navbar en /admin
   if (location.pathname.startsWith('/admin')) return null;
@@ -23,7 +26,7 @@ export default function Navbar() {
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-full">
         <div className="flex items-center justify-between h-full">
-          {/* Logo (sin márgenes negativos) */}
+          {/* Logo */}
           <div className="flex items-center pr-4 lg:pr-8">
             <Link
               to="/"
@@ -52,16 +55,18 @@ export default function Navbar() {
           {/* Links desktop */}
           <div className="hidden lg:flex items-center justify-center flex-1">
             <ul className="flex items-center gap-10 xl:gap-14">
-              <li><Link to="/sobre-nosotros" className={link}>SOBRE NOSOTROS</Link></li>
-              <li><Link to="/nuestro-trabajo" className={link}>NUESTRO TRABAJO</Link></li>
-              <li><Link to="/donantes" className={link}>DONANTES</Link></li>
-              <li><Link to="/noticias" className={link}>NOTICIAS</Link></li>
-              <li><Link to="/donar" className={link}>DONAR</Link></li>
+              <li><Link to="/sobre-nosotros" className={link}>{t('nav.aboutUs').toUpperCase()}</Link></li>
+              <li><Link to="/nuestro-trabajo" className={link}>{t('nav.ourWork').toUpperCase()}</Link></li>
+              <li><Link to="/donantes" className={link}>{t('nav.donors').toUpperCase()}</Link></li>
+              <li><Link to="/noticias" className={link}>{t('nav.news').toUpperCase()}</Link></li>
+              <li><Link to="/donar" className={link}>{t('nav.donate').toUpperCase()}</Link></li>
             </ul>
           </div>
 
-          {/* Usuario + toggle móvil */}
-          <div className="flex items-center pl-6 lg:pl-12">
+          {/* Selector de idioma + Usuario + toggle móvil */}
+          <div className="flex items-center gap-4 pl-6 lg:pl-12">
+            <LanguageSelector />
+            <div className="h-8 w-px bg-slate-300" /> {/* Separador visual */}
             <UserButton />
             <button
               type="button"
@@ -93,11 +98,11 @@ export default function Navbar() {
         >
           <div className="border-t border-slate-200 py-2 bg-white">
             <nav className="flex flex-col">
-              <Link to="/sobre-nosotros" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>SOBRE NOSOTROS</Link>
-              <Link to="/nuestro-trabajo" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NUESTRO TRABAJO</Link>
-              <Link to="/donantes" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONANTES</Link>
-              <Link to="/noticias" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>NOTICIAS</Link>
-              <Link to="/donar" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>DONAR</Link>
+              <Link to="/sobre-nosotros" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>{t('nav.aboutUs').toUpperCase()}</Link>
+              <Link to="/nuestro-trabajo" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>{t('nav.ourWork').toUpperCase()}</Link>
+              <Link to="/donantes" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>{t('nav.donors').toUpperCase()}</Link>
+              <Link to="/noticias" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>{t('nav.news').toUpperCase()}</Link>
+              <Link to="/donar" className="px-4 py-3 text-[16px] text-slate-800 hover:text-red-600" onClick={() => setMobileOpen(false)}>{t('nav.donate').toUpperCase()}</Link>
             </nav>
           </div>
         </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
 import ServiceCard from "./ServiceCard";
 import {
   Flame,
@@ -14,66 +15,68 @@ import {
 } from "lucide-react";
 
 export default function NuestroTrabajoSection() {
+  const { t } = useTranslation();
+
   const services = [
     {
       icon: Flame,
-      title: "Combate de Incendios",
-      description: "Incendios forestales, estructurales, basura, eléctricos",
+      title: t('work.services.fires.title'),
+      description: t('work.services.fires.description'),
     },
     {
       icon: Heart,
-      title: "Atención Médica",
-      description: "Atención médica de emergencia y primeros auxilios",
+      title: t('work.services.medical.title'),
+      description: t('work.services.medical.description'),
     },
     {
       icon: Waves,
-      title: "Emergencias Costeras",
-      description: "Respuesta rápida a emergencias en el mar y playa",
+      title: t('work.services.coastal.title'),
+      description: t('work.services.coastal.description'),
     },
     {
       icon: Triangle,
-      title: "Desastres Naturales",
-      description: "Respuesta a desastres naturales y catástrofes",
+      title: t('work.services.disasters.title'),
+      description: t('work.services.disasters.description'),
     },
     {
       icon: Car,
-      title: "Accidentes Vehiculares",
-      description: "Rescate y atención en accidentes de tránsito",
+      title: t('work.services.accidents.title'),
+      description: t('work.services.accidents.description'),
     },
     {
       icon: PawPrint,
-      title: "Rescate de Animales Salvajes",
-      description: "Reubicación segura de fauna silvestre",
+      title: t('work.services.wildlife.title'),
+      description: t('work.services.wildlife.description'),
     },
     {
       icon: GraduationCap,
-      title: "Programas Educativos",
-      description: "Capacitación y prevención en la comunidad",
+      title: t('work.services.education.title'),
+      description: t('work.services.education.description'),
     },
     {
       icon: Users,
-      title: "Servicio Comunitario",
-      description: "Apoyo y asistencia a la comunidad de Nosara",
+      title: t('work.services.community.title'),
+      description: t('work.services.community.description'),
     },
     {
       icon: CircleAlert,
-      title: "Guardia Costera",
-      description: "Vigilancia y rescate en zonas costeras",
+      title: t('work.services.lifeguard.title'),
+      description: t('work.services.lifeguard.description'),
     },
   ];
 
   return (
-    <section className="relative w-full overflow-hidden font-[Poppins] bg-gradient-to-b from-white via-[#E5E7EB] to-[#374151]">
+    <section className="relative w-full overflow-hidden bg-gradient-to-b from-white via-[#E5E7EB] to-[#374151]">
       {/* Contenido principal */}
       <div className="relative z-10 py-16 md:py-20">
         <div className="container mx-auto max-w-7xl space-y-10 px-4 sm:px-6 lg:px-8">
           {/* Encabezado */}
           <div className="text-center space-y-3">
             <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900">
-              Nuestro Trabajo
+              {t('work.title')}
             </h2>
             <p className="text-lg md:text-xl text-gray-700 font-medium max-w-3xl mx-auto">
-              Comprometidos con la seguridad y bienestar de nuestra comunidad
+              {t('work.subtitle')}
             </p>
           </div>
 

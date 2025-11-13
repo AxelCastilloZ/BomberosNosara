@@ -1,14 +1,24 @@
 "use client";
 
 import React from "react";
-import { aboutParagraphs } from "../../../data/aboutData";
+import { useTranslation } from "react-i18next";
 import Img2 from "../../../images/Img2.jpeg";
 
 export default function AboutSection() {
+  const { t } = useTranslation();
+
+  // Párrafos traducidos dinámicamente
+  const paragraphs = [
+    { id: 1, content: t('about.paragraph1') },
+    { id: 2, content: t('about.paragraph2') },
+    { id: 3, content: t('about.paragraph3') },
+    { id: 4, content: t('about.paragraph4') },
+  ];
+
   return (
     <section
       id="about-us"
-      className="w-full bg-white py-12 md:py-16 px-6 font-[Poppins]"
+      className="w-full bg-white py-12 md:py-16 px-6"
     >
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start gap-8 md:gap-16">
         {/* ---- Columna Izquierda: Texto ---- */}
@@ -16,16 +26,16 @@ export default function AboutSection() {
           {/* Encabezado */}
           <div>
             <h2 className="text-4xl md:text-5xl font-extrabold text-gray-900">
-              Sobre Nosotros
+              {t('about.title')}
             </h2>
             <p className="text-lg text-gray-700 mt-3 leading-relaxed">
-              Los bomberos son esenciales para la seguridad de nuestras comunidades locales.
+              {t('about.subtitle')}
             </p>
           </div>
 
           {/* Contenido completo - Todos los párrafos visibles */}
           <div className="text-gray-700 leading-relaxed space-y-4 text-base">
-            {aboutParagraphs.map((paragraph) => (
+            {paragraphs.map((paragraph) => (
               <p key={paragraph.id} className="leading-relaxed">
                 {paragraph.content}
               </p>
