@@ -76,11 +76,8 @@ export class NoticiaService {
     // Intentar eliminar la imagen asociada si existe
     if (noticia.url) {
       try {
-        // Extraer el nombre del archivo de la URL
-        const filename = noticia.url.replace(
-          `http://localhost:3000/uploads/`,
-          '',
-        );
+        // Extraer el nombre del archivo de la URL (funciona con cualquier dominio)
+        const filename = noticia.url.split('/uploads/').pop() || '';
         const isDeleted = await this.uploadService.deleteFile(filename);
         if (isDeleted) {
           this.logger.log(`Imagen ${filename} eliminada exitosamente`);
