@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Donante } from "../../../../types/donate";
 
 interface ModalProps {
@@ -7,6 +8,7 @@ interface ModalProps {
 }
 
 export const DonanteModal = ({ donante, onClose }: ModalProps) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export const DonanteModal = ({ donante, onClose }: ModalProps) => {
         <button
           onClick={() => { setExpanded(false); onClose(); }}
           className="absolute top-3 right-3 text-white bg-red-600 rounded-full p-1 text-3xl hover:bg-red-700"
-          aria-label="Cerrar"
+          aria-label={t('donors.modal.close')}
         >
           &times;
         </button>
@@ -76,7 +78,7 @@ export const DonanteModal = ({ donante, onClose }: ModalProps) => {
             aria-expanded={expanded}
             aria-controls="donante-desc"
           >
-            {expanded ? "Ver menos" : "Ver más"}
+            {expanded ? t('donors.readLess') : t('donors.readMore')}
           </button>
         </div>
 
@@ -87,7 +89,7 @@ export const DonanteModal = ({ donante, onClose }: ModalProps) => {
           rel="noopener noreferrer"
           className="block w-full text-center bg-red-600 text-white py-2 rounded hover:bg-red-700 transition"
         >
-          Visitar sitio del donante
+          {t('donors.modal.visitWebsite')}
         </a>
       </div>
     </div>

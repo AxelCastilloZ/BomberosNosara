@@ -200,7 +200,7 @@ export default function AdminLayout() {
     };
     handleResize();
 
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: number;
     const debouncedResize = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(handleResize, 150);
@@ -223,10 +223,11 @@ export default function AdminLayout() {
     return location.pathname === href || location.pathname.startsWith(href + "/");
   }, [location.pathname]);
 
+  // ✅ CORRECCIÓN: Redirige al landing (/) en lugar de al login
   const handleLogout = useCallback(() => {
     localStorage.clear();
     sessionStorage.clear();
-    navigate({ to: "/login" });
+    navigate({ to: "/" });  // ✅ Cambiado de "/login" a "/"
   }, [navigate]);
 
   // ✅ Cierra el sidebar al hacer clic fuera (en móvil)
@@ -241,7 +242,8 @@ export default function AdminLayout() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 relative">
+    // ✅ BALANCE PERFECTO: bg-gray-100
+    <div className="min-h-screen bg-gray-100 relative">
       {/* 🔹 Botón hamburguesa (solo móvil) */}
       {showSidebar && (
         <button
@@ -315,7 +317,7 @@ export default function AdminLayout() {
           className={`flex-1 p-2 sm:p-3 md:p-4 w-full transition-all duration-300 ${
             showSidebar
               ? window.innerWidth >= 1024
-                ? "" // 🧱 en pantallas grandes el sidebar es estático, sin margen
+                ? "" 
                 : "ml-0"
               : ""
           }`}
@@ -324,6 +326,7 @@ export default function AdminLayout() {
           <div className="w-full max-w-full 2xl:max-w-7xl mx-auto">
             <div
               className={[
+                // ✅ CAMBIO: Asegurar que el dashboard NO tenga fondo blanco
                 isDashboard
                   ? "bg-transparent border-0 shadow-none"
                   : "bg-white border border-gray-200 shadow-sm",

@@ -10,8 +10,11 @@ export default function Navbar() {
   const { location } = useRouterState();
   const { t } = useTranslation();
 
-  // ⛔️ Oculta navbar en /admin
-  if (location.pathname.startsWith('/admin')) return null;
+  // ⛔️ Oculta navbar en estas rutas
+  const hiddenRoutes = ['/admin', '/login'];
+  if (hiddenRoutes.some(route => location.pathname.startsWith(route))) {
+    return null;
+  }
 
   const link =
     "relative px-2 py-2 text-[15px] font-medium text-slate-800 whitespace-nowrap transition-colors duration-200 " +

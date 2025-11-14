@@ -81,8 +81,13 @@ const translationES = {
     "subtitle": "Si desea formar parte de este selecto grupo, envíe un correo a:",
     "email": "donaciones@bomberosdenosara.org",
     "readMore": "Leer más",
+    "readLess": "Ver menos",
     "loading": "Cargando donantes...",
-    "error": "Error cargando donantes"
+    "error": "Error cargando donantes",
+    "modal": {
+      "close": "Cerrar",
+      "visitWebsite": "Visitar sitio del donante"
+    }
   },
   "donate": {
     "hero": {
@@ -116,6 +121,56 @@ const translationES = {
       "nonprofit": "Amigos Of Costa Rica (501(c)(3) exenta de impuestos)",
       "paragraph3": "Su donación es deducible dentro de las pautas de la ley de EE. UU. Conserve su recibo de donación como comprobante oficial.",
       "costaRica": "Para donaciones deducibles de impuestos en Costa Rica, contacte:"
+    },
+    "modal": {
+      "monetary": {
+        "title": "Donación Monetaria",
+        "description": "Tu apoyo financiero tiene un impacto directo en nuestra capacidad de responder a emergencias y salvar vidas en la comunidad de Nosara.",
+        "oneTime": {
+          "title": "Donación Única",
+          "description": "Haz una contribución de un solo pago para apoyar nuestras operaciones inmediatas.",
+          "benefit1": "Cualquier monto",
+          "benefit2": "Impacto inmediato",
+          "benefit3": "Deducible de impuestos",
+          "button": "Donar Una Vez",
+          "alternative": "Opción alternativa de pago"
+        },
+        "monthly": {
+          "title": "Cuota de Servicios de Emergencia",
+          "description": "Conviértete en un apoyo constante con una contribución mensual. Ideal para residentes y negocios.",
+          "benefit1": "Desde $60 o $100/mes",
+          "benefit2": "Apoyo continuo y predecible",
+          "benefit3": "Mayor impacto a largo plazo",
+          "button": "Suscribirse Mensualmente"
+        },
+        "bank": {
+          "title": "Transferencia Bancaria en Costa Rica",
+          "description": "Para empresas o personas que prefieren transferir directamente en Costa Rica, pueden usar nuestras cuentas del Banco de Costa Rica:",
+          "usd": "Cuenta en Dólares (USD)",
+          "crc": "Cuenta en Colones (CRC)",
+          "footer": "Banco de Costa Rica (BCR) • Asociación Bomberos de Nosara"
+        }
+      },
+      "resources": {
+        "title": "Donación de Recursos",
+        "description": "Los Bomberos de Nosara necesitan diversos recursos materiales para llevar a cabo sus operaciones de emergencia de manera efectiva. Tu contribución de recursos puede salvar vidas.",
+        "whatToDonate": "¿Qué puedes donar?",
+        "equipment": {
+          "title": "Equipo Bomberil:",
+          "description": "Herramientas especializadas de rescate, equipos de protección personal certificados, tecnología de última generación"
+        },
+        "vehicles": {
+          "title": "Vehículos de Emergencia:",
+          "description": "Camiones de bomberos, ambulancias, vehículos todo terreno, sistemas de comunicación avanzados"
+        },
+        "other": {
+          "title": "Otros Recursos:",
+          "description": "Materiales de construcción, suministros médicos, equipos de comunicación"
+        },
+        "howToDonate": "¿Cómo donar?",
+        "contactInfo": "Contáctanos directamente por WhatsApp para coordinar tu donación de recursos. Nuestro equipo te guiará en el proceso y te proporcionará toda la información necesaria sobre logística y recepción.",
+        "whatsappButton": "Contactar por WhatsApp"
+      }
     }
   },
   "footer": {
@@ -210,8 +265,13 @@ const translationEN = {
     "subtitle": "If you wish to be part of this select group, send an email to:",
     "email": "donaciones@bomberosdenosara.org",
     "readMore": "Read more",
+    "readLess": "Read less",
     "loading": "Loading donors...",
-    "error": "Error loading donors"
+    "error": "Error loading donors",
+    "modal": {
+      "close": "Close",
+      "visitWebsite": "Visit donor's website"
+    }
   },
   "donate": {
     "hero": {
@@ -245,6 +305,56 @@ const translationEN = {
       "nonprofit": "Amigos Of Costa Rica (501(c)(3) tax-exempt)",
       "paragraph3": "Your donation is deductible within U.S. law guidelines. Keep your donation receipt as official proof.",
       "costaRica": "For tax-deductible donations in Costa Rica, contact:"
+    },
+    "modal": {
+      "monetary": {
+        "title": "Monetary Donation",
+        "description": "Your financial support has a direct impact on our ability to respond to emergencies and save lives in the Nosara community.",
+        "oneTime": {
+          "title": "One-Time Donation",
+          "description": "Make a single payment contribution to support our immediate operations.",
+          "benefit1": "Any amount",
+          "benefit2": "Immediate impact",
+          "benefit3": "Tax-deductible",
+          "button": "Donate Once",
+          "alternative": "Alternative payment option"
+        },
+        "monthly": {
+          "title": "Emergency Services Fee",
+          "description": "Become a constant support with a monthly contribution. Ideal for residents and businesses.",
+          "benefit1": "From $60 or $100/month",
+          "benefit2": "Continuous and predictable support",
+          "benefit3": "Greater long-term impact",
+          "button": "Subscribe Monthly"
+        },
+        "bank": {
+          "title": "Bank Transfer in Costa Rica",
+          "description": "For businesses or individuals who prefer to transfer directly in Costa Rica, you can use our Banco de Costa Rica accounts:",
+          "usd": "Dollar Account (USD)",
+          "crc": "Colones Account (CRC)",
+          "footer": "Banco de Costa Rica (BCR) • Asociación Bomberos de Nosara"
+        }
+      },
+      "resources": {
+        "title": "Resource Donation",
+        "description": "Bomberos de Nosara needs various material resources to carry out emergency operations effectively. Your resource contribution can save lives.",
+        "whatToDonate": "What can you donate?",
+        "equipment": {
+          "title": "Firefighting Equipment:",
+          "description": "Specialized rescue tools, certified personal protective equipment, state-of-the-art technology"
+        },
+        "vehicles": {
+          "title": "Emergency Vehicles:",
+          "description": "Fire trucks, ambulances, all-terrain vehicles, advanced communication systems"
+        },
+        "other": {
+          "title": "Other Resources:",
+          "description": "Construction materials, medical supplies, communication equipment"
+        },
+        "howToDonate": "How to donate?",
+        "contactInfo": "Contact us directly via WhatsApp to coordinate your resource donation. Our team will guide you through the process and provide all necessary information about logistics and reception.",
+        "whatsappButton": "Contact via WhatsApp"
+      }
     }
   },
   "footer": {

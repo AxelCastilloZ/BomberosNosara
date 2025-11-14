@@ -22,8 +22,34 @@ const LEGACY_TOKEN_KEY = 'token';
 function toApiError(error: unknown, fallback = 'Error de autenticación') {
   if (axios.isAxiosError(error)) {
     const data: any = error.response?.data;
-    return new Error(data?.message || data?.error || fallback);
+    
+    // 🔧 SOLUCIÓN: Extraer el mensaje correctamente
+    let message = fallback;
+    
+    if (data) {
+      // Intentar diferentes propiedades comunes
+      if (typeof data.message === 'string' && data.message) {
+        message = data.message;
+      } else if (typeof data.error === 'string' && data.error) {
+        message = data.error;
+      } else if (typeof data.msg === 'string' && data.msg) {
+        message = data.msg;
+      } else if (typeof data === 'string') {
+        message = data;
+      }
+    }
+    
+    return new Error(message);
   }
+  
+  if (error instanceof Error) {
+    return error;
+  }
+  
+  if (typeof error === 'string') {
+    return new Error(error);
+  }
+  
   return new Error(fallback);
 }
 
