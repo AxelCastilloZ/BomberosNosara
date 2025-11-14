@@ -42,7 +42,7 @@ export default function AdminDashboardPage() {
     markAsRead,
     closeDropdown
   }=useChatNotifications();
-  console.log(unreadMessages)
+
   // Function to navigate to chat with specific conversation
   const navigateToChat=useCallback((conversationId: string, messageId?: string) => {
     const params=new URLSearchParams();
@@ -98,7 +98,8 @@ export default function AdminDashboardPage() {
   }, [userRoles]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    // ✅ CAMBIO: Quitar el fondo aquí, heredar del layout
+    <div className="min-h-screen">
       {/* Navbar */}
       <nav className="bg-white border-b border-gray-200 px-4 py-3 shadow-sm">
         <div className="flex items-center justify-between">
@@ -124,10 +125,11 @@ export default function AdminDashboardPage() {
             <Link
               key={label}
               to={href}
-              className="bg-white border border-gray-200 rounded-lg p-6 shadow hover:shadow-md transition-all hover:-translate-y-1 flex items-center space-x-4 hover:bg-gray-50"
+              // ✅ CAMBIO: Cards mejoradas con hover effect más moderno
+              className="bg-white border-2 border-gray-200 rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex items-center space-x-4 hover:border-red-300 group"
             >
-              <div className="text-red-600">{icon}</div>
-              <span className="font-medium text-gray-800">{label}</span>
+              <div className="text-red-600 group-hover:scale-110 transition-transform duration-300">{icon}</div>
+              <span className="font-semibold text-gray-800 group-hover:text-red-600 transition-colors">{label}</span>
             </Link>
           ))}
         </div>

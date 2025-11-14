@@ -48,7 +48,7 @@ export default function AdminVoluntariosPage() {
             >
               <BarChart3 className="h-6 w-6 mx-auto text-gray-600" />
               <h3 className="mt-2 font-semibold text-gray-800">Estadísticas sobre Voluntarios</h3>
-              <p className="text-sm text-gray-600">Ver estadísticas generales (próximamente)</p>
+              <p className="text-sm text-gray-600">Ver estadísticas absolutas y mensuales</p>
             </button>
           </div>
         </>

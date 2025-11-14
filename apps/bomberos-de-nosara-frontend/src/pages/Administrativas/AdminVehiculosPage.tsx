@@ -193,33 +193,37 @@ export default function AdminVehiculosPage() {
               </div>
               
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded-lg border border-emerald-100">
+                {/* ✅ En servicio - Verde corporativo */}
+                <div className="flex items-center justify-between p-2.5 bg-green-50 rounded-lg border border-green-200">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-green-600"></div>
                     <span className="text-xs font-medium text-gray-700">En servicio</span>
                   </div>
                   <span className="text-xs font-bold text-gray-900">{statsVehiculos.enServicio}</span>
                 </div>
                 
-                <div className="flex items-center justify-between p-2.5 bg-amber-50 rounded-lg border border-amber-100">
+                {/* ⚠️ Malos - Amarillo advertencia */}
+                <div className="flex items-center justify-between p-2.5 bg-yellow-50 rounded-lg border border-yellow-200">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
                     <span className="text-xs font-medium text-gray-700">Malos</span>
                   </div>
                   <span className="text-xs font-bold text-gray-900">{statsVehiculos.malos}</span>
                 </div>
                 
-                <div className="flex items-center justify-between p-2.5 bg-orange-50 rounded-lg border border-orange-100">
+                {/* ⚪ Fuera de servicio - Gris neutral */}
+                <div className="flex items-center justify-between p-2.5 bg-gray-50 rounded-lg border border-gray-300">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
                     <span className="text-xs font-medium text-gray-700">Fuera de servicio</span>
                   </div>
                   <span className="text-xs font-bold text-gray-900">{statsVehiculos.fuera}</span>
                 </div>
                 
-                <div className="flex items-center justify-between p-2.5 bg-red-50 rounded-lg border border-red-100">
+                {/* ❌ Dado de baja - Rojo corporativo */}
+                <div className="flex items-center justify-between p-2.5 bg-red-50 rounded-lg border border-red-200">
                   <div className="flex items-center gap-2.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-600"></div>
                     <span className="text-xs font-medium text-gray-700">Dado de baja</span>
                   </div>
                   <span className="text-xs font-bold text-gray-900">{statsVehiculos.baja}</span>
@@ -242,25 +246,28 @@ export default function AdminVehiculosPage() {
               </div>
               
               <div className="space-y-2">
-                <div className="flex items-center justify-between p-2.5 bg-blue-50 rounded-lg border border-blue-100">
+                {/* ℹ️ Pendientes - Azul info */}
+                <div className="flex items-center justify-between p-2.5 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-2.5">
-                    <AlertCircle className="h-3.5 w-3.5 text-blue-500" />
+                    <AlertCircle className="h-3.5 w-3.5 text-blue-600" />
                     <span className="text-xs font-medium text-gray-700">Pendientes</span>
                   </div>
                   <span className="text-xs font-bold text-gray-900">{statsMantenimientos.pendientes}</span>
                 </div>
                 
-                <div className="flex items-center justify-between p-2.5 bg-purple-50 rounded-lg border border-purple-100">
+                {/* 📅 Este mes - Azul (cambiado de purple) */}
+                <div className="flex items-center justify-between p-2.5 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center gap-2.5">
-                    <Calendar className="h-3.5 w-3.5 text-purple-500" />
+                    <Calendar className="h-3.5 w-3.5 text-blue-600" />
                     <span className="text-xs font-medium text-gray-700">Este mes</span>
                   </div>
                   <span className="text-xs font-bold text-gray-900">{statsMantenimientos.delMes}</span>
                 </div>
                 
-                <div className="flex items-center justify-between p-2.5 bg-green-50 rounded-lg border border-green-100">
+                {/* 💰 Gastos del mes - Verde */}
+                <div className="flex items-center justify-between p-2.5 bg-green-50 rounded-lg border border-green-200">
                   <div className="flex items-center gap-2.5">
-                    <DollarSign className="h-3.5 w-3.5 text-green-500" />
+                    <DollarSign className="h-3.5 w-3.5 text-green-600" />
                     <span className="text-xs font-medium text-gray-700">Gastos del mes</span>
                   </div>
                   <span className="text-xs font-bold text-gray-900">{formatCosto(statsMantenimientos.costoDelMes)}</span>
